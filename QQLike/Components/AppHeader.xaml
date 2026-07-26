@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="QQLike.Components.AppHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:QQLike.Components"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             Height="36" HorizontalAlignment="Stretch" Width="200">
+       <StackPanel Orientation="Horizontal">
+           <Image Width="30"
+                  Height="30"
+                  Margin="0,0,10,0"
+                  Source="/Resource/images/favicon.ico" />
+           <StackPanel Width="40" Orientation="Horizontal">
+                <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="36"
+                            VerticalAlignment="Center"
+                            Command="{Binding ModifyUserProfileCommand}">
+                    <Ellipse  StrokeThickness="2">
+                        <Ellipse.Fill>
+                            <ImageBrush ImageSource="{Binding UserAvatar}"
+                                        Stretch="UniformToFill" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </Button>
+               <Button  Style="{StaticResource MaterialDesignFlatButton}"
+                        Content="{Binding Nickname}">
+               </Button>
+               <TextBox
+                   VerticalAlignment="Top"
+                   AcceptsReturn="True"
+                   Style="{StaticResource MaterialDesignFilledTextBox}"
+                   Text="{Binding Signature}"
+                   TextWrapping="Wrap"
+               />
+           </StackPanel>
+              <StackPanel Width="100" HorizontalAlignment="Right" VerticalAlignment="Center">
+                  <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="45" Height="36"
+                           VerticalAlignment="Center"
+                           Command="{Binding MinimizeCommand}">
+                      <materialDesign:PackIcon Kind="Minus" Width="16" Height="16" />
+                  </Button>
+                  <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="45" Height="36"
+                           VerticalAlignment="Center"
+                           Command="{Binding MaximizeCommand}"
+                           Margin="10,0,10,0"
+                           >
+                      <materialDesign:PackIcon Kind="WindowMaximize" Width="16" Height="16" />
+                  </Button>
+                  <Button VerticalAlignment="Center"
+                          Width="45"
+                          Height="36"
+                          Command="{Binding ExitCommand}"
+                          Style="{StaticResource MaterialDesignFlatButton}">
+                      <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
+                  </Button>
+              </StackPanel>
+       </StackPanel>
+</UserControl>

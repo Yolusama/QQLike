@@ -1,0 +1,37 @@
+﻿<Window x:Class="QQLike.Components.MessageComponent"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Loaded="OnLoaded"
+        Closed="OnClosed"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        Title="MessageComponent">
+    <Grid>
+        <Border
+            Background="{Binding BackgroundBrush}"
+            BorderBrush="{Binding BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Margin="16"
+            Padding="16,10"
+            MinWidth="220"
+            MaxWidth="420">
+            <TextBlock
+                Text="{Binding Message}"
+                Foreground="{Binding ForegroundBrush}"
+                FontSize="14"
+                TextWrapping="Wrap"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center" />
+        </Border>
+    </Grid>
+</Window>

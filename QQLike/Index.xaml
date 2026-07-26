@@ -1,0 +1,130 @@
+﻿<Window x:Class="QQLike.Index"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:QQLike"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:components="clr-namespace:QQLike.Components"
+        mc:Ignorable="d"
+        WindowStyle="None"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Index_OnLoaded"
+        Title="登录" Height="600" Width="500">
+    <Window.Resources>
+    </Window.Resources>
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop x:Name="BgStop1" Color="#FFEAF6FF" Offset="0.00" />
+                <GradientStop x:Name="BgStop2" Color="#FFD9EEFF" Offset="0.45" />
+                <GradientStop x:Name="BgStop3" Color="#FFF7ECFF" Offset="1.00" />
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                        <DoubleAnimation Storyboard.TargetName="BgStop1"
+                                         Storyboard.TargetProperty="Offset"
+                                         From="-0.2"
+                                         To="0.2"
+                                         Duration="0:0:4" />
+                        <DoubleAnimation Storyboard.TargetName="BgStop2"
+                                         Storyboard.TargetProperty="Offset"
+                                         From="0.35"
+                                         To="0.7"
+                                         Duration="0:0:6" />
+                        <DoubleAnimation Storyboard.TargetName="BgStop3"
+                                         Storyboard.TargetProperty="Offset"
+                                         From="0.8"
+                                         To="1.2"
+                                         Duration="0:0:5" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+
+       <Grid.ColumnDefinitions>
+           <ColumnDefinition Width="*" />
+       </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <components:EntryHeader Grid.Row="0"
+                                MinimizeButtonVisible="false"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Top" />
+        <StackPanel
+            Grid.Row="1"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            Width="250"
+        >
+            <TextBlock Text="QQLike"
+                       HorizontalAlignment="Center"
+                       Margin="0,10,0,12"
+                       FontSize="34"
+                       FontWeight="SemiBold">
+                <TextBlock.Foreground>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#FF5BC0FF" Offset="0" />
+                        <GradientStop Color="#FFB58CFF" Offset="1" />
+                    </LinearGradientBrush>
+                </TextBlock.Foreground>
+            </TextBlock>
+
+            <Grid Width="130" Height="130" Margin="0,0,0,16">
+                <Ellipse Stroke="#FFFFFFFF" StrokeThickness="2">
+                    <Ellipse.Fill>
+                        <ImageBrush ImageSource="pack://application:,,,/QQLike;component/Resource/images/logo.png"
+                                    Stretch="UniformToFill" />
+                    </Ellipse.Fill>
+                </Ellipse>
+            </Grid>
+
+            <TextBox
+                Width="245"
+                AcceptsReturn="True"
+                Text="{Binding UserAccount, UpdateSourceTrigger=PropertyChanged}"
+                Style="{StaticResource MaterialDesignFilledTextBox}"
+                TextWrapping="Wrap"
+                Height="40"
+                materialDesign:HintAssist.Hint="输入QQLike账号"
+            />
+            <PasswordBox
+                x:Name="PasswordBox"
+                VerticalAlignment="Top"
+                materialDesign:HintAssist.Hint="输入QQLike密码"
+                Style="{StaticResource MaterialDesignFilledPasswordBox}"
+                Width="245"
+                Height="40"
+                Margin="0,10,0,10"
+            >
+            </PasswordBox>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <CheckBox
+                    Content="自动登录"
+                    IsChecked="{Binding  AutoLogin}" />
+                <CheckBox
+                    Content="记住密码"
+                    IsChecked="{Binding RememberPassword}" />
+                <Button
+                    Width="60"
+                    Margin="10"
+                    Content="注册"
+                    Style="{StaticResource MaterialDesignFlatLightButton}"
+                    Command="{Binding GoRegisterCommand}"
+                />
+            </StackPanel>
+            <Button
+                Content="登录"
+                Style="{StaticResource MaterialDesignFlatLightBgButton}"
+                Command="{Binding LoginCommand}"
+            />
+        </StackPanel>
+    </Grid>
+</Window>
