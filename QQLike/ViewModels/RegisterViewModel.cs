@@ -4,10 +4,12 @@ using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using QQLike.Components;
 using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.DTO;
+using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
@@ -51,6 +53,7 @@ public partial class RegisterViewModel(IEmailSender emailSender
         var key = $"{CachingKeys.VerificationCode}_{_email}";
         try
         {
+            MessageComponent.ShowMessage(View, "已发送验证码", MessageType.Success, 3);
             var verificationCode = generator.GenerateByNumbers(Constants.RegisterCodeLength);
             var html = @$"<html>
                            <body><p>您当前获取的验证码:<strong>{verificationCode}</strong>,请于5分钟内使用</p></body>
@@ -75,7 +78,7 @@ public partial class RegisterViewModel(IEmailSender emailSender
             VerifyButtonContent = "获取验证码";
             await logger.LogAsync($"验证码发送失败:{e.Message}", "用户注册");
             await redis.RemoveAsync(key);
-            MessageBox.Show("验证码发送失败，请稍后重试", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageComponent.ShowMessage(View, "验证码发送失败，请稍后重试", MessageType.Error, 3);
         }
         
     }
@@ -91,30 +94,34 @@ public partial class RegisterViewModel(IEmailSender emailSender
     {
         if(await sugar.Queryable<User>().Where(e => e.Email == _email).AnyAsync())
         {
-            MessageBox.Show("该邮箱已被注册，请使用其他邮箱", "注册失败", MessageBoxButton.OK, 
-                MessageBoxImage.Warning);
+            MessageComponent.ShowMessage(View, "该邮箱已被注册，请使用其他邮箱", MessageType.Warning, 3);
             return;
         }
 
         var user = this.MapTo(new UserRegisterModel());
         user.Password = Password.ToSha256Str();
         var apiUrl = $"{setting.ApiUrl}/api/User/Register"; 
+        var loading = LoadingComponent.Loading(View,"注册中...");
         try
         {
             var json =  JsonSerializer.Serialize(user); 
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            await Task.Delay(1000);
+            if(loading.Cancelled)
+                return;
             var resultStr = await httpService.Request(apiUrl,HttpMethod.Put,content);
             var result = JsonSerializer.Deserialize<ResponseResult<string>>(resultStr,
               Constants.DesSerializerOptions);
             if (result.Success)
             {
-                MessageBox.Show($"注册成功，您的账号为:{result.Data}", "注册成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageComponent.ShowMessage(View, $"注册成功，您的账号为:{result.Data}", MessageType.Success, 3);
+                loading.Complete();
                 View.Close();
                 localStorage.Set(CachingKeys.RegisteredAccount,result.Data);
             }
             else
             {
-                MessageBox.Show($"注册失败，原因:{result.Message}", "注册失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageComponent.ShowMessage(View, $"注册失败，原因:{result.Message}", MessageType.Warning, 3);
                 await logger.LogAsync($"注册失败:{result.Message}", "用户注册");
             }
         }
@@ -122,7 +129,7 @@ public partial class RegisterViewModel(IEmailSender emailSender
         {
             Console.WriteLine(e);
             await logger.LogAsync($"注册过程中程序出现异常:{e}", "用户注册");
-            MessageBox.Show("注册过程中发生错误，请稍后重试", "注册失败", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageComponent.ShowMessage(View, "注册过程中发生错误，请稍后重试", MessageType.Error, 3);
         }
         
     }

@@ -3,57 +3,74 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:QQLike.Components"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
-             Height="36" HorizontalAlignment="Stretch" Width="200">
-       <StackPanel Orientation="Horizontal">
-           <Image Width="30"
-                  Height="30"
-                  Margin="0,0,10,0"
-                  Source="/Resource/images/favicon.ico" />
-           <StackPanel Width="40" Orientation="Horizontal">
-                <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="40" Height="36"
-                            VerticalAlignment="Center"
-                            Command="{Binding ModifyUserProfileCommand}">
-                    <Ellipse  StrokeThickness="2">
+             Height="45" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+    <Border Background="{DynamicResource MaterialDesignPaper}"
+            BorderBrush="{DynamicResource MaterialDesignDivider}"
+            BorderThickness="0,0,0,1"
+            MouseLeftButtonDown="Header_MouseLeftButtonDown">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: App Icon + User Info -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal"
+                        VerticalAlignment="Center" Margin="10,0,0,0">
+                <Image Width="30" Height="30" Margin="0,0,6,0"
+                       Source="/Resource/images/favicon.ico" />
+
+                <Button Width="32" Height="32" Margin="0,0,6,0"
+                        Command="{Binding OpenUserProfileCommand}"
+                        Style="{x:Null}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <Ellipse Width="32" Height="32"
+                             Stroke="{DynamicResource MaterialDesignDivider}"
+                             StrokeThickness="1">
                         <Ellipse.Fill>
-                            <ImageBrush ImageSource="{Binding UserAvatar}"
-                                        Stretch="UniformToFill" />
+                            <ImageBrush ImageSource="{Binding UserAvatar}" Stretch="UniformToFill" />
                         </Ellipse.Fill>
                     </Ellipse>
                 </Button>
-               <Button  Style="{StaticResource MaterialDesignFlatButton}"
-                        Content="{Binding Nickname}">
-               </Button>
-               <TextBox
-                   VerticalAlignment="Top"
-                   AcceptsReturn="True"
-                   Style="{StaticResource MaterialDesignFilledTextBox}"
-                   Text="{Binding Signature}"
-                   TextWrapping="Wrap"
-               />
-           </StackPanel>
-              <StackPanel Width="100" HorizontalAlignment="Right" VerticalAlignment="Center">
-                  <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="45" Height="36"
+
+                <TextBlock Text="{Binding Nickname}"
                            VerticalAlignment="Center"
-                           Command="{Binding MinimizeCommand}">
-                      <materialDesign:PackIcon Kind="Minus" Width="16" Height="16" />
-                  </Button>
-                  <Button  Style="{StaticResource MaterialDesignFlatButton}" Width="45" Height="36"
+                           FontSize="13" FontWeight="SemiBold"
+                           Margin="0,0,8,0" />
+
+                <TextBlock Text="{Binding Signature}"
                            VerticalAlignment="Center"
-                           Command="{Binding MaximizeCommand}"
-                           Margin="10,0,10,0"
-                           >
-                      <materialDesign:PackIcon Kind="WindowMaximize" Width="16" Height="16" />
-                  </Button>
-                  <Button VerticalAlignment="Center"
-                          Width="45"
-                          Height="36"
-                          Command="{Binding ExitCommand}"
-                          Style="{StaticResource MaterialDesignFlatButton}">
-                      <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
-                  </Button>
-              </StackPanel>
-       </StackPanel>
+                           FontSize="12"
+                           Foreground="{DynamicResource MaterialDesignHintForeground}"
+                           MaxWidth="200"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <!-- Right: Window Control Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Width="45" Height="36"
+                        Command="{Binding MinimizeCommand}"
+                        ToolTip="最小化">
+                    <materialDesign:PackIcon Kind="Minus" Width="16" Height="16" />
+                </Button>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Width="45" Height="36"
+                        Command="{Binding MaximizeCommand}"
+                        ToolTip="最大化">
+                    <materialDesign:PackIcon Kind="WindowMaximize" Width="16" Height="16" x:Name="MaximizeIcon" />
+                </Button>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Width="45" Height="36"
+                        Command="{Binding ExitCommand}"
+                        ToolTip="关闭">
+                    <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
 </UserControl>

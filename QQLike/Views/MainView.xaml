@@ -6,8 +6,10 @@
         xmlns:local="clr-namespace:QQLike.Views"
         xmlns:domain="clr-namespace:QQLike.Domain"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:components="clr-namespace:QQLike.Components"
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
         Title="MainView" Height="720" Width="1200">
     <Grid>
         <Grid.ColumnDefinitions>
@@ -15,6 +17,7 @@
             <ColumnDefinition Width="0.3*"/>
             <ColumnDefinition Width="0.4*"/>
         </Grid.ColumnDefinitions>
+        <components:AppHeader Grid.ColumnSpan="3"/>
         <Viewbox
             Grid.Column="0"
             Width="80"
@@ -23,7 +26,7 @@
             <ListBox
                 Margin="0,0,0,0"
                 Foreground="#E8DEF8"
-                ItemsSource="{Binding SampleList}"
+                ItemsSource="{Binding MenuItems}"
                 SelectedIndex="0">
                 <ListBox.ItemContainerStyle>
                     <Style

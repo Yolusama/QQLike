@@ -38,9 +38,9 @@ public partial class App : Application
     private void ConfigureServices(IServiceCollection services)
     {
         // 注册服务和依赖项
-        services.AddTransient<Index>();
+        services.AddSingleton<Index>();
         
-        services.AddTransient<IndexViewModel>();
+        services.AddSingleton<IndexViewModel>();
         services.AddTransient<EntryHeaderViewModel>();
         services.AddSingleton<AppHeaderViewModel>();
         
@@ -107,5 +107,7 @@ public partial class App : Application
         services.AddTransient<MessageViewModel>();
         services.AddTransient<NotificationComponent>();
         services.AddTransient<NotificationViewModel>();
+        services.AddTransient<MessageBoxComponent>();
+        services.AddTransient<MessageBoxViewModel>();
     }
 }

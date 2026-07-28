@@ -7,7 +7,7 @@ namespace QQLike.ViewModels;
 
 public class MainViewModel : ViewModelBase<MainView>
 {
-    public ObservableCollection<MDMenuItem> Menus { get; } = [
+    public ObservableCollection<MDMenuItem> MenuItems { get; } = [
     
         new MDMenuItem { Title = "消息" },
         new MDMenuItem { Title = "联系人" },
