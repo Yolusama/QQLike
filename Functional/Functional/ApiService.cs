@@ -18,12 +18,12 @@ public class ApiService(
     ISessionStorage sessionStorage,
     SysSetting setting) : IApiService
 {
-    private async Task<ResponseResult<TR>> Request<TR, TM>(string apiUrl, TM model, HttpMethod method,
+    private async Task<ResponseResult<TR>> Request<TR>(string apiUrl, object? model, HttpMethod method,
         Dictionary<string, string>? headers = null)
     {
         var json = JsonSerializer.Serialize(model);
 
-        var tokenInfo = sessionStorage.Get<UserLoginDTO>("User");
+        var tokenInfo = sessionStorage.Get<UserLoginDTO>(CachingKeys.User);
         if (headers == null)
             headers = new Dictionary<string, string> { { "Authorization", $"Bearer {tokenInfo.Token}" } };
         else
@@ -39,7 +39,7 @@ public class ApiService(
             {
                 var query = HttpUtility.ParseQueryString(uriBuilder.Query);
 
-                var properties = typeof(TM).GetProperties();
+                var properties = model.GetType().GetProperties();
                 foreach (var property in properties)
                 {
                     var value = property.GetValue(model);
@@ -62,33 +62,33 @@ public class ApiService(
         }
     }
 
-    public Task<ResponseResult<TR>> PostAsync<TR, TM>(string apiUrl, TM model,
+    public Task<ResponseResult<TR>> PostAsync<TR>(string apiUrl, object? model,
         Dictionary<string, string>? headers = null)
     {
-        return Request<TR, TM>(apiUrl, model, HttpMethod.Post, headers);
+        return Request<TR>(apiUrl, model, HttpMethod.Post, headers);
     }
 
-    public Task<ResponseResult<TR>> GetAsync<TR, TM>(string apiUrl, TM model,
+    public Task<ResponseResult<TR>> GetAsync<TR>(string apiUrl, object? model,
         Dictionary<string, string>? headers = null)
     {
-        return Request<TR, TM>(apiUrl, model, HttpMethod.Get, headers);
+        return Request<TR>(apiUrl, model, HttpMethod.Get, headers);
     }
 
-    public Task<ResponseResult<TR>> PutAsync<TR, TM>(string apiUrl, TM model,
+    public Task<ResponseResult<TR>> PutAsync<TR>(string apiUrl, object? model,
         Dictionary<string, string>? headers = null)
     {
-        return Request<TR, TM>(apiUrl, model, HttpMethod.Put, headers);
+        return Request<TR>(apiUrl, model, HttpMethod.Put, headers);     
     }
 
-    public Task<ResponseResult<TR>> PatchAsync<TR, TM>(string apiUrl, TM model,
+    public Task<ResponseResult<TR>> PatchAsync<TR>(string apiUrl, object? model,
         Dictionary<string, string>? headers = null)
     {
-        return Request<TR, TM>(apiUrl, model, HttpMethod.Patch, headers);
+        return Request<TR>(apiUrl, model, HttpMethod.Patch, headers);
     }
 
-    public Task<ResponseResult<TR>> DeleteAsync<TR, TM>(string apiUrl, TM model,
+    public Task<ResponseResult<TR>> DeleteAsync<TR>(string apiUrl, object? model,   
         Dictionary<string, string>? headers = null)
     {
-        return Request<TR, TM>(apiUrl, model, HttpMethod.Delete, headers);
+        return Request<TR>(apiUrl, model, HttpMethod.Delete, headers);
     }
 }

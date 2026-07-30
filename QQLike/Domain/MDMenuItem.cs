@@ -1,6 +1,15 @@
-﻿namespace QQLike.Domain;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MaterialDesignThemes.Wpf;
 
-public class MDMenuItem
+namespace QQLike.Domain;
+
+public partial class MDMenuItem : ObservableObject
 {
-    public string Title { get; set; }
+    public required string Title { get; set; }
+    public PackIconKind SelectedIcon { get; set; }
+    public PackIconKind UnselectedIcon { get; set; }
+    public bool Activated { get; set; }
+    
+    [ObservableProperty]
+    private string? _notification;
 }

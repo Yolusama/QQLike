@@ -4,5 +4,5 @@ namespace QQLike.Services.Interfaces;
 
 public interface IUserControlFactory
 {
-    public T GetUserControl<T>() where T:UserControl;
+    public T Get<T>() where T:UserControl;
 }

@@ -3,6 +3,9 @@ using SqlSugar;
 
 namespace QQLike.Entity;
 
+/// <summary>
+/// 用户表
+/// </summary>
 public class User
 {
     /// <summary>

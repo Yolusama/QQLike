@@ -33,6 +33,23 @@ public class UserService(IFreeSql orm,
             data.Id = generator.Guid;
             await worker.Orm.Insert(data).ExecuteAffrowsAsync();
             await redis.RemoveAsync($"{CachingKeys.VerificationCode}_{model.Email}");
+            var userContactGroup = new UserContactGroup
+            {
+                UserId = data.Id,
+                Name = "我的好友",
+                CreateTime = DateTime.Now,
+                IsGroup = false
+            };
+            var groupContact = new UserContactGroup
+            {
+                UserId = data.Id,
+                Name = "加入的群聊",
+                CreateTime = DateTime.Now,
+                IsGroup = true
+            };
+            await worker.Orm.Insert(new List<UserContactGroup> { userContactGroup, groupContact })
+                .ExecuteAffrowsAsync();
+          
             worker.Commit();
             return ResponseResult<string>.OK("注册成功",account);
         }
@@ -62,6 +79,7 @@ public class UserService(IFreeSql orm,
             user.IsOnline = true;
             var userDTO = user.MapTo(new UserLoginDTO());
             userDTO.Token = token;
+            userDTO.UserId = user.Id;
             await worker.Orm.Update<User>().SetSource(user).ExecuteAffrowsAsync();
             worker.Commit();
             return ResponseResult<UserLoginDTO>.OK("登录成功", userDTO);
@@ -72,5 +90,13 @@ public class UserService(IFreeSql orm,
             worker.Rollback();
             return ResponseResult.Fail($"登录过程中程序出现异常:{e.Message}").Generic<UserLoginDTO>();
         }
+    }
+
+    public async Task<ResponseResult<List<long>>> GetUserContactGroups(string userId)
+    {
+        var groupIds = await orm.Select<UserContactGroup>()
+            .Where(ucg => ucg.UserId == userId)
+            .ToListAsync(e=>e.Id);
+        return ResponseResult<List<long>>.OK("获取成功", groupIds);
     }
 }

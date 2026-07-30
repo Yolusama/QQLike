@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.FileProviders;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
 using QQLike.Entity.Configuration;
+using QQLike.Entity.VO;
 using QQLike.Services.Interfaces;
 using StackExchange.Redis;
 
@@ -14,7 +16,7 @@ public static class ExpansionService
         services.AddScoped<IRedisCache, RedisCache>();
     }
 
-    public static void HandleStaticFiles(this WebApplication app,IConfiguration configuration,FileConfig config)
+    public static void HandleStaticFiles(this WebApplication app,FileConfig config)
     {
         var root = new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), config.FileRootPath));
         if (!root.Exists)
@@ -33,6 +35,15 @@ public static class ExpansionService
             FileProvider = new PhysicalFileProvider(root.FullName),
             RequestPath = "/files"
         });
+    }
+
+    public static UserTokenInfo GetJwtData(this ControllerBase controller)
+    {
+        var headers = controller.Request.Headers;
+        var token = headers["Authorization"].ToString().Split(' ').Last();
+        var jwtService = controller.HttpContext.RequestServices.GetRequiredService<IJwtService>();
+        var userTokenInfo = jwtService.Parse<UserTokenInfo>(token);
+        return userTokenInfo;
     }
 
     /*private static IServiceScope? _socketServerScope;

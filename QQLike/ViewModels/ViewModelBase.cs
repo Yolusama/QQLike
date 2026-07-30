@@ -5,5 +5,10 @@ namespace QQLike.ViewModels;
 
 public abstract class ViewModelBase<T> : ObservableObject where T : FrameworkElement
 {
-    public T View { get; set; } = default!;
+    private T _view = null;
+    public T View
+    { 
+        get => _view; 
+        set { _view ??= value; }
+    }
 }

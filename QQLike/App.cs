@@ -13,6 +13,7 @@ using QQLike.Services;
 using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
 using QQLike.Views;
+using QQLike.Views.User;
 using SqlSugar;
 
 namespace QQLike;
@@ -109,5 +110,11 @@ public partial class App : Application
         services.AddTransient<NotificationViewModel>();
         services.AddTransient<MessageBoxComponent>();
         services.AddTransient<MessageBoxViewModel>();
+        services.AddSingleton<UserContactView>();
+        services.AddSingleton<UserContactViewModel>();
+        services.AddScoped<UserSearchHeader>();
+        services.AddScoped<UserSearchHeaderViewModel>();
+        services.AddTransient<UserSearchHeader>();
+        services.AddTransient<CommonToolHeaderViewModel>();
     }
 }

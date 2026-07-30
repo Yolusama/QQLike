@@ -22,13 +22,13 @@
                 <Image Width="30" Height="30" Margin="0,0,6,0"
                        Source="/Resource/images/favicon.ico" />
 
-                <Button Width="32" Height="32" Margin="0,0,6,0"
+                <Button Width="40" Height="40" Margin="0,0,6,0"
                         Command="{Binding OpenUserProfileCommand}"
                         Style="{x:Null}"
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand">
-                    <Ellipse Width="32" Height="32"
+                    <Ellipse Width="36" Height="36"
                              Stroke="{DynamicResource MaterialDesignDivider}"
                              StrokeThickness="1">
                         <Ellipse.Fill>

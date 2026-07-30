@@ -20,4 +20,11 @@ public class UserController(IUserService userService) : ControllerBase
     {
         return await userService.Register(model);
     }
+    
+    [Authorize]
+    [HttpGet("{userId}")]
+    public async Task<ActionResult<ResponseResult<List<long>>>> ContactGroups([FromRoute] string userId)
+    {
+        return await userService.GetUserContactGroups(userId);
+    }
 }

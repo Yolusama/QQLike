@@ -95,7 +95,7 @@ var app = builder.Build();
     app.UseSwaggerUI();
 }*/
 
-app.HandleStaticFiles(builder.Configuration, fileConfig);
+app.HandleStaticFiles(fileConfig);
 
 //app.UseAuthentication();
 app.UseAuthorization();

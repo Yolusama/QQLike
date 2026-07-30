@@ -3,63 +3,78 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:local="clr-namespace:QQLike.Views"
         xmlns:domain="clr-namespace:QQLike.Domain"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:components="clr-namespace:QQLike.Components"
+        xmlns:user="clr-namespace:QQLike.Views.User"
+        xmlns:converters="clr-namespace:QQLike.Converters"
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         Title="MainView" Height="720" Width="1200">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="0.2*"/>
-            <ColumnDefinition Width="0.3*"/>
-            <ColumnDefinition Width="0.4*"/>
+            <ColumnDefinition Width="0.1*" />
+            <ColumnDefinition Width="0.2*" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <components:AppHeader Grid.ColumnSpan="3"/>
-        <Viewbox
-            Grid.Column="0"
-            Width="80"
-            VerticalAlignment="Top"
-            Stretch="Uniform">
-            <ListBox
-                Margin="0,0,0,0"
-                Foreground="#E8DEF8"
-                ItemsSource="{Binding MenuItems}"
-                SelectedIndex="0">
-                <ListBox.ItemContainerStyle>
-                    <Style
-                        TargetType="ListBoxItem"
-                        BasedOn="{StaticResource MaterialDesign3.NavigationRailPrimaryListBoxItem}">
-                        <Setter
-                            Property="materialDesign:BadgedAssist.Badge"
-                            Value="{Binding Notification}" />
-                        <Setter
-                            Property="materialDesign:BadgedAssist.BadgeBackground"
-                            Value="#930006" />
-                        <Setter
-                            Property="materialDesign:BadgedAssist.BadgeForeground"
-                            Value="#FFDAD4" />
-                        <Setter
-                            Property="materialDesign:NavigationRailAssist.IsTextVisible"
-                            Value="False" />
-                        <Setter
-                            Property="materialDesign:NavigationRailAssist.SelectedIcon"
-                            Value="{Binding SelectedIcon}" />
-                        <Setter
-                            Property="materialDesign:NavigationRailAssist.UnselectedIcon"
-                            Value="{Binding UnselectedIcon}" />
-                    </Style>
-                </ListBox.ItemContainerStyle>
-                <ListBox.Resources>
-                    <DataTemplate
-                        DataType="{x:Type domain:MDMenuItem}">
-                        <TextBlock
-                            Text="{Binding Title}" />
-                    </DataTemplate>
-                </ListBox.Resources>
-            </ListBox>
-        </Viewbox>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <!-- 顶部 Header -->
+        <components:AppHeader Grid.Row="0" Grid.ColumnSpan="3"  />
+
+
+        <!-- 左侧菜单栏 (NavigationRail) -->
+        <Border Grid.Column="0" Grid.Row="1"
+                Background="{DynamicResource MaterialDesignPaper}"
+                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                BorderThickness="0,0,1,0">
+            <Grid Width="80"
+                  Background="{DynamicResource MaterialDesignPaper}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <!-- 导航菜单列表 -->
+                <Viewbox Grid.Row="1"
+                         Width="80"
+                         VerticalAlignment="Top"
+                         Stretch="Uniform">
+                    <ListBox Margin="0"
+                             Foreground="#E8DEF8"
+                             ItemsSource="{Binding MenuItems}"
+                             SelectedItem="{Binding SelectedMenuItem}"
+                             SelectedIndex="0"
+                             SelectionMode="Single">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem"
+                                   BasedOn="{StaticResource MaterialDesign3.NavigationRailPrimaryListBoxItem}">
+                                <Setter Property="materialDesign:BadgedAssist.Badge"
+                                        Value="{Binding Notification}" />
+                                <Setter Property="materialDesign:BadgedAssist.BadgeBackground"
+                                        Value="#930006" />
+                                <Setter Property="materialDesign:BadgedAssist.BadgeForeground"
+                                        Value="#FFDAD4" />
+                                <Setter Property="materialDesign:NavigationRailAssist.IsTextVisible"
+                                        Value="False" />
+                                <Setter Property="materialDesign:NavigationRailAssist.SelectedIcon"
+                                        Value="{Binding SelectedIcon}" />
+                                <Setter Property="materialDesign:NavigationRailAssist.UnselectedIcon"
+                                        Value="{Binding UnselectedIcon}" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.Resources>
+                            <DataTemplate DataType="{x:Type domain:MDMenuItem}">
+                                <TextBlock Text="{Binding Title}" />
+                            </DataTemplate>
+                        </ListBox.Resources>
+                    </ListBox>
+                </Viewbox>
+            </Grid>
+        </Border>
+        <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding SelectedMenuItem.Activated, Converter={StaticResource BoolVisibilityConverter2}}"/>
+        
     </Grid>
 </Window>
