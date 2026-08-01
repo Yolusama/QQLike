@@ -1,6 +1,6 @@
-﻿namespace QQLike.Entity.DTO;
+﻿namespace QQLike.Entity.VO;
 
-public class UserLoginDTO
+public class UserLoginVO
 {
     public string UserId { get; set; }
     public string Account {get; set; }

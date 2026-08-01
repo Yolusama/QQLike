@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using QQLike.Entity.DTO;
 using QQLike.Entity.Model;
+using QQLike.Entity.Result;
+using QQLike.Entity.VO;
 using QQLike.Services.Interfaces;
 
 namespace QQLike.Controllers;
@@ -10,7 +11,7 @@ namespace QQLike.Controllers;
 public class UserController(IUserService userService) : ControllerBase
 {
     [HttpPost]
-    public async Task<ActionResult<ResponseResult<UserLoginDTO>>> Login([FromBody] UserLoginModel model)
+    public async Task<ActionResult<ResponseResult<UserLoginVO>>> Login([FromBody] UserLoginModel model)
     {
         return await userService.Login(model);
     }
@@ -21,10 +22,4 @@ public class UserController(IUserService userService) : ControllerBase
         return await userService.Register(model);
     }
     
-    [Authorize]
-    [HttpGet("{userId}")]
-    public async Task<ActionResult<ResponseResult<List<long>>>> ContactGroups([FromRoute] string userId)
-    {
-        return await userService.GetUserContactGroups(userId);
-    }
 }

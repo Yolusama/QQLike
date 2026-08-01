@@ -5,11 +5,14 @@ namespace QQLike.Domain;
 
 public partial class MDMenuItem : ObservableObject
 {
-    public required string Title { get; set; }
-    public PackIconKind SelectedIcon { get; set; }
-    public PackIconKind UnselectedIcon { get; set; }
-    public bool Activated { get; set; }
-    
+    [ObservableProperty]
+    private string _title;
+    [ObservableProperty]
+    private PackIconKind _selectedIcon;
+    [ObservableProperty]
+    private PackIconKind _unselectedIcon;
+    [ObservableProperty]
+    private bool _activated;
     [ObservableProperty]
     private string? _notification;
 }

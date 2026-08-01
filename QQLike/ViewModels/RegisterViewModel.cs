@@ -1,14 +1,13 @@
 ﻿using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QQLike.Components;
 using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
-using QQLike.Entity.DTO;
+using QQLike.Entity.Result;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Functional.Instructure;

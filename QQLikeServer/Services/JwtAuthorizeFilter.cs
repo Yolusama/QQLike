@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using QQLike.Entity.Attributes;
 using QQLike.Entity.Common;
-using QQLike.Entity.DTO;
+using QQLike.Entity.Result;
 using QQLike.Entity.VO;
 using QQLike.Services.Interfaces;
 
@@ -13,7 +14,7 @@ public class JwtAuthorizeFilter(IJwtService jwtService,IRedisCache redis) : IAut
     public void OnAuthorization(AuthorizationFilterContext context)
     {
         var needAuthorize = context.ActionDescriptor.EndpointMetadata
-            .OfType<AuthorizeAttribute>().Any();
+            .OfType<RequestAuthorizeAttribute>().Any();
 
         if (!needAuthorize)
         {

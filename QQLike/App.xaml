@@ -15,8 +15,10 @@
             <!-- Converters -->
             <converters:BoolVisibilityConverter x:Key="BoolVisibilityConverter" />
             <converters:BoolVisibilityConverter2 x:Key="BoolVisibilityConverter2" />
-
-            <!-- Compatibility key for old button style name used in views. -->
+            
+            <Style x:Key="OutlineTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                <Setter Property="Padding" Value="10" />
+            </Style>   
             <Style x:Key="MaterialDesignPaperDarkButton" TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
                 <Setter Property="Foreground" Value="White" />
                 <Setter Property="Background" Value="#3949AB" />

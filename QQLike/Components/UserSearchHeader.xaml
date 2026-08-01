@@ -6,9 +6,9 @@
              xmlns:local="clr-namespace:QQLike.Components"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="300">
-    <Grid>
-        <Grid Margin="0,0,0,12" VerticalAlignment="Top">
+             d:DesignHeight="300" d:DesignWidth="400">
+    <Grid Background="#f5f5f5">
+        <Grid Margin="6" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -21,7 +21,8 @@
             <TextBox Grid.Column="0"
                      Height="40"
                      Text="{Binding SearchText}"
-                     Style="{StaticResource MaterialDesignFilledTextBox}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Padding="10"
                      LostFocus="TextBox_LostFocus"
                      TextChanged="TextBox_TextChanged"
                      materialDesign:HintAssist.Hint="搜索"
@@ -33,6 +34,7 @@
                     Width="40"
                     Height="40"
                     Margin="8,0,0,0"
+                    Background="#ebebeb"
                     Style="{StaticResource MaterialDesignOutlinedButton}">
                 <materialDesign:PackIcon Kind="Plus" Width="36" Height="36" />
             </Button>
@@ -67,7 +69,7 @@
                             <RowDefinition Height="Auto"></RowDefinition>
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Margin="0,8,0,0">
-                            <TextBlock Text="联系人"></TextBlock>
+                            <TextBlock Text="联系人" Foreground="Gray"></TextBlock>
                             <ListBox ItemsSource="{Binding UserResults}" Height="Auto">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
@@ -92,7 +94,7 @@
                             </ListBox>
                         </StackPanel>
                         <StackPanel Grid.Row="1" Margin="0,8,0,0">
-                            <TextBlock Text="群聊"></TextBlock>
+                            <TextBlock Text="群聊" Foreground="Gray"></TextBlock>
                             <ListBox ItemsSource="{Binding GroupResults}" Height="Auto">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>

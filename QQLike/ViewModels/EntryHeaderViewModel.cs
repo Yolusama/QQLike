@@ -11,8 +11,18 @@ public partial class EntryHeaderViewModel : ViewModelBase<EntryHeader>
     [RelayCommand]
     private void Exit()
     {
-        var window = Window.GetWindow(View);
-        window.Close();
+        foreach (Window window in Application.Current.Windows)
+            {
+                try
+                {
+                   window.Close();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+        Application.Current.Shutdown();
     }
 
     [RelayCommand]

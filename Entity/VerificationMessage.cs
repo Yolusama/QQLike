@@ -15,6 +15,10 @@ public class VerificationMessage
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
     public long Id { get; set; }
     /// <summary>
+    /// 发起用户ID
+    /// </summary>
+    public string UserId { get; set; }
+    /// <summary>
     /// 是否为群组验证信息
     /// </summary>
     [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint")]

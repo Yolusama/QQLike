@@ -2,8 +2,8 @@
 using System.Text.Json;
 using System.Web;
 using QQLike.Entity.Common;
-using QQLike.Entity.Configuration;
-using QQLike.Entity.DTO;
+using QQLike.Entity.Configuration; 
+using QQLike.Entity.Result;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 
@@ -23,7 +23,7 @@ public class ApiService(
     {
         var json = JsonSerializer.Serialize(model);
 
-        var tokenInfo = sessionStorage.Get<UserLoginDTO>(CachingKeys.User);
+        var tokenInfo = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         if (headers == null)
             headers = new Dictionary<string, string> { { "Authorization", $"Bearer {tokenInfo.Token}" } };
         else

@@ -74,7 +74,7 @@
                 </Viewbox>
             </Grid>
         </Border>
-        <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding SelectedMenuItem.Activated, Converter={StaticResource BoolVisibilityConverter2}}"/>
+        <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.SelectedMenuItem.Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
         
     </Grid>
 </Window>

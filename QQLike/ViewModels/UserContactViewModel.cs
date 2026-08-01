@@ -6,10 +6,10 @@ using QQLike.Components;
 using QQLike.Domain;
 using QQLike.Entity;
 using QQLike.Entity.Common;
-using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
+using QQLike.Services.Interfaces;
 using QQLike.Views.User;
 using SqlSugar;
 
@@ -18,24 +18,25 @@ namespace QQLike.ViewModels;
 public partial class UserContactViewModel(ISqlSugarClient sugarClient,
     IProjectLogger logger,
     IApiService apiService,
+    IWindowFactory windowFactory,
     ISessionStorage sessionStorage) : ViewModelBase<UserContactView>
 {
     [ObservableProperty]
     private ObservableCollection<UserContactGroupItem> _userContactGroups = [];
-
+    [ObservableProperty]
     private bool _isGroupView = false;
     
     
     [RelayCommand]
     private void SwitchUserView()
     {
-        _isGroupView = false;
+        IsGroupView = false;
     }
 
     [RelayCommand]
     private void SwitchGroupView()
     {
-        _isGroupView = true;
+        IsGroupView = true;
     }
 
     [RelayCommand]
@@ -43,8 +44,8 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
     {
         try
         {
-           var user = sessionStorage.Get<UserLoginDTO>(CachingKeys.User);
-           var res = await apiService.GetAsync<List<long>>($"api/User/ContactGroups/{user.UserId}",
+           var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+           var res = await apiService.GetAsync<List<long>>($"api/UserContact/ContactGroups/{user.UserId}",
                null);
            if (res.Success)
            {
@@ -87,7 +88,7 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
             var userContactInfos = await sugarClient.Queryable<UserContact>()
                 .InnerJoin<User>((uc, u) => uc.ContactId == u.Id)
                 .Where(uc => uc.UserContactGroupId == item.ContactGroupId &&
-                             uc.IsGroup == _isGroupView)
+                             uc.IsGroup == IsGroupView)
                 .Select((uc, u) => new { uc, u })
                 .ToListAsync(e => new UserContactInfo
                 {
@@ -110,5 +111,11 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
             item.IsExpanded = false;
             item.UserContacts.Clear();
         }
+    }
+
+    [RelayCommand]
+    private void OpenUserManage()
+    {
+         windowFactory.GetAndShowWindow<UserContactManageView>();
     }
 }

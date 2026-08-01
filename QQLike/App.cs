@@ -1,8 +1,5 @@
-﻿using System.Configuration.Internal;
-using System.IO;
-using System.Net.Http;
+﻿using System.IO;
 using System.Windows;
-using Google.Protobuf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using QQLike.Components;
@@ -13,6 +10,7 @@ using QQLike.Services;
 using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
 using QQLike.Views;
+using QQLike.Views.Message;
 using QQLike.Views.User;
 using SqlSugar;
 
@@ -86,6 +84,7 @@ public partial class App : Application
         services.AddSingleton<ILocalStorage,LocalStorage>();
         services.AddSingleton<ISessionStorage,SessionStorage>();
         services.AddScoped<IApiService,ApiService>();
+        services.AddScoped<IUserControlFactory,UserControlFactory>();
     }
 
     private void AddConfiguration<T>(IServiceCollection services,IConfiguration configuration) where T : class
@@ -116,5 +115,12 @@ public partial class App : Application
         services.AddScoped<UserSearchHeaderViewModel>();
         services.AddTransient<UserSearchHeader>();
         services.AddTransient<CommonToolHeaderViewModel>();
+        services.AddTransient<CommonToolHeader>();
+        services.AddTransient<ComprehensiveSearchViewModel>();
+        services.AddTransient<ComprehensiveSearch>();
+        services.AddTransient<UserContactManageView>();
+        services.AddTransient<UserContactManageViewModel>();
+        services.AddTransient<VerificationMessageView>();
+        services.AddSingleton<VerificationMessageViewModel>();
     }
 }

@@ -1,0 +1,12 @@
+﻿using QQLike.Entity.Model;
+using QQLike.Entity.Result;
+using QQLike.Entity.VO;
+
+namespace QQLike.Services.Interfaces;
+
+public interface IUserContactService
+{
+    public Task<ResponseResult<List<long>>> GetUserContactGroups(string userId);
+    public Task<ResponseResult<List<UserContactGroupingVO>>> GetUserContactGrouping(string userId);
+    public Task<ResponseResult<long>> AddUserContactGroup(UserContactGroupModel model);
+}

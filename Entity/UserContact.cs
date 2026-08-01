@@ -15,6 +15,10 @@ public class UserContact
     [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
     public long Id { get; set; }
     /// <summary>
+    /// 用户ID，人/群组
+    /// </summary>
+    public string UserId { get; set; }
+    /// <summary>
     /// 联系方ID，人/群组
     /// </summary>
     public string ContactId { get; set; }

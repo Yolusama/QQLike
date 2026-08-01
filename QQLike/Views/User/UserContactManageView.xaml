@@ -4,7 +4,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:QQLike.Views.User"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:components="clr-namespace:QQLike.Components"
+        Loaded="OnLoaded"
         mc:Ignorable="d"
+        WindowStyle="None"
+        WindowStartupLocation="Manual"
         Title="UserContactManageView" Height="450" Width="800">
     <Border BorderThickness="1" BorderBrush="Gray" CornerRadius="5">
         <Grid>
@@ -12,11 +17,220 @@
                 <ColumnDefinition Width="0.3*"></ColumnDefinition>
                 <ColumnDefinition Width="0.7*"></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="0.2*"></RowDefinition>
-                <RowDefinition Height="*"></RowDefinition>
-            </Grid.RowDefinitions>
+            <materialDesign:DialogHost
+                                       IsOpen="{Binding IsGroupDialogOpen}"
+                                       DialogTheme="Inherit">
+                <materialDesign:DialogHost.DialogContent>
+                    <StackPanel
+                        Margin="16">
+                        <TextBlock
+                            Text="添加新的分组名" />
+                        <TextBox
+                            Margin="0,8,0,0"
+                            Text="{Binding NewGroupName}"
+                            HorizontalAlignment="Stretch" />
+                        <StackPanel
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="0,8,8,0"
+                                Command="{Binding ConfirmAddGroupCommand}"
+                                Content="确定"
+                                IsDefault="True"
+                                Style="{StaticResource MaterialDesignFlatButton}">
+                                <Button.CommandParameter>
+                                    <system:Boolean
+                                        xmlns:system="clr-namespace:System;assembly=mscorlib">
+                                        True
+                                    </system:Boolean>
+                                </Button.CommandParameter>
+                            </Button>
+                            <Button
+                                Margin="0,8,8,0"
+                                Command="{Binding CancelAddGroupCommand}"
+                                Content="取消"
+                                IsCancel="True"
+                                Style="{StaticResource MaterialDesignFlatButton}">
+                                <Button.CommandParameter>
+                                    <system:Boolean
+                                        xmlns:system="clr-namespace:System;assembly=mscorlib">
+                                        False
+                                    </system:Boolean>
+                                </Button.CommandParameter>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </materialDesign:DialogHost.DialogContent>
+            </materialDesign:DialogHost>
+            <components:CommonToolHeader Grid.Column="1" />
+            <!-- 左侧：分组列表 -->
+            <Grid Grid.Column="0" Background="#ededed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" BorderBrush="#dbdbdb" BorderThickness="1" CornerRadius="5"
+                        Background="#dbdbdb" Margin="10,25,10,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"></ColumnDefinition>
+                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <Label FontSize="15" Content="全部好友" Height="30" VerticalAlignment="Center"
+                               HorizontalAlignment="Left">
+                        </Label>
+                        <Label Grid.Column="1" FontSize="10" Foreground="#7a7a7a"
+                               VerticalAlignment="Center" Content="{Binding FriendsCount, Mode=OneWay}">
+                        </Label>
+                    </Grid>
+                </Border>
+                <Label Grid.Row="1" Content="分组" Margin="10,0,10,10" Foreground="#7b7b7b"
+                       Height="30" VerticalAlignment="Top">
+                </Label>
+                <ScrollViewer Grid.Row="1" MaxHeight="300" Margin="15,30,15,20">
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    </Grid.ColumnDefinitions>
+                                    <Label FontSize="14" Content="{Binding GroupName}" Height="30"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Left">
+                                    </Label>
+                                    <Label Grid.Column="1" FontSize="10" Foreground="#7a7a7a"
+                                           VerticalAlignment="Center" Content="{Binding ContactCount, Mode=OneWay}">
+                                    </Label>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <Button Grid.Row="2" Style="{StaticResource MaterialDesignOutlinedButton}"
+                        materialDesign:ButtonAssist.CornerRadius="5"
+                        VerticalAlignment="Bottom" Margin="10,0,10,10" Height="40"
+                        Command="{Binding AddGroupCommand}" Foreground="#090909">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Plus" Width="16" Height="16" VerticalAlignment="Center" />
+                        <Label Content="添加分组" FontSize="14" VerticalAlignment="Center"></Label>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- 右侧：好友管理 -->
+            <Grid Grid.Column="1" Background="#fbfbfb">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0.2*"></RowDefinition>
+                    <RowDefinition Height="0.8*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                    </Grid.ColumnDefinitions>
+                    <Label Grid.Column="0" FontSize="18" Content="好友管理器" VerticalAlignment="Center"></Label>
+                    <TextBox Grid.Column="1" Width="200" Height="40" VerticalAlignment="Center" Padding="12,0"
+                             materialDesign:HintAssist.Hint="搜索"
+                             materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                             materialDesign:TextFieldAssist.HasClearButton="True"
+                             materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Text="{Binding SearchText}">
+                    </TextBox>
+                </Grid>
+                <materialDesign:Card Padding="0" Grid.Row="1" Margin="15,10" UniformCornerRadius="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- 表头 -->
+                        <Border Grid.Row="0" BorderBrush="#e0e0e0" BorderThickness="2" Padding="10,12,10,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="60" />
+                                </Grid.ColumnDefinitions>
+                                <RadioButton Grid.Column="0" VerticalAlignment="Center"
+                                             HorizontalAlignment="Center"
+                                             Style="{StaticResource MaterialDesignRadioButton}" />
+                                <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#616161" VerticalAlignment="Center">
+                                    昵称
+                                </TextBlock>
+                                <TextBlock Grid.Column="2" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#616161" VerticalAlignment="Center">
+                                    备注
+                                </TextBlock>
+                                <TextBlock Grid.Column="3" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#616161" VerticalAlignment="Center">
+                                    分组
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+
+                        <!-- 好友列表 -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Friends}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#eeeeee" BorderThickness="0,0,0,10">
+                                            <Grid Height="56">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="40" />
+                                                    <ColumnDefinition Width="180" />
+                                                    <ColumnDefinition Width="220" />
+                                                    <ColumnDefinition Width="180" />
+                                                    <ColumnDefinition Width="60" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- 单选框 -->
+                                                <RadioButton Grid.Column="0" VerticalAlignment="Center"
+                                                             HorizontalAlignment="Center"
+                                                             Style="{StaticResource MaterialDesignRadioButton}" />
+
+                                                <!-- 头像+昵称 -->
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                            VerticalAlignment="Center">
+                                                    <Image Width="32" Height="32"
+                                                           Source="{Binding Avatar}"
+                                                           RenderOptions.BitmapScalingMode="HighQuality">
+                                                        <Image.Clip>
+                                                            <EllipseGeometry Center="16,16" RadiusX="16" RadiusY="16" />
+                                                        </Image.Clip>
+                                                    </Image>
+                                                    <TextBlock Text="{Binding Nickname}" Margin="10,0,0,0"
+                                                               FontSize="14" VerticalAlignment="Center" />
+                                                </StackPanel>
+
+                                                <!-- 备注 -->
+                                                <TextBlock Grid.Column="2" Text="{Binding Remark}"
+                                                           FontSize="14" VerticalAlignment="Center" />
+
+                                                <!-- 分组下拉 -->
+                                                <ComboBox Grid.Column="3" Text="{Binding GroupName}"
+                                                          Width="140" Height="32" FontSize="13"
+                                                          VerticalAlignment="Center"
+                                                          materialDesign:HintAssist.Hint="选择分组"
+                                                          ItemsSource="{Binding DataContext.Groups, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}">
+                                                </ComboBox>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </materialDesign:Card>
+            </Grid>
         </Grid>
-        
     </Border>
 </Window>

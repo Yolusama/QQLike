@@ -5,7 +5,7 @@ using MaterialDesignThemes.Wpf;
 using QQLike.Components;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
-using QQLike.Entity.DTO;
+using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
 using QQLike.Views.User;
@@ -36,7 +36,7 @@ public partial class AppHeaderViewModel : ViewModelBase<AppHeader>
 
     private void SetUserInfo()
     {
-        var user = sessionStorage.Get<UserLoginDTO>(CachingKeys.User);
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
 
         UserAvatar = $"{setting.ApiUrl}/Files/Images/{user.Avatar}";
         Nickname = user.Nickname;

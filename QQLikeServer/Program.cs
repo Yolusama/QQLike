@@ -47,10 +47,12 @@ var fileConfig = builder.Configuration.GetSection(nameof(FileConfig)).Get<FileCo
 builder.Services.AddSingleton(fileConfig);
 
 builder.Services.AddScoped<IProjectLogger, ProjectLogger>(_ => new ProjectLogger(setting.LogPath));
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRandomGenerator, RandomGenerator>();
+
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserContactService, UserContactService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 
@@ -84,7 +86,7 @@ builder.Services.AddRedis(setting.RedisConnectionString);
             }
         };
     });*/
-builder.Services.AddAuthorization();
+//builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -98,7 +100,7 @@ var app = builder.Build();
 app.HandleStaticFiles(fileConfig);
 
 //app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthorization();
 //app.UseHttpsRedirection();
 app.MapControllers();
 

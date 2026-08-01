@@ -1,4 +1,4 @@
-﻿namespace QQLike.Entity.DTO;
+﻿namespace QQLike.Entity.Result;
 
 public class ResponseResult
 {

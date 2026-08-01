@@ -11,9 +11,9 @@ namespace QQLike.ViewModels;
 public partial class MainViewModel(IUserControlFactory userControlFactory) : ViewModelBase<MainView>
 {
     [ObservableProperty]
-    private MDMenuItem? _selectedMenuItem;
-
-    public ObservableCollection<MDMenuItem> MenuItems { get; } = [
+    private MDMenuItem? _selectedMenuItem = new MDMenuItem{Activated = false};
+    [ObservableProperty]
+    private ObservableCollection<MDMenuItem> _menuItems = [
         new MDMenuItem { Title = "消息", SelectedIcon = PackIconKind.MessageText, UnselectedIcon = PackIconKind.MessageTextOutline },
         new MDMenuItem { Title = "联系人", SelectedIcon = PackIconKind.AccountGroup, UnselectedIcon = PackIconKind.AccountGroupOutline },
         new MDMenuItem { Title = "验证消息", SelectedIcon = PackIconKind.MessageAlert, UnselectedIcon = PackIconKind.MessageAlertOutline},
@@ -23,9 +23,9 @@ public partial class MainViewModel(IUserControlFactory userControlFactory) : Vie
     partial void OnSelectedMenuItemChanged(MDMenuItem? value)
     {
         if (value == null) return;
+        SelectedMenuItem = value;
         foreach (var item in MenuItems)
             item.Activated = false;
-        value.Activated = true;
         SwitchPage(value.Title);
     }
 
@@ -34,16 +34,14 @@ public partial class MainViewModel(IUserControlFactory userControlFactory) : Vie
         switch (title)
         {
             case "消息":
-                // Switch to message page
                 break;
             case "联系人":
-                // Switch to contacts page
+                if (SelectedMenuItem != null)
+                    SelectedMenuItem.Activated = true;
                 break;
             case "验证消息":
-                // Switch to verification messages page
                 break;
             case "设置":
-                // Switch to settings page
                 break;
         }
     }

@@ -1,8 +1,8 @@
 ﻿using QQLike.Functional.Utils;
 using QQLike.Entity;
 using QQLike.Entity.Common;
-using QQLike.Entity.DTO;
 using QQLike.Entity.Model;
+using QQLike.Entity.Result;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
@@ -61,7 +61,7 @@ public class UserService(IFreeSql orm,
         }
     }
 
-    public async Task<ResponseResult<UserLoginDTO>> Login(UserLoginModel  model)
+    public async Task<ResponseResult<UserLoginVO>> Login(UserLoginModel  model)
     {
         using var worker = orm.CreateUnitOfWork();
         try
@@ -70,33 +70,25 @@ public class UserService(IFreeSql orm,
                 .Where(u => u.Account == model.UserAccount)
                 .FirstAsync();
             if(user == null)
-                return ResponseResult.Fail("用户不存在").Generic<UserLoginDTO>();
+                return ResponseResult.Fail("用户不存在").Generic<UserLoginVO>();
             if(user.Password != model.Password)
-                return ResponseResult.Fail("密码错误").Generic<UserLoginDTO>();
+                return ResponseResult.Fail("密码错误").Generic<UserLoginVO>();
             var token = jwtService.Generate(new UserTokenInfo{ UserId = user.Id }, Constants.TokenExpire);
             await redis.SetAsync($"{user.Id}_{CachingKeys.UserToken}", token, Constants.TokenExpire);
             user.LastLoginTime = DateTime.Now;
             user.IsOnline = true;
-            var userDTO = user.MapTo(new UserLoginDTO());
+            var userDTO = user.MapTo(new UserLoginVO());
             userDTO.Token = token;
             userDTO.UserId = user.Id;
             await worker.Orm.Update<User>().SetSource(user).ExecuteAffrowsAsync();
             worker.Commit();
-            return ResponseResult<UserLoginDTO>.OK("登录成功", userDTO);
+            return ResponseResult<UserLoginVO>.OK("登录成功", userDTO);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             worker.Rollback();
-            return ResponseResult.Fail($"登录过程中程序出现异常:{e.Message}").Generic<UserLoginDTO>();
+            return ResponseResult.Fail($"登录过程中程序出现异常:{e.Message}").Generic<UserLoginVO>();
         }
-    }
-
-    public async Task<ResponseResult<List<long>>> GetUserContactGroups(string userId)
-    {
-        var groupIds = await orm.Select<UserContactGroup>()
-            .Where(ucg => ucg.UserId == userId)
-            .ToListAsync(e=>e.Id);
-        return ResponseResult<List<long>>.OK("获取成功", groupIds);
     }
 }

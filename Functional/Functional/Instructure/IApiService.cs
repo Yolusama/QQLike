@@ -1,4 +1,4 @@
-﻿using QQLike.Entity.DTO;
+﻿using QQLike.Entity.Result;
 
 namespace QQLike.Functional.Instructure;
 

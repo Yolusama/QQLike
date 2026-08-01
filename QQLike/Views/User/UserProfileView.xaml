@@ -4,9 +4,75 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:QQLike.Views.User"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="UserProfileView" Height="450" Width="800">
-    <Grid>
-        
+    <Grid Margin="80">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Ellipse Grid.Column="0" Width="100" Height="100" Stroke="Transparent" StrokeThickness="2">
+                <Ellipse.Fill>
+                   <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                </Ellipse.Fill>
+            </Ellipse>
+            <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center" Orientation="Vertical">
+                <TextBlock Text="{Binding Nickname}" FontSize="24" FontWeight="Bold"></TextBlock>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="QQLike" FontSize="13" Foreground="#868686"></TextBlock>
+                    <TextBlock Text="{Binding Account}" FontSize="13" Foreground="#868686" Margin="5,0,0,0"></TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="1"  Margin="0,5,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.2*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <materialDesign:PackIcon Grid.Column="0" Kind="SquareEditOutline" Height="16" Width="16" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="0" Text="个性签名:" FontSize="13" VerticalAlignment="Center" Margin="20,0,0,0"></TextBlock>
+            <TextBlock Grid.Column="1" Text="{Binding Signature}" FontSize="13" Foreground="#868686" Margin="15,0,10,0" VerticalAlignment="Center"></TextBlock>
+            <TextBox Grid.Column="1" VerticalAlignment="Center" Text="{Binding Signature, Mode=TwoWay}" Margin="15,0,10,0"></TextBox>
+        </Grid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="10,20,0,10">
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="{Binding GenderIcon}" Width="16" Height="16" VerticalAlignment="Center"
+                                         Foreground="{Binding GenderIconColor}">
+                </materialDesign:PackIcon>
+                <TextBlock Text="{Binding GenderText}" FontSize="13" Margin="5,0,0,0"></TextBlock>
+            </StackPanel>
+        </StackPanel>
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.8*"></ColumnDefinition>
+                <ColumnDefinition Width="Auto"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="AccountGroupOutline" Width="16" Height="16" VerticalAlignment="Center">
+                </materialDesign:PackIcon>
+                <TextBlock Text="好友分组" FontSize="14" Margin="5,0,0,0" VerticalAlignment="Center"></TextBlock>
+            </StackPanel>
+            <ComboBox Grid.Column="1" Width="150" Height="30" Margin="10,10,0,10"
+                      ItemsSource="{Binding FriendGroups}" DisplayMemberPath="Name"
+                      SelectedItem="{Binding SelectedFriendGroup}" /> 
+        </Grid>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,20,0,20" HorizontalAlignment="Center">
+            <Button Content="编辑资料" Width="100" Height="30" Margin="0,0,10,0" Background="#fff"
+                    Foreground="#000" materialDesign:ButtonAssist.CornerRadius="8"></Button>
+            <Button Content="发消息" Width="100" Height="30" Margin="0,0,10,0" Background="#09f"
+                    Foreground="White" materialDesign:ButtonAssist.CornerRadius="8"></Button>
+            <Button Content="加好友" Width="100" Height="30" Background="#fff" Foreground="#000"
+                    materialDesign:ButtonAssist.CornerRadius="8"></Button>
+        </StackPanel>
     </Grid>
 </Window>

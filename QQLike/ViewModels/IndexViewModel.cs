@@ -8,9 +8,10 @@ using QQLike.Components;
 using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
-using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
+using QQLike.Entity.Result;
+using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
@@ -68,7 +69,7 @@ public partial class IndexViewModel(IWindowFactory windowFactory,
             var json = JsonSerializer.Serialize(loginModel);
             var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
             var resultStr = await httpService.Request(apiUrl, HttpMethod.Post, httpContent);
-            var res = JsonSerializer.Deserialize<ResponseResult<UserLoginDTO>>(resultStr,
+            var res = JsonSerializer.Deserialize<ResponseResult<UserLoginVO>>(resultStr,
                 Constants.DesSerializerOptions);
             if (res.Success)
             {
