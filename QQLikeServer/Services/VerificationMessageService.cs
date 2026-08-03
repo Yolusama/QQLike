@@ -1,6 +1,9 @@
 ﻿using QQLike.Entity;
+using QQLike.Entity.Enum;
+using QQLike.Entity.Model;
 using QQLike.Entity.Result;
 using QQLike.Entity.VO;
+using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
 
 namespace QQLike.Services;
@@ -24,5 +27,39 @@ public class VerificationMessageService(IFreeSql orm) : IVerificationMessageServ
                 Source = e.t1.Source
             });
         return ResponseResult<List<VerificationMessageVO>>.OK(data);
+    }
+
+    public async Task<ResponseResult> AddVerificationMessage(VerificationMessageModel model)
+    {
+        using var worker = orm.CreateUnitOfWork();
+        try
+        {
+            var entity = new VerificationMessage
+            {
+                UserId = model.UserId,
+                ContactId = model.ContactId,
+                Message = model.VerificationMessage,
+                Status = VerificationMessageStatus.验证中.GetValue(),
+                Source = model.Source,
+                CreateTime = DateTime.Now,
+                IsGroup = model.IsGroup,
+                NeedConfirm = model.NeedConfirm,
+                Expire = (long)TimeSpan.FromDays(7).TotalMilliseconds // 设置过期时间为7天后
+            };
+            var entity1 = entity.MapTo(new VerificationMessage());
+            entity1.ContactId = entity.UserId;
+            entity1.UserId = model.ContactId;
+            entity1.Status = VerificationMessageStatus.待验证.GetValue();
+            await orm.Insert(new List<VerificationMessage> { entity, entity1 })
+                .ExecuteAffrowsAsync();
+            worker.Commit();
+            return ResponseResult.OK("添加成功");
+        }
+        catch (Exception e)
+        {
+            worker.Rollback();
+            Console.WriteLine(e);
+            throw;
+        }
     }
 }

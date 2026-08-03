@@ -8,6 +8,7 @@
         xmlns:components="clr-namespace:QQLike.Components"
         xmlns:user="clr-namespace:QQLike.Views.User"
         xmlns:converters="clr-namespace:QQLike.Converters"
+        xmlns:message="clr-namespace:QQLike.Views.Message"
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -15,7 +16,6 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0.1*" />
-            <ColumnDefinition Width="0.2*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
@@ -74,7 +74,8 @@
                 </Viewbox>
             </Grid>
         </Border>
-        <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.SelectedMenuItem.Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
-        
+        <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[1].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
+        <message:VerificationMessageView Grid.Column="1" Width="Auto" Height="Auto"
+                                         Grid.Row="1" Visibility="{Binding DataContext.MenuItems[2].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
     </Grid>
 </Window>

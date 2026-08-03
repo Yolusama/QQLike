@@ -34,4 +34,9 @@ public static class ExpansionService
         services.AddSingleton<IConnectionMultiplexer, ConnectionMultiplexer>(_ => redisConnect);
         services.AddScoped<IRedisCache, RedisCache>();
     }
+
+    public static T GetViewModel<T>(this FrameworkElement element)
+    {
+        return (T)element.DataContext;
+    }
 }

@@ -1,4 +1,5 @@
-﻿using System.Windows.Controls;
+﻿using System.Windows;
+using System.Windows.Controls;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -10,5 +11,11 @@ public partial class VerificationMessageView : UserControl
     {
         InitializeComponent();
         this.SetViewModel<VerificationMessageViewModel,VerificationMessageView>();
+    }
+
+    private void VerificationMessageView_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        var viewModel = this.GetViewModel<VerificationMessageViewModel>();
+        viewModel.LoadNoticesCommand.Execute(null);
     }
 }

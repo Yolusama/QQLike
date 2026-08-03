@@ -2,7 +2,11 @@
 using Microsoft.Extensions.FileProviders;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
+using QQLike.Functional;
+using QQLike.Functional.Instructure;
+using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
+using RabbitMQ.Client;
 using StackExchange.Redis;
 
 namespace QQLike.Services;
@@ -35,6 +39,20 @@ public static class ExpansionService
             FileProvider = new PhysicalFileProvider(root.FullName),
             RequestPath = "/files"
         });
+    }
+
+    public static void AddRabbitMQ(this IServiceCollection services, RabbitMQConfig config)
+    {
+        services.AddSingleton<IConnection>(_ =>
+        {
+            var connectionFactory = config.MapTo(new ConnectionFactory());
+            var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+            var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+            services.AddSingleton(channel);
+            return connection;
+        });
+        services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
+        services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();
     }
 
     public static UserTokenInfo GetJwtData(this ControllerBase controller)

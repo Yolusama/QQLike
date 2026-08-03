@@ -41,10 +41,16 @@ builder.Services.AddSingleton<IFreeSql>(_ =>
 builder.Services.AddSingleton(setting);
 builder.Services.AddSingleton<EmailConfig>(_ => builder.Configuration
     .GetSection(nameof(EmailConfig)).Get<EmailConfig>());
+builder.Services.AddSingleton<RabbitMQConfig>(_ => builder.Configuration
+    .GetSection(nameof(RabbitMQConfig)).Get<RabbitMQConfig>());
 var jwtConfig = builder.Configuration.GetSection(nameof(JwtConfig)).Get<JwtConfig>();
 builder.Services.AddSingleton<JwtConfig>(jwtConfig);
 var fileConfig = builder.Configuration.GetSection(nameof(FileConfig)).Get<FileConfig>();
 builder.Services.AddSingleton(fileConfig);
+
+var rabbitMQConfig = builder.Configuration.GetSection(nameof(RabbitMQConfig)).Get<RabbitMQConfig>();
+builder.Services.AddSingleton(rabbitMQConfig);
+builder.Services.AddRabbitMQ(rabbitMQConfig);
 
 builder.Services.AddScoped<IProjectLogger, ProjectLogger>(_ => new ProjectLogger(setting.LogPath));
 builder.Services.AddScoped<IEmailSender, EmailSender>();

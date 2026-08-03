@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using QQLike.Entity.VO;
 
 namespace QQLike.Functional.Utils;
 
@@ -35,4 +36,6 @@ public static class ExpansionUtils
         }
         return dest;
     }
+
+   
 }

@@ -104,7 +104,7 @@ public partial class IndexViewModel(IWindowFactory windowFactory,
                     return;
                 var window = windowFactory.GetWindow<MainView>();
                 window.Show();
-                View.Hide();
+                View.Close();
             }
             else
             {

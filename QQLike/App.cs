@@ -6,13 +6,17 @@ using QQLike.Components;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;
 using QQLike.Functional.Instructure;
+using QQLike.Functional.Utils;
 using QQLike.Services;
 using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
 using QQLike.Views;
 using QQLike.Views.Message;
 using QQLike.Views.User;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using SqlSugar;
+using ConnectionConfig = SqlSugar.ConnectionConfig;
 
 namespace QQLike;
 
@@ -37,9 +41,9 @@ public partial class App : Application
     private void ConfigureServices(IServiceCollection services)
     {
         // 注册服务和依赖项
-        services.AddSingleton<Index>();
+        services.AddTransient<Index>();
         
-        services.AddSingleton<IndexViewModel>();
+        services.AddTransient<IndexViewModel>();
         services.AddTransient<EntryHeaderViewModel>();
         services.AddSingleton<AppHeaderViewModel>();
         
@@ -85,6 +89,7 @@ public partial class App : Application
         services.AddSingleton<ISessionStorage,SessionStorage>();
         services.AddScoped<IApiService,ApiService>();
         services.AddScoped<IUserControlFactory,UserControlFactory>();
+        AddRabbitMQ(services,config);
     }
 
     private void AddConfiguration<T>(IServiceCollection services,IConfiguration configuration) where T : class
@@ -94,13 +99,29 @@ public partial class App : Application
         services.AddSingleton(configInstance);
     }
 
+    private void AddRabbitMQ(IServiceCollection services, IConfiguration configuration)
+    {
+        var rabbitMQConfig = configuration.GetSection(nameof(RabbitMQConfig)).Get<RabbitMQConfig>();
+        services.AddSingleton(rabbitMQConfig);
+        services.AddSingleton<IConnection>(_ =>
+        {
+            var connectionFactory = rabbitMQConfig.MapTo(new ConnectionFactory());
+            var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+            var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+            services.AddSingleton(channel);
+            return connection;
+        });
+        services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
+        services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();
+    }
+
     private void RegisterViewOptions(IServiceCollection services)
     {
         //每次需要重新建立使用瞬时实例服务
         services.AddTransient<RegisterView>();
         services.AddTransient<RegisterViewModel>();
-        services.AddSingleton<MainView>();
-        services.AddSingleton<MainViewModel>();
+        services.AddTransient<MainView>();
+        services.AddTransient<MainViewModel>();
         services.AddTransient<LoadingComponent>();
         services.AddTransient<LoadingViewModel>();
         services.AddTransient<MessageComponent>();
@@ -109,8 +130,8 @@ public partial class App : Application
         services.AddTransient<NotificationViewModel>();
         services.AddTransient<MessageBoxComponent>();
         services.AddTransient<MessageBoxViewModel>();
-        services.AddSingleton<UserContactView>();
-        services.AddSingleton<UserContactViewModel>();
+        services.AddTransient<UserContactView>();
+        services.AddTransient<UserContactViewModel>();
         services.AddScoped<UserSearchHeader>();
         services.AddScoped<UserSearchHeaderViewModel>();
         services.AddTransient<UserSearchHeader>();
@@ -121,6 +142,8 @@ public partial class App : Application
         services.AddTransient<UserContactManageView>();
         services.AddTransient<UserContactManageViewModel>();
         services.AddTransient<VerificationMessageView>();
-        services.AddSingleton<VerificationMessageViewModel>();
+        services.AddTransient<VerificationMessageViewModel>();
+        services.AddTransient<UserCardViewModel>();
+        services.AddTransient<UserCard>();
     }
 }

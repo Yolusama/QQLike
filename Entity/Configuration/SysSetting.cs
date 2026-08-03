@@ -8,4 +8,6 @@ public class SysSetting
     public string LogPath { get; set; }
     public string RedisConnectionString { get; set; }
     public string ApiUrl { get; set; }
+    public string SocketUrl { get; set; }
+    public int SocketServerPort  { get; set; }
 }
