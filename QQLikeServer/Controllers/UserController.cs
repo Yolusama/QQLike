@@ -22,4 +22,10 @@ public class UserController(IUserService userService) : ControllerBase
         return await userService.Register(model);
     }
     
+    [HttpGet]
+    public async Task<ActionResult<ResponseResult<UserVerifyInfo>>> GetUserVerifyInfo([FromQuery] string account)
+    {
+        return await userService.GetUserVerifyInfo(account);
+    }
+    
 }

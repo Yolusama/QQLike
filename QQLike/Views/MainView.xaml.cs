@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.ComponentModel;
+using System.Windows;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -10,5 +11,17 @@ public partial class MainView : Window
     {
         InitializeComponent();
         this.SetViewModel(viewModel);
+    }
+
+    private void MainView_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if(DataContext is MainViewModel viewModel)
+            viewModel.StartMQConsumingCommand.Execute(null);
+    }
+
+    private void MainView_OnClosing(object sender, CancelEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+            viewModel.ClosingApplicationCommand.Execute(null);
     }
 }

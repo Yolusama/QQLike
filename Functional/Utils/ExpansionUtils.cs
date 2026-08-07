@@ -37,5 +37,11 @@ public static class ExpansionUtils
         return dest;
     }
 
+    public static T2 MapTo<T1, T2>(this T1 src)
+    {
+        // Map properties from src to instance
+        var dest = Activator.CreateInstance<T2>();
+        return src.MapTo(dest);
+    }
    
 }

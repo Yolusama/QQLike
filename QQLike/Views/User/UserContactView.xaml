@@ -7,6 +7,9 @@
              xmlns:entity="clr-namespace:QQLike.Entity;assembly=Entity"
              xmlns:domain="clr-namespace:QQLike.Domain"
              xmlns:vo="clr-namespace:QQLike.Entity.VO;assembly=Entity"
+             xmlns:components="clr-namespace:QQLike.Components"
+             xmlns:user="clr-namespace:QQLike.Views.User"
+             xmlns:group="clr-namespace:QQLike.Views.Group"
              mc:Ignorable="d"
              Loaded="OnLoaded"
              d:DesignHeight="700" d:DesignWidth="300">
@@ -16,9 +19,15 @@
     <Grid Background="{DynamicResource MaterialDesignPaper}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0" Margin="12,14,12,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.3*" />
+            <ColumnDefinition Width="Auto"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <components:UserSearchHeader/>
+        <StackPanel Grid.Row="1" Margin="12,14,12,0" Grid.Column="0">
             <Button Height="44"
                     Margin="0,0,0,12"
                     Command="{Binding OpenUserContactManageCommand}"
@@ -54,7 +63,7 @@
             </Border>
         </StackPanel>
 
-        <Grid Grid.Row="1" Margin="12,0,12,12">
+        <Grid Grid.Row="2" Margin="12,0,12,12">
             <TreeView ItemsSource="{Binding UserContactGroups}"
                       x:Name="UserContactTreeView">
                 <TreeView.Style>
@@ -113,6 +122,14 @@
                 </TreeView.Resources>
             </TreeView>
             
+        </Grid>
+        <Grid Row="0" Grid.Column="1">
+            <user:UserProfileView 
+                Width="300" Margin="12,0,0,0" HorizontalAlignment="Center" 
+                VerticalAlignment="Center" Visibility="{Binding IsUserProfileVisible, Converter={StaticResource BoolVisibilityConverter}}" />
+            <group:GroupProfileView 
+                Width="300" Margin="12,0,0,0" HorizontalAlignment="Center" 
+                VerticalAlignment="Center" Visibility="{Binding IsGroupProfileVisible, Converter={StaticResource BoolVisibilityConverter}}" />
         </Grid>
     </Grid>
 </UserControl>

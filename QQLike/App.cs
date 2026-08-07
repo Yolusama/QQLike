@@ -11,10 +11,10 @@ using QQLike.Services;
 using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
 using QQLike.Views;
+using QQLike.Views.Group;
 using QQLike.Views.Message;
 using QQLike.Views.User;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using SqlSugar;
 using ConnectionConfig = SqlSugar.ConnectionConfig;
 
@@ -103,14 +103,11 @@ public partial class App : Application
     {
         var rabbitMQConfig = configuration.GetSection(nameof(RabbitMQConfig)).Get<RabbitMQConfig>();
         services.AddSingleton(rabbitMQConfig);
-        services.AddSingleton<IConnection>(_ =>
-        {
-            var connectionFactory = rabbitMQConfig.MapTo(new ConnectionFactory());
-            var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
-            var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-            services.AddSingleton(channel);
-            return connection;
-        });
+        var connectionFactory = rabbitMQConfig.MapTo<RabbitMQConfig,ConnectionFactory>();
+        var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+        var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+        services.AddScoped(_ => channel);
+        services.AddSingleton(connection);
         services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
         services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();
     }
@@ -145,5 +142,11 @@ public partial class App : Application
         services.AddTransient<VerificationMessageViewModel>();
         services.AddTransient<UserCardViewModel>();
         services.AddTransient<UserCard>();
+        services.AddTransient<VerifyDialogViewModel>();
+        services.AddTransient<VerifyDialog>();
+        services.AddTransient<UserProfileView>();
+        services.AddTransient<UserProfileViewModel>();
+        services.AddTransient<GroupProfileView>();
+        services.AddTransient<GroupProfileViewModel>();
     }
 }

@@ -12,6 +12,8 @@
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
+        Loaded="MainView_OnLoaded"
+        Closing="MainView_OnClosing"
         Title="MainView" Height="720" Width="1200">
     <Grid>
         <Grid.ColumnDefinitions>

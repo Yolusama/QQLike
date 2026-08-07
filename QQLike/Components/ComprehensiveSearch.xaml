@@ -1,19 +1,36 @@
 ﻿<Window x:Class="QQLike.Components.ComprehensiveSearch"
+        x:Name="Root"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:QQLike.Components"
+        xmlns:domain="clr-namespace:QQLike.Domain"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:converters="clr-namespace:QQLike.Converters"
         mc:Ignorable="d"
         Title="综合搜索" Height="600" Width="800"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
+        AllowsTransparency="True"
         ResizeMode="NoResize"
-        Background="White">
+        Background="Transparent">
+    <Window.Resources>
+        <converters:BoolVisibilityConverter2 x:Key="BoolVisibilityConverter" />
+        <Style x:Key="TagBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FFF5F7FA" />
+            <Setter Property="BorderBrush" Value="#FFE5E9EF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+    <!-- 圆角边框包裹整个页面内容 -->
+    <Border Background="White" CornerRadius="12" ClipToBounds="True">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -37,6 +54,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      materialDesign:TextFieldAssist.HasLeadingIcon="True"
                      materialDesign:TextFieldAssist.HasClearButton="True"
                      materialDesign:TextFieldAssist.LeadingIcon="Magnify"
@@ -59,80 +77,259 @@
                     materialDesign:ButtonAssist.CornerRadius="6"
                     Command="{Binding SearchCommand}" />
         </Grid>
+
+        <!-- Tab Toggle Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" 
+                    HorizontalAlignment="Center" Margin="0,0,0,16">
+            <StackPanel.Resources>
+                <Style x:Key="TabToggleStyle" TargetType="ToggleButton">
+                    <Setter Property="Width" Value="120" />
+                    <Setter Property="Height" Value="34" />
+                    <Setter Property="FontSize" Value="14" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="#FF7F8791" />
+                    <Setter Property="BorderBrush" Value="#FFD0D5DD" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="Cursor" Value="Hand" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="0">
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Background" Value="#FF1E90FF" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="BorderBrush" Value="#FF1E90FF" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#FFE8F4FD" />
+                            <Setter Property="Foreground" Value="#FF1E90FF" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+
+                <Style x:Key="TabToggleLeftStyle" TargetType="ToggleButton" BasedOn="{StaticResource TabToggleStyle}">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="6,0,0,6"
+                                        Padding="0">
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+
+                <Style x:Key="TabToggleRightStyle" TargetType="ToggleButton" BasedOn="{StaticResource TabToggleStyle}">
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ToggleButton">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="0,6,6,0"
+                                        Padding="0">
+                                    <ContentPresenter HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </StackPanel.Resources>
+            <ToggleButton Style="{StaticResource TabToggleLeftStyle}"
+                          Content="群聊"
+                          IsChecked="{Binding IsGroupTabActive}"
+                          Command="{Binding SwitchTabCommand}"
+                          CommandParameter="Group" />
+            <ToggleButton Style="{StaticResource TabToggleRightStyle}"
+                          Content="用户"
+                          IsChecked="{Binding IsUserTabActive}"
+                          Command="{Binding SwitchTabCommand}"
+                          CommandParameter="User" />
+        </StackPanel>
+
         <!-- Search Results List -->
-        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
-            <ItemsControl Margin="16,0,16,16">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Padding="0,10"
-                                BorderBrush="#FFF0F0F0"
-                                BorderThickness="0,0,0,1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
+        <local:InfinityScrollView x:Name="ResultsScrollViewer" Grid.Row="3"
+                                  VerticalScrollBarVisibility="Auto"
+                                  LoadMoreCommand="{Binding LoadDataCommand}"
+                                  IsLoading="{Binding IsLoading}">
+            <StackPanel Margin="16,0,16,16">
+                <!-- Group Results -->
+                <StackPanel Visibility="{Binding IsGroupTabActive, Converter={StaticResource BoolVisibilityConverter}}">
+                    <TextBlock Text="群聊"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#FF4B4B4B"
+                               Margin="0,0,0,8" />
 
-                                <!-- Avatar -->
-                                <Ellipse Grid.Column="0"
-                                         Width="48" Height="48"
-                                         VerticalAlignment="Top"
-                                         Margin="0,0,12,0"
-                                         Stroke="#FFE0E0E0"
-                                         StrokeThickness="1">
-                                    <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding Avatar}"
-                                                    Stretch="UniformToFill" />
-                                    </Ellipse.Fill>
-                                </Ellipse>
+                    <ItemsControl ItemsSource="{Binding GroupResults}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:GroupComprehensiveItem}">
+                                <Border Padding="0,12"
+                                        BorderBrush="#FFF0F0F0"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
 
-                                <!-- Info -->
-                                <StackPanel Grid.Column="1" VerticalAlignment="Top">
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="15" FontWeight="SemiBold"
-                                               Foreground="#FF222222" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Text="{Binding MemberCount}"
-                                                   FontSize="12"
-                                                   Foreground="#FF999999" />
-                                        <TextBlock Text="{Binding Tag1}"
-                                                   FontSize="12"
-                                                   Foreground="#FF999999"
-                                                   Margin="8,0,0,0"
-                                                   Background="#FFF5F5F5"
-                                                   Padding="4,1" />
-                                        <TextBlock Text="{Binding Tag2}"
-                                                   FontSize="12"
-                                                   Foreground="#FF999999"
-                                                   Margin="8,0,0,0"
-                                                   Background="#FFF5F5F5"
-                                                   Padding="4,1" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Description}"
-                                               FontSize="13"
-                                               Foreground="#FF888888"
-                                               Margin="0,6,0,0"
-                                               TextWrapping="Wrap"
-                                               MaxWidth="500"
-                                               TextTrimming="CharacterEllipsis" />
-                                </StackPanel>
+                                        <Ellipse Grid.Column="0"
+                                                 Width="52" Height="52"
+                                                 Margin="0,0,12,0"
+                                                 Stroke="#FFE0E0E0"
+                                                 StrokeThickness="1">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                            </Ellipse.Fill>
+                                        </Ellipse>
 
-                                <!-- Join Button -->
-                                <Button Grid.Column="2"
-                                        Content="加入"
-                                        Width="72" Height="32"
-                                        VerticalAlignment="Top"
-                                        Style="{StaticResource MaterialDesignOutlinedButton}"
-                                        materialDesign:ButtonAssist.CornerRadius="16"
-                                        FontSize="13"
-                                        Command="{Binding JoinCommand}"
-                                        CommandParameter="{Binding}" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="#FF111111">
+                                                <Run Text="{Binding Name}" />
+                                                <Run Text="  (" Foreground="#FF0A84FF" />
+                                                <Run Text="{Binding GroupNum}" Foreground="#FF0A84FF" />
+                                                <Run Text=")" Foreground="#FF0A84FF" />
+                                            </TextBlock>
+
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <Border Style="{StaticResource TagBorderStyle}">
+                                                    <TextBlock FontSize="12" Foreground="#FF9098A5">
+                                                        <Run Text="成员 " />
+                                                        <Run Text="{Binding CurrentCount}" />
+                                                        <Run Text="/" />
+                                                        <Run Text="{Binding TotalCount}" />
+                                                    </TextBlock>
+                                                </Border>
+
+                                                <Border Style="{StaticResource TagBorderStyle}"
+                                                        x:Name="CreateTag">
+                                                    <TextBlock FontSize="12" Foreground="#FF9098A5">
+                                                        <Run Text="{Binding TimeText}" />
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding Description}"
+                                                       FontSize="13"
+                                                       Foreground="#FF7F8791"
+                                                       Margin="0,8,0,0"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="520"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2"
+                                                Content="加入"
+                                                Width="82" Height="36"
+                                                Margin="8,0,0,0"
+                                                VerticalAlignment="Top"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                materialDesign:ButtonAssist.CornerRadius="18"
+                                                FontSize="14"
+                                                Command="{Binding DataContext.JoinGroupCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </Border>
+
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding CreateTime}" Value="{x:Null}">
+                                        <Setter TargetName="CreateTag" Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- User Results -->
+                <StackPanel Visibility="{Binding IsUserTabActive, Converter={StaticResource BoolVisibilityConverter}}">
+                    <TextBlock Text="用户"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#FF4B4B4B"
+                               Margin="0,0,0,8" />
+
+                    <ItemsControl ItemsSource="{Binding UserResults}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type domain:UserComprehensiveItem}">
+                                <Border Padding="0,12"
+                                        BorderBrush="#FFF0F0F0"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Ellipse Grid.Column="0"
+                                                 Width="52" Height="52"
+                                                 Margin="0,0,12,0"
+                                                 Stroke="#FFE0E0E0"
+                                                 StrokeThickness="1">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="#FF111111">
+                                                <Run Text="{Binding Nickname}" />
+                                                <Run Text=" (" Foreground="#FF0A84FF" />
+                                                <Run Text="{Binding Account}" Foreground="#FF0A84FF" />
+                                                <Run Text=")" Foreground="#FF0A84FF" />
+                                            </TextBlock>
+
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <Border Style="{StaticResource TagBorderStyle}">
+                                                    <TextBlock FontSize="12" Foreground="#FF9098A5" Text="账号" />
+                                                </Border>
+                                                <Border Style="{StaticResource TagBorderStyle}">
+                                                    <TextBlock FontSize="12" Foreground="#FF9098A5" Text="用户" />
+                                                </Border>
+                                            </StackPanel>
+
+                                            <TextBlock FontSize="13"
+                                                       Foreground="#FF7F8791"
+                                                       Margin="0,8,0,0"
+                                                       Text="{Binding Account, StringFormat=QQLike 号：{0}}" />
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2"
+                                                Content="加好友"
+                                                Width="82" Height="36"
+                                                Margin="8,0,0,0"
+                                                VerticalAlignment="Top"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                materialDesign:ButtonAssist.CornerRadius="18"
+                                                FontSize="14"
+                                                Command="{Binding DataContext.AddUserCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </local:InfinityScrollView>
     </Grid>
+    </Border>
 </Window>

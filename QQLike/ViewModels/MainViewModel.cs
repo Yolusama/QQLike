@@ -4,16 +4,22 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MaterialDesignThemes.Wpf;
 using QQLike.Domain;
+using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
 using QQLike.Views;
+using RabbitMQ.Client.Events;
+using SqlSugar;
+using Constants = QQLike.Entity.Common.Constants;
 
 namespace QQLike.ViewModels;
 
 public partial class MainViewModel(ISessionStorage sessionStorage,
+    IRabbitMQConsumer mqConsumer,
+    ISqlSugarClient sugarClient,
     SysSetting setting) : ViewModelBase<MainView>, IDisposable
 {
     private static readonly TimeSpan ReceiveDelay = TimeSpan.FromSeconds(1);
@@ -24,18 +30,20 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
     [ObservableProperty]
     private ObservableCollection<MDMenuItem> _menuItems =
     [
-        new MDMenuItem { Title = "消息", SelectedIcon = PackIconKind.MessageText, UnselectedIcon = PackIconKind.MessageTextOutline },
-        new MDMenuItem { Title = "联系人", SelectedIcon = PackIconKind.AccountGroup, UnselectedIcon = PackIconKind.AccountGroupOutline },
-        new MDMenuItem { Title = "验证消息", SelectedIcon = PackIconKind.MessageAlert, UnselectedIcon = PackIconKind.MessageAlertOutline },
-        new MDMenuItem { Title = "设置", SelectedIcon = PackIconKind.Cog, UnselectedIcon = PackIconKind.CogOutline }
+        new MDMenuItem { Key = nameof(ChatMessage), Title = "消息", SelectedIcon = PackIconKind.MessageText, UnselectedIcon = PackIconKind.MessageTextOutline },
+        new MDMenuItem { Key = nameof(UserContact), Title = "联系人", SelectedIcon = PackIconKind.AccountGroup, UnselectedIcon = PackIconKind.AccountGroupOutline },
+        new MDMenuItem { Key = nameof(VerificationMessage), Title = "验证消息", SelectedIcon = PackIconKind.MessageAlert, UnselectedIcon = PackIconKind.MessageAlertOutline },
+        new MDMenuItem { Key = nameof(SysSetting), Title = "设置", SelectedIcon = PackIconKind.Cog, UnselectedIcon = PackIconKind.CogOutline }
     ];
 
     private readonly SemaphoreSlim _socketGate = new(1, 1);
+    private readonly SemaphoreSlim _mqGate = new(1, 1);
     private readonly byte[] _receiveBuffer = new byte[4 * 1024];
 
     private Socket? _client;
     private Task? _receiveTask;
     private CancellationTokenSource _cts = new();
+    private bool _mqStarted;
     private bool _disposed;
 
     [RelayCommand]
@@ -103,6 +111,7 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
     private void OpenUserProfile()
     {
     }
+    
 
     private async Task Receive(CancellationToken cancellationToken)
     {
@@ -146,6 +155,52 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
                 Console.WriteLine(e);
                 await Task.Delay(ReceiveDelay, cancellationToken);
             }
+        }
+    }
+
+    [RelayCommand]
+    private async Task StartMQConsuming()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await _mqGate.WaitAsync();
+        try
+        {
+            if (_mqStarted)
+            {
+                return;
+            }
+
+            mqConsumer.SetHandler(ConsumeMessage);
+            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, nameof(VerificationMessage));
+            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, nameof(ChatMessage));
+            _mqStarted = true;
+        }
+        finally
+        {
+            _mqGate.Release();
+        }
+    }
+    private async Task ConsumeMessage(object data,BasicDeliverEventArgs ea)
+    {
+        if (ea.RoutingKey == nameof(VerificationMessage))
+        {
+            var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(VerificationMessage));
+            if (menuItem is null) return;
+            var unreadCount =await sugarClient.Queryable<VerificationMessage>()
+                .Where(e=>!e.IsRead)
+                .CountAsync();
+            menuItem.Notification = unreadCount.ToString();
+        }
+
+        if (ea.RoutingKey == nameof(ChatMessage))
+        {
+            var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(ChatMessage));
+            if (menuItem is null) return;
+            var unreadCount = await sugarClient.Queryable<ChatMessage>()
+                //.Where(e=>!e.IsRead)
+                .CountAsync();
+            menuItem.Notification = unreadCount.ToString();
         }
     }
 
@@ -195,5 +250,17 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
 
         _cts.Dispose();
         _socketGate.Dispose();
+        _mqGate.Dispose();
+        mqConsumer.RemoveHandler();
+    }
+
+    [RelayCommand]
+    private async Task ClosingApplication()
+    { 
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        await sugarClient.Updateable<User>()
+            .SetColumns(e => e.IsOnline == false)
+            .Where(e=>e.Id == user.UserId)
+            .ExecuteCommandAsync();
     }
 }

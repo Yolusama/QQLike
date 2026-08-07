@@ -43,15 +43,12 @@ public static class ExpansionService
 
     public static void AddRabbitMQ(this IServiceCollection services, RabbitMQConfig config)
     {
-        services.AddSingleton<IConnection>(_ =>
-        {
-            var connectionFactory = config.MapTo(new ConnectionFactory());
-            var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
-            var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-            services.AddSingleton(channel);
-            return connection;
-        });
-        services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
+        var connectionFactory = config.MapTo(new ConnectionFactory());
+        var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+        var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+        services.AddScoped(_ => channel);
+        services.AddSingleton(connection);
+        services.AddScoped<IRabbitMQProducer, RabbitMQProducer>();
         services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();
     }
 

@@ -24,6 +24,7 @@
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Padding="10"
                      LostFocus="TextBox_LostFocus"
+                     GotFocus="TextBox_GotFocus"
                      TextChanged="TextBox_TextChanged"
                      materialDesign:HintAssist.Hint="搜索"
                      materialDesign:TextFieldAssist.HasLeadingIcon="True"
@@ -34,12 +35,23 @@
                     Width="40"
                     Height="40"
                     Margin="8,0,0,0"
+                    Padding="0"
+                    MinWidth="0"
+                    MinHeight="0"
                     Background="#ebebeb"
+                    Foreground="#FF333333"
+                    Command="{Binding ShowAddingCommand}"
+                    LostFocus="Button_LostFocus"
                     Style="{StaticResource MaterialDesignOutlinedButton}">
-                <materialDesign:PackIcon Kind="Plus" Width="36" Height="36" />
+                <materialDesign:PackIcon Kind="Plus"
+                                         Width="18"
+                                         Height="18"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Button>
             <Border Grid.Row="1" Grid.Column="1" BorderThickness="1" BorderBrush="#fff" CornerRadius="4"
-                    Margin="12,10,0,0"
+                    Margin="12,10,0,0" 
                     Visibility="{Binding IsAdding, Converter={StaticResource BoolVisibilityConverter2}}">
                 <StackPanel Margin="0,8,0,0" Orientation="Vertical">
                     <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
@@ -67,7 +79,9 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"></RowDefinition>
                             <RowDefinition Height="Auto"></RowDefinition>
+                            <RowDefinition Height="Auto"></RowDefinition>
                         </Grid.RowDefinitions>
+
                         <StackPanel Grid.Row="0" Margin="0,8,0,0">
                             <TextBlock Text="联系人" Foreground="Gray"></TextBlock>
                             <ListBox ItemsSource="{Binding UserResults}" Height="Auto">
@@ -121,6 +135,29 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                         </StackPanel>
+
+                        <Button Grid.Row="2"
+                                Margin="0,14,0,4"
+                                Padding="10"
+                                MinHeight="64"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding OpenComprehensiveSearchCommand}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="36" Height="36" Background="#FF1E90FF" CornerRadius="18" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="Magnify" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="进入综合搜索" FontSize="16" Foreground="#FF111111" />
+                                    <TextBlock Text="查找用户、群聊等" FontSize="12" Foreground="#FF9AA0A6" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Button>
                     </Grid>
                 </ScrollViewer>
             </Border>

@@ -52,4 +52,6 @@ public class VerificationMessage
     /// 创建时间
     /// </summary>
     public DateTime? CreateTime { get; set; }
+    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint")]
+    public bool IsRead { get; set; }
 }

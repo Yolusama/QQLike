@@ -9,4 +9,5 @@ public interface IUserContactService
     public Task<ResponseResult<List<long>>> GetUserContactGroups(string userId);
     public Task<ResponseResult<List<UserContactGroupingVO>>> GetUserContactGrouping(string userId);
     public Task<ResponseResult<long>> AddUserContactGroup(UserContactGroupModel model);
+    //public Task<ResponseResult<long>> AddUserContact(UserContactModel model);
 }

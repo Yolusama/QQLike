@@ -91,4 +91,22 @@ public class UserService(IFreeSql orm,
             return ResponseResult.Fail($"登录过程中程序出现异常:{e.Message}").Generic<UserLoginVO>();
         }
     }
+
+    public async Task<ResponseResult<UserVerifyInfo>> GetUserVerifyInfo(string account)
+    {
+        var user = await orm.Select<User>()
+            .Where(u => u.Account == account)
+            .FirstAsync();
+        if(user == null)
+            return ResponseResult.Fail("用户不存在").Generic<UserVerifyInfo>();
+        var res = new UserVerifyInfo();
+        res.Avatar = user.Avatar;
+        res.Nickname = user.Nickname;
+        res.UserId = user.Id;
+        var contactGroups = await orm.Select<UserContactGroup>()
+            .Where(c => c.UserId == user.Id && !c.IsGroup)
+            .ToListAsync();
+        res.ContactGroups = contactGroups;
+        return ResponseResult<UserVerifyInfo>.OK("获取用户验证信息成功", res);
+    }
 }

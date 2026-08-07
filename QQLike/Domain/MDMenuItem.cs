@@ -15,4 +15,5 @@ public partial class MDMenuItem : ObservableObject
     private bool _activated;
     [ObservableProperty]
     private string? _notification;
+    public string Key { get; set; }
 }

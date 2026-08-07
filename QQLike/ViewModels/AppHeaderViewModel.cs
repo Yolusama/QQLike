@@ -79,7 +79,6 @@ public partial class AppHeaderViewModel : ViewModelBase<AppHeader>
     [RelayCommand]
     private void OpenUserProfileCommand()
     {
-       var userProfileWindow = windowFactory.GetWindow<UserProfileView>();
-       userProfileWindow.Show();
+      
     }
 }

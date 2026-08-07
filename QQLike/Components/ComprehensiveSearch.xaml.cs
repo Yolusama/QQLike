@@ -7,7 +7,7 @@ namespace QQLike.Components;
 
 public partial class ComprehensiveSearch : Window
 {
-    public ComprehensiveSearch(ComprehensiveSearchViewModel  viewModel)
+    public ComprehensiveSearch(ComprehensiveSearchViewModel viewModel)
     {
         InitializeComponent();
         this.SetViewModel(viewModel);
@@ -15,6 +15,7 @@ public partial class ComprehensiveSearch : Window
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        DragMove();
+        if (e.ChangedButton == MouseButton.Left)
+            DragMove();
     }
 }

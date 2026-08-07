@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QQLike.Components;
@@ -7,10 +8,11 @@ using QQLike.Entity;
 using QQLike.Entity.Configuration;
 using QQLike.Functional.Instructure;
 using SqlSugar;
+using QQLike.Services.Interfaces;
 
 namespace QQLike.ViewModels;
 
-public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysSetting setting) : ViewModelBase<UserSearchHeader>
+public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysSetting setting, IWindowFactory windowFactory) : ViewModelBase<UserSearchHeader>
 {
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -25,6 +27,11 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
 
     private CancellationTokenSource? _cts;
 
+    public void ShowSearch()
+    {
+        IsSearching = true;
+    }
+    
     public void CancelSearch()
     {
         _cts?.Cancel();
@@ -53,8 +60,7 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
         {
             // 300ms 防抖，等待用户停止输入
             await Task.Delay(300, token);
-
-            IsSearching = true;
+            
             UserResults.Clear();
             GroupResults.Clear();
 
@@ -110,5 +116,24 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
         {
             // 搜索被取消，静默处理
         }
+    }
+    
+    [RelayCommand]
+    private void ShowAdding()
+    {
+        IsAdding = true;
+    }
+    
+    [RelayCommand]
+    private void CancelAdding()
+    {
+        IsAdding = false;
+    }
+
+    [RelayCommand]
+    private void OpenComprehensiveSearch()
+    {
+        IsSearching = false;
+        windowFactory.GetAndShowWindow<ComprehensiveSearch>(Window.GetWindow(View));
     }
 }

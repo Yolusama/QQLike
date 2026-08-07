@@ -9,4 +9,5 @@ public interface IUserService
    // public ResponseResult Login(string userAccount, string password);
    public Task<ResponseResult<string>> Register(UserRegisterModel user);
    public Task<ResponseResult<UserLoginVO>> Login(UserLoginModel user);
+   public Task<ResponseResult<UserVerifyInfo>> GetUserVerifyInfo(string account);
 }

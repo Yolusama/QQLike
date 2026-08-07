@@ -10,4 +10,5 @@ public static class Constants
     {
         PropertyNameCaseInsensitive = true
     };
+    public const string MQExchange = "QQLike";
 }

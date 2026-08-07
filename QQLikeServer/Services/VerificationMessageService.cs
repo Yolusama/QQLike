@@ -1,14 +1,17 @@
-﻿using QQLike.Entity;
+﻿using System.Text.Json;
+using QQLike.Entity;
+using QQLike.Entity.Common;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Entity.Result;
 using QQLike.Entity.VO;
+using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
 
 namespace QQLike.Services;
 
-public class VerificationMessageService(IFreeSql orm) : IVerificationMessageService
+public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProducer) : IVerificationMessageService
 {
     public async Task<ResponseResult<List<VerificationMessageVO>>> GetVerificationMessages(string userId, bool? isGroup)
     {
@@ -52,6 +55,8 @@ public class VerificationMessageService(IFreeSql orm) : IVerificationMessageServ
             entity1.Status = VerificationMessageStatus.待验证.GetValue();
             await orm.Insert(new List<VerificationMessage> { entity, entity1 })
                 .ExecuteAffrowsAsync();
+            await mqProducer.Produce(nameof(VerificationMessage),Constants.MQExchange,
+                nameof(VerificationMessage),JsonSerializer.Serialize(entity1));
             worker.Commit();
             return ResponseResult.OK("添加成功");
         }
