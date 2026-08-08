@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -15,6 +16,12 @@ public partial class UserContactManageView : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        
+        ViewModel.LoadDataCommand.Execute(null);
+    }
+
+    private void CommonToolHeaderPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if(e.ButtonState == MouseButtonState.Pressed)
+           DragMove();
     }
 }

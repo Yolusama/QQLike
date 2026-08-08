@@ -18,53 +18,58 @@
     </UserControl.Resources>
     <Grid Background="{DynamicResource MaterialDesignPaper}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="0.1*" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0.3*" />
-            <ColumnDefinition Width="Auto"></ColumnDefinition>
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <components:UserSearchHeader/>
-        <StackPanel Grid.Row="1" Margin="12,14,12,0" Grid.Column="0">
-            <Button Height="44"
-                    Margin="0,0,0,12"
-                    Command="{Binding OpenUserContactManageCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <materialDesign:PackIcon Kind="AccountCog" Width="20" Height="20" Margin="0,0,6,0" />
-                    <TextBlock Text="好友管理器" FontSize="15" FontWeight="SemiBold" />
-                </StackPanel>
-            </Button>
 
-       
-            <Border Background="#FFF2F2F2" CornerRadius="8" Padding="4" Margin="0,0,0,8">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0" Grid.Row="1" Margin="12,14,12,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-                    <Border Background="White" HorizontalAlignment="Stretch" CornerRadius="6" Margin="0,0,4,0">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchUserView}">
-                            <TextBlock Text="好友" Foreground="#2196F3" FontSize="15" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"  />
-                        </Button>
-                    </Border>
+            <StackPanel Grid.Row="0">
+                <Button Height="44"
+                        Margin="0,0,0,12"
+                        Command="{Binding OpenUserContactManageCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <materialDesign:PackIcon Kind="AccountCog" Width="20" Height="20" Margin="0,0,6,0" />
+                        <TextBlock Text="好友管理器" FontSize="15" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
 
-                    <Border Grid.Column="1" Background="Transparent" CornerRadius="6" Margin="4,0,0,0">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchGroupView}">
-                            <TextBlock Text="群聊" Foreground="#666" FontSize="15" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"  />
-                        </Button>
-                    </Border>
-                </Grid>
-            </Border>
-        </StackPanel>
+                <Border Background="#FFF2F2F2" CornerRadius="8" Padding="4" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="2" Margin="12,0,12,12">
-            <TreeView ItemsSource="{Binding UserContactGroups}"
+                        <Border Background="White" HorizontalAlignment="Stretch" CornerRadius="6" Margin="0,0,4,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchUserView}">
+                                <TextBlock Text="好友" Foreground="#2196F3" FontSize="15" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"  />
+                            </Button>
+                        </Border>
+
+                        <Border Grid.Column="1" Background="Transparent" CornerRadius="6" Margin="4,0,0,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchGroupView}">
+                                <TextBlock Text="群聊" Foreground="#666" FontSize="15" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"  />
+                            </Button>
+                        </Border>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <Grid Grid.Row="1">
+            <TreeView ItemsSource="{Binding Groups}"
                       x:Name="UserContactTreeView">
                 <TreeView.Style>
                     <Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
@@ -122,6 +127,7 @@
                 </TreeView.Resources>
             </TreeView>
             
+        </Grid>
         </Grid>
         <Grid Row="0" Grid.Column="1">
             <user:UserProfileView 

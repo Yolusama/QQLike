@@ -19,9 +19,9 @@ public class UserContactService(IFreeSql orm) : IUserContactService
     public async Task<ResponseResult<List<UserContactGroupingVO>>> GetUserContactGrouping(string userId)
     {
         var data = await orm.Select<UserContactGroup, UserContact>()
-            .InnerJoin(e => e.t1.Id == e.t2.UserContactGroupId && 
-                            !e.t1.IsGroup && !e.t2.IsGroup)
-            .Where(e=>e.t2.UserId == userId)
+            .LeftJoin(e => e.t1.Id == e.t2.UserContactGroupId && 
+                          !e.t2.IsGroup)
+            .Where(e=>e.t1.UserId == userId && !e.t1.IsGroup)
             .GroupBy(e => new { e.t1.Id, e.t1.Name })
             .ToListAsync(e => new UserContactGroupingVO
             {
@@ -54,5 +54,21 @@ public class UserContactService(IFreeSql orm) : IUserContactService
             worker.Rollback();
             return ResponseResult.Fail("添加失败").Generic<long>();
         }
+    }
+
+    public async Task<ResponseResult<List<UserContactManageVO>>> GetUserManageFriends(string userId,long userContactGroupId = 0)
+    {
+        var data = await orm.Select<User, UserContact, UserContactGroup>()
+            .LeftJoin(e => e.t1.Id == e.t2.UserId && !e.t2.IsGroup)
+            .LeftJoin(e => e.t2.UserContactGroupId == e.t3.Id)
+            .WhereIf(userContactGroupId != 0, e => e.t3.Id == userContactGroupId)
+            .Where(e => e.t1.Id == userId)
+            .ToListAsync(e => new UserContactManageVO
+            {
+                Avatar = e.t1.Avatar, Nickname = e.t1.Nickname, Remark = e.t2.Remark,
+                UserId = e.t1.Id, UserContactGroupId = e.t3.Id
+            });
+
+        return ResponseResult<List<UserContactManageVO>>.OK("获取成功", data);
     }
 }

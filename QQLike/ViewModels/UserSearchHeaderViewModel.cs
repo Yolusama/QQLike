@@ -24,6 +24,10 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
     private ObservableCollection<UserContactItem> _userResults = new();
     [ObservableProperty]
     private ObservableCollection<UserContactItem> _groupResults = new ();
+    [ObservableProperty]
+    private bool _userProfileVisible;
+    [ObservableProperty]
+    private bool _groupProfileVisible;
 
     private CancellationTokenSource? _cts;
 

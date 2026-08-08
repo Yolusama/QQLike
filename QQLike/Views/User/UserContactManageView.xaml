@@ -9,17 +9,16 @@
         Loaded="OnLoaded"
         mc:Ignorable="d"
         WindowStyle="None"
-        WindowStartupLocation="Manual"
-        Title="UserContactManageView" Height="450" Width="800">
-    <Border BorderThickness="1" BorderBrush="Gray" CornerRadius="5">
+        WindowStartupLocation="CenterScreen" Width="800" Height="720">
+    <Border BorderThickness="0" BorderBrush="Gray" CornerRadius="5">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.3*"></ColumnDefinition>
                 <ColumnDefinition Width="0.7*"></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <materialDesign:DialogHost
-                                       IsOpen="{Binding IsGroupDialogOpen}"
-                                       DialogTheme="Inherit">
+                IsOpen="{Binding IsGroupDialogOpen}"
+                DialogTheme="Inherit">
                 <materialDesign:DialogHost.DialogContent>
                     <StackPanel
                         Margin="16">
@@ -88,23 +87,43 @@
                 <Label Grid.Row="1" Content="分组" Margin="10,0,10,10" Foreground="#7b7b7b"
                        Height="30" VerticalAlignment="Top">
                 </Label>
-                <ScrollViewer Grid.Row="1" MaxHeight="300" Margin="15,30,15,20">
-                    <ItemsControl ItemsSource="{Binding Groups}">
+                <ScrollViewer Grid.Row="1" Margin="15,30,15,20" VerticalAlignment="Top"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding GroupingData}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"></ColumnDefinition>
-                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                    </Grid.ColumnDefinitions>
-                                    <Label FontSize="14" Content="{Binding GroupName}" Height="30"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Left">
-                                    </Label>
-                                    <Label Grid.Column="1" FontSize="10" Foreground="#7a7a7a"
-                                           VerticalAlignment="Center" Content="{Binding ContactCount, Mode=OneWay}">
-                                    </Label>
-                                </Grid>
+                                <Border BorderBrush="#dbdbdb"  CornerRadius="5" Background="{Binding DataContext.SelectedGroupBackColor}">
+                                    <Button Command="{Binding DataContext.SelectGroupCommand,
+                                             RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding DataContext}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#e4e4e4" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter Property="Background" Value="#dbdbdb" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"></ColumnDefinition>
+                                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            </Grid.ColumnDefinitions>
+                                            <Label FontSize="14" Content="{Binding Name}" Height="30"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Left">
+                                            </Label>
+                                            <Label Grid.Column="1" FontSize="10" Foreground="#7a7a7a"
+                                                   VerticalAlignment="Center"
+                                                   Content="{Binding ContactCount, Mode=OneWay}">
+                                            </Label>
+                                        </Grid>
+                                    </Button>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -123,16 +142,29 @@
             <!-- 右侧：好友管理 -->
             <Grid Grid.Column="1" Background="#fbfbfb">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="0.2*"></RowDefinition>
-                    <RowDefinition Height="0.8*"></RowDefinition>
+                    <RowDefinition Height="0.05*"></RowDefinition>
+                    <RowDefinition Height="0.1*"></RowDefinition>
+                    <RowDefinition Height="0.85*"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="15">
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Background="Transparent"
+                            MouseLeftButtonDown="CommonToolHeaderPanel_MouseLeftButtonDown" />
+
+                    <components:CommonToolHeader Grid.Column="1" />
+                </Grid>
+                <Grid Grid.Row="1" Margin="15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"></ColumnDefinition>
                         <ColumnDefinition Width="Auto"></ColumnDefinition>
                     </Grid.ColumnDefinitions>
-                    <Label Grid.Column="0" FontSize="18" Content="好友管理器" VerticalAlignment="Center"></Label>
-                    <TextBox Grid.Column="1" Width="200" Height="40" VerticalAlignment="Center" Padding="12,0"
+                    <Label Grid.Column="0" FontSize="18" Content="好友管理器" VerticalAlignment="Top"></Label>
+                    <TextBox Grid.Column="1" Width="200" Height="40" VerticalAlignment="Top" Padding="12,0"
                              materialDesign:HintAssist.Hint="搜索"
                              materialDesign:TextFieldAssist.HasLeadingIcon="True"
                              materialDesign:TextFieldAssist.HasClearButton="True"
@@ -141,7 +173,7 @@
                              Text="{Binding SearchText}">
                     </TextBox>
                 </Grid>
-                <materialDesign:Card Padding="0" Grid.Row="1" Margin="15,10" UniformCornerRadius="8">
+                <materialDesign:Card Padding="0" Grid.Row="2" Margin="15,10" UniformCornerRadius="8">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

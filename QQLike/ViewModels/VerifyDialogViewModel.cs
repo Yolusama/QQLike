@@ -18,6 +18,7 @@ public partial class VerifyDialogViewModel(IProjectLogger logger
 ISessionStorage sessionStorage,
 SysSetting setting) : ViewModelBase<VerifyDialog>
 {
+    [ObservableProperty] private string _title;
     [ObservableProperty] private string _nickname;
     [ObservableProperty] private string _account;
     [ObservableProperty] private string _avatar;
@@ -25,6 +26,7 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
     [ObservableProperty] private string _remark;
     [ObservableProperty] private UserContactGroup _selectedGroup;
     [ObservableProperty] private ObservableCollection<UserContactGroup> _groups = [];
+    [ObservableProperty] private string _groupNum;
     private string _contactId;
     public bool IsGroup { get; set; }
     public string Source { get; set; }
@@ -76,7 +78,10 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
             var res = await apiService.PostAsync<object>($"api/{nameof(VerificationMessage)}/AddVerificationMessage",
                 model);
             if (res.Success)
-                await ConfirmCallback?.Invoke();
+            {
+                if(ConfirmCallback!=null)
+                    await ConfirmCallback.Invoke();
+            }
             else
                 NotificationComponent.ShowNotification(View.Owner,res.Message,MessageType.Error);
             View.Close();
@@ -92,7 +97,8 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
     [RelayCommand]
     private async Task Cancel()
     {
-        await CancelCallback?.Invoke();
+        if(CancelCallback!=null)
+           await CancelCallback.Invoke();
         View.Close();
     }
 

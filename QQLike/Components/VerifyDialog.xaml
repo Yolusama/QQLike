@@ -4,7 +4,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        xmlns:vm="clr-namespace:QQLike.ViewModels"
         mc:Ignorable="d"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -17,6 +16,7 @@
     <materialDesign:Card
         Padding="16"
         UniformCornerRadius="8"
+        Background="#f5f5f5"
         Width="420">
         <Grid>
             <Grid.RowDefinitions>
@@ -31,38 +31,33 @@
                                          HorizontalAlignment="Right"
                                          VerticalAlignment="Top" ></materialDesign:PackIcon>
             </Button>
-        
-            <!-- Title Bar -->
-            <materialDesign:ColorZone
-                Grid.Row="0"
-                Mode="PrimaryLight"
-                Padding="16,12">
-                <Grid>
-                    <TextBlock
-                        Text="申请加好友"
-                        FontSize="18"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Center"/>
-                    <Button
-                        Command="{Binding CloseCommand}"
-                        Style="{StaticResource MaterialDesignFlatButton}"
-                        Width="36" Height="36"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        ToolTip="关闭">
-                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
-                    </Button>
-                </Grid>
-            </materialDesign:ColorZone>
+            <Grid Grid.Row="0">
+                <TextBlock
+                    Text="{Binding Title}"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"/>
+                <Button
+                    Command="{Binding CloseCommand}"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Width="40" Height="40"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Padding="0"
+                    ToolTip="关闭">
+                    <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                </Button>
+            </Grid>
+            
 
             <!-- Content -->
-                <StackPanel>
+                <StackPanel Grid.Row="1">
                     <!-- User Info -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                         <Ellipse Width="56" Height="56" VerticalAlignment="Top">
                             <Ellipse.Fill>
-                                <ImageBrush ImageSource="{Binding AvatarPath}" Stretch="UniformToFill" />
+                                <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
                             </Ellipse.Fill>
                         </Ellipse>
                         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">

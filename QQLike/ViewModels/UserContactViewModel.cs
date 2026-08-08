@@ -114,7 +114,7 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
     }
 
     [RelayCommand]
-    private void OpenUserManage()
+    private void OpenUserContactManage()
     {
          windowFactory.GetAndShowWindow<UserContactManageView>();
     }

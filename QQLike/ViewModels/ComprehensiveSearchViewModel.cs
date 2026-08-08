@@ -54,6 +54,9 @@ public partial class ComprehensiveSearchViewModel(
     {
         if (IsLoading)
             return;
+        
+        if (string.IsNullOrEmpty(SearchText))
+            return;
 
         IsLoading = true;
         try
@@ -157,7 +160,7 @@ public partial class ComprehensiveSearchViewModel(
         if (item is null)
             return;
         const string source = "来自 群聊搜索";
-        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), source,true);
+        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), item.GroupNum, source, true);
     }
 
     [RelayCommand]
@@ -166,6 +169,6 @@ public partial class ComprehensiveSearchViewModel(
         if (item is null)
             return;
         const string source = "来自 好友搜索";
-        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), source);
+        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), item.Account, source);
     }
 }

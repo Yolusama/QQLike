@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using QQLike.Services;
 using QQLike.ViewModels;
@@ -10,23 +11,20 @@ namespace QQLike.Components;
 public partial class UserSearchHeader : UserControl
 {
     private readonly UserSearchHeaderViewModel _viewModel;
+    private bool _isMouseOverSearchPopup;
+
     public UserSearchHeader()
     {
         InitializeComponent();
-        this.SetViewModel<UserSearchHeaderViewModel,UserSearchHeader>();
+        this.SetViewModel<UserSearchHeaderViewModel, UserSearchHeader>();
         _viewModel = (UserSearchHeaderViewModel)DataContext;
     }
 
-    private void TextBox_LostFocus(object sender, RoutedEventArgs e)
+
+    private void TryCloseSearchByMouseLeave(object sender, MouseEventArgs e)
     {
-        // Let the next focused element settle; keep panel open when focus moves inside this control.
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (!IsKeyboardFocusWithin)
-            {
-                _viewModel.CancelSearch();
-            }
-        }), DispatcherPriority.Background);
+        SearchTextBox.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+        _viewModel.CancelSearch();
     }
 
     private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -37,7 +35,6 @@ public partial class UserSearchHeader : UserControl
     private void TextBox_GotFocus(object sender, RoutedEventArgs e)
     {
         _viewModel.ShowSearch();
-        
     }
 
     private void Button_LostFocus(object sender, RoutedEventArgs e)
@@ -49,5 +46,35 @@ public partial class UserSearchHeader : UserControl
                 _viewModel.CancelAddingCommand.Execute(null);
             }
         }), DispatcherPriority.Background);
+    }
+
+    private void SearchPopup_Closed(object? sender, EventArgs e)
+    {
+        _isMouseOverSearchPopup = false;
+        if (_viewModel.IsSearching)
+        {
+            _viewModel.CancelSearch();
+        }
+    }
+
+    private void SearchPopup_MouseEnter(object sender, MouseEventArgs e)
+    {
+        _isMouseOverSearchPopup = true;
+    }
+
+    private void SearchPopup_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _isMouseOverSearchPopup = false;
+        TryCloseSearchByMouseLeave(sender, e);
+    }
+
+    private void SearchPopup_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _isMouseOverSearchPopup = true;
+    }
+
+    private void SearchTextBox_MouseLeave(object sender, MouseEventArgs e)
+    {
+        TryCloseSearchByMouseLeave(sender, e);
     }
 }

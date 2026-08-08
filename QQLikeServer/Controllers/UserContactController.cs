@@ -31,4 +31,12 @@ public class UserContactController(IUserContactService userContactService) : Con
     {
         return await userContactService.AddUserContactGroup(model);
     }
+
+    [RequestAuthorize]
+    [HttpGet("{userId}/{userContactGroupId}")]
+    public async Task<ActionResult<ResponseResult<List<UserContactManageVO>>>> RemoveUserContactGroup(
+        [FromRoute] string userId,[FromRoute] long userContactGroupId = 0)
+    {
+        return await userContactService.GetUserManageFriends(userId,userContactGroupId);
+    }
 }

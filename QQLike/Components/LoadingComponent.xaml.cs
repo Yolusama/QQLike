@@ -13,6 +13,15 @@ public partial class LoadingComponent : Window
         this.SetViewModel(viewModel);
     }
 
+    public LoadingViewModel ShowLoading(Window owner,string text)
+    {
+        var viewModel = DataContext as LoadingViewModel;
+        Owner = owner;
+        Show();
+        viewModel.Start(text);
+        return viewModel;
+    }
+
     public static LoadingViewModel Loading(Window owner, string text)
     {
         var loading = App.ServiceProvider.GetRequiredService<LoadingComponent>();

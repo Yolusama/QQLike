@@ -3,12 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:QQLike.Components"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
              d:DesignHeight="300" d:DesignWidth="400">
     <Grid Background="#f5f5f5">
-        <Grid Margin="6" VerticalAlignment="Top">
+        <Grid x:Name="HeaderLayoutRoot" Margin="6" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -18,12 +17,12 @@
                 <RowDefinition Height="Auto"></RowDefinition>
             </Grid.RowDefinitions>
 
-            <TextBox Grid.Column="0"
+            <TextBox x:Name="SearchTextBox"
+                     Grid.Column="0"
                      Height="40"
                      Text="{Binding SearchText}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Padding="10"
-                     LostFocus="TextBox_LostFocus"
                      GotFocus="TextBox_GotFocus"
                      TextChanged="TextBox_TextChanged"
                      materialDesign:HintAssist.Hint="搜索"
@@ -31,7 +30,8 @@
                      materialDesign:TextFieldAssist.HasClearButton="True"
                      materialDesign:TextFieldAssist.LeadingIcon="Magnify" />
 
-            <Button Grid.Row="0" Grid.Column="1"
+            <Button x:Name="AddButton"
+                    Grid.Row="0" Grid.Column="1"
                     Width="40"
                     Height="40"
                     Margin="8,0,0,0"
@@ -50,117 +50,153 @@
                                          VerticalAlignment="Center"
                                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Button>
-            <Border Grid.Row="1" Grid.Column="1" BorderThickness="1" BorderBrush="#fff" CornerRadius="4"
-                    Margin="12,10,0,0" 
-                    Visibility="{Binding IsAdding, Converter={StaticResource BoolVisibilityConverter2}}">
-                <StackPanel Margin="0,8,0,0" Orientation="Vertical">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                            <materialDesign:PackIcon Kind="AccountOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
-                            <Label Content="加好友/群" VerticalAlignment="Center" FontSize="12"></Label>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                            <materialDesign:PackIcon Kind="AccountGroupOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
-                            <Label Content="创建群聊" VerticalAlignment="Center" FontSize="12"></Label>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Border>
-            <Border Grid.Row="1" Grid.Column="0" Padding="4" Margin="0,10,0,0" BorderThickness="1"
-                    BorderBrush="#fff" CornerRadius="4"
-                    Visibility="{Binding IsSearching,
-              Converter={StaticResource BoolVisibilityConverter2}}">
-                <ScrollViewer
-                    MaxHeight="400"
-                    VerticalScrollBarVisibility="Auto">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"></RowDefinition>
-                            <RowDefinition Height="Auto"></RowDefinition>
-                            <RowDefinition Height="Auto"></RowDefinition>
-                        </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Margin="0,8,0,0">
-                            <TextBlock Text="联系人" Foreground="Gray"></TextBlock>
-                            <ListBox ItemsSource="{Binding UserResults}" Height="Auto">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                                Command="{Binding GoUserMessageCommand}">
-                                            <StackPanel Orientation="Vertical" Margin="4">
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                                                    <Image Width="30" Height="30" Source="{Binding Avatar}"
-                                                           Margin="0,0,8,0" />
-                                                    <TextBlock Text="{Binding ContactName}" VerticalAlignment="Center" />
-                                                    <Button HorizontalAlignment="Right"
-                                                            Style="{StaticResource MaterialDesignFlatButton}"
-                                                            Command="{Binding GoUserMessageCommand}">
-                                                        <materialDesign:PackIcon Kind="User"></materialDesign:PackIcon>
-                                                    </Button>
-                                                </StackPanel>
-                                                <TextBlock Text="{Binding GroupFrom}" FontSize="10" Foreground="Gray" />
-                                            </StackPanel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
-                        <StackPanel Grid.Row="1" Margin="0,8,0,0">
-                            <TextBlock Text="群聊" Foreground="Gray"></TextBlock>
-                            <ListBox ItemsSource="{Binding GroupResults}" Height="Auto">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                                Command="{Binding GoGroupMessageCommand}">
-                                            <StackPanel Orientation="Horizontal" Margin="4">
+            <Popup Grid.Row="0"
+                   Grid.Column="1"
+                   PlacementTarget="{Binding ElementName=AddButton}"
+                   Placement="Bottom"
+                   VerticalOffset="8"
+                   AllowsTransparency="True"
+                   StaysOpen="False"
+                   IsOpen="{Binding IsAdding, Mode=TwoWay}">
+                <Border MinWidth="150"
+                        Background="White"
+                        BorderThickness="1"
+                        BorderBrush="#ddd"
+                        CornerRadius="4"
+                        Effect="{DynamicResource MaterialDesignElevationShadow2}">
+                    <StackPanel Margin="0,8,0,0" Orientation="Vertical">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                <materialDesign:PackIcon Kind="AccountOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
+                                <Label Content="加好友/群" VerticalAlignment="Center" FontSize="12"></Label>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                <materialDesign:PackIcon Kind="AccountGroupOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
+                                <Label Content="创建群聊" VerticalAlignment="Center" FontSize="12"></Label>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Popup>
+
+            <Popup x:Name="SearchPopup"
+                   Grid.Row="0"
+                   Grid.Column="0"
+                   Grid.ColumnSpan="2"
+                   PlacementTarget="{Binding ElementName=SearchTextBox}"
+                   Placement="Bottom"
+                   VerticalOffset="8"
+                   AllowsTransparency="True"
+                   StaysOpen="True"
+                   Closed="SearchPopup_Closed"
+                   IsOpen="{Binding IsSearching, Mode=TwoWay}">
+                <Border Width="{Binding ActualWidth, ElementName=HeaderLayoutRoot}"
+                        Background="White"
+                        Padding="4"
+                        BorderThickness="1"
+                        BorderBrush="#ddd"
+                        CornerRadius="4"
+                        Effect="{DynamicResource MaterialDesignElevationShadow2}"
+                        MouseEnter="SearchPopup_MouseEnter"
+                        MouseLeave="SearchPopup_MouseLeave"
+                        PreviewMouseLeftButtonDown="SearchPopup_PreviewMouseLeftButtonDown">
+                    <ScrollViewer MaxHeight="400" VerticalScrollBarVisibility="Auto">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                                <RowDefinition Height="Auto"></RowDefinition>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="0,8,0,0">
+                                <TextBlock Text="联系人" Foreground="Gray"></TextBlock>
+                                <ListBox ItemsSource="{Binding UserResults}" Height="Auto">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Command="{Binding GoUserMessageCommand}">
                                                 <StackPanel Orientation="Vertical" Margin="4">
-                                                    <StackPanel Orientation="Horizontal">
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                                         <Image Width="30" Height="30" Source="{Binding Avatar}"
                                                                Margin="0,0,8,0" />
                                                         <TextBlock Text="{Binding ContactName}"
                                                                    VerticalAlignment="Center" />
-                                                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                                                Command="{Binding GoGroupProfileCommand}">
-                                                            <materialDesign:PackIcon Kind="AccountGroup"></materialDesign:PackIcon>
+                                                        <Button HorizontalAlignment="Right"
+                                                                Style="{StaticResource MaterialDesignFlatButton}"
+                                                                Command="{Binding GoUserMessageCommand}">
+                                                            <materialDesign:PackIcon Kind="User"></materialDesign:PackIcon>
                                                         </Button>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding GroupFrom}" FontSize="10"
                                                                Foreground="Gray" />
                                                 </StackPanel>
-                                            </StackPanel>
-                                        </Button>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Margin="0,8,0,0">
+                                <TextBlock Text="群聊" Foreground="Gray"></TextBlock>
+                                <ListBox ItemsSource="{Binding GroupResults}" Height="Auto">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Command="{Binding GoGroupMessageCommand}">
+                                                <StackPanel Orientation="Horizontal" Margin="4">
+                                                    <StackPanel Orientation="Vertical" Margin="4">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Image Width="30" Height="30" Source="{Binding Avatar}"
+                                                                   Margin="0,0,8,0" />
+                                                            <TextBlock Text="{Binding ContactName}"
+                                                                       VerticalAlignment="Center" />
+                                                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                                    Command="{Binding GoGroupProfileCommand}">
+                                                                <materialDesign:PackIcon Kind="AccountGroup"></materialDesign:PackIcon>
+                                                            </Button>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding GroupFrom}" FontSize="10"
+                                                                   Foreground="Gray" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
 
-                        <Button Grid.Row="2"
-                                Margin="0,14,0,4"
-                                Padding="10"
-                                MinHeight="64"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Command="{Binding OpenComprehensiveSearchCommand}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border Width="36" Height="36" Background="#FF1E90FF" CornerRadius="18" VerticalAlignment="Center">
-                                    <materialDesign:PackIcon Kind="Magnify" Width="20" Height="20" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                                </Border>
-                                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock Text="进入综合搜索" FontSize="16" Foreground="#FF111111" />
-                                    <TextBlock Text="查找用户、群聊等" FontSize="12" Foreground="#FF9AA0A6" Margin="0,2,0,0" />
-                                </StackPanel>
-                            </Grid>
-                        </Button>
-                    </Grid>
-                </ScrollViewer>
-            </Border>
+                            <Button Grid.Row="2"
+                                    Margin="0,14,0,4"
+                                    Padding="10"
+                                    MinHeight="64"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding OpenComprehensiveSearchCommand}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="36" Height="36" Background="#FF1E90FF" CornerRadius="18"
+                                            VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="Magnify" Width="20" Height="20"
+                                                                 Foreground="White" VerticalAlignment="Center"
+                                                                 HorizontalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="进入综合搜索" FontSize="16" Foreground="#FF111111" />
+                                        <TextBlock Text="查找用户、群聊等" FontSize="12" Foreground="#FF9AA0A6"
+                                                   Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </Grid>
+                    </ScrollViewer>
+                </Border>
+            </Popup>
         </Grid>
     </Grid>
 </UserControl>
