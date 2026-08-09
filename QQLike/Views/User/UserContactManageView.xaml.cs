@@ -1,5 +1,7 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using QQLike.Domain;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -23,5 +25,11 @@ public partial class UserContactManageView : Window
     {
         if(e.ButtonState == MouseButtonState.Pressed)
            DragMove();
+    }
+
+    private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: UserContactManageItem item })
+            ViewModel.ChangeGroupCommand.Execute(item);
     }
 }

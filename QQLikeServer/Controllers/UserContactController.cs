@@ -12,9 +12,9 @@ public class UserContactController(IUserContactService userContactService) : Con
 {
     [RequestAuthorize]
     [HttpGet("{userId}")]
-    public async Task<ActionResult<ResponseResult<List<long>>>> ContactGroups([FromRoute] string userId)
+    public async Task<ActionResult<ResponseResult<List<UserContactGroupVO>>>> ContactGroups([FromRoute] string userId,bool isGroup)
     {
-        return await userContactService.GetUserContactGroups(userId);
+        return await userContactService.GetUserContactGroups(userId,isGroup);
     }
 
     [RequestAuthorize]
@@ -34,9 +34,17 @@ public class UserContactController(IUserContactService userContactService) : Con
 
     [RequestAuthorize]
     [HttpGet("{userId}/{userContactGroupId}")]
-    public async Task<ActionResult<ResponseResult<List<UserContactManageVO>>>> RemoveUserContactGroup(
+    public async Task<ActionResult<ResponseResult<List<UserContactManageVO>>>> GetUserManageFriends(
         [FromRoute] string userId,[FromRoute] long userContactGroupId = 0)
     {
         return await userContactService.GetUserManageFriends(userId,userContactGroupId);
+    }
+    
+    [RequestAuthorize]
+    [HttpGet("{userId}")]
+    public async Task<ActionResult<ResponseResult<List<ValueLabel<long>>>>> GetUserContactGroupSelections(
+        [FromRoute] string userId,bool isGroup)
+    {
+        return await userContactService.GetUserContactGroupSelections(userId,isGroup);
     }
 }

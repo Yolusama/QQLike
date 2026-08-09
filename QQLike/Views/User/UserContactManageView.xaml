@@ -9,7 +9,7 @@
         Loaded="OnLoaded"
         mc:Ignorable="d"
         WindowStyle="None"
-        WindowStartupLocation="CenterScreen" Width="800" Height="720">
+        WindowStartupLocation="CenterScreen" Width="1000" Height="720">
     <Border BorderThickness="0" BorderBrush="Gray" CornerRadius="5">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -95,7 +95,9 @@
                                 <Border BorderBrush="#dbdbdb"  CornerRadius="5" Background="{Binding DataContext.SelectedGroupBackColor}">
                                     <Button Command="{Binding DataContext.SelectGroupCommand,
                                              RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding DataContext}">
+                                            CommandParameter="{Binding DataContext}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
                                                 <Style.Triggers>
@@ -110,8 +112,8 @@
                                         </Button.Style>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"></ColumnDefinition>
-                                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                                <ColumnDefinition Width="0.7*"></ColumnDefinition>
+                                                <ColumnDefinition Width="0.3*"></ColumnDefinition>
                                             </Grid.ColumnDefinitions>
                                             <Label FontSize="14" Content="{Binding Name}" Height="30"
                                                    VerticalAlignment="Center"
@@ -119,6 +121,7 @@
                                             </Label>
                                             <Label Grid.Column="1" FontSize="10" Foreground="#7a7a7a"
                                                    VerticalAlignment="Center"
+                                                   HorizontalAlignment="Right"
                                                    Content="{Binding ContactCount, Mode=OneWay}">
                                             </Label>
                                         </Grid>
@@ -185,9 +188,9 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="40" />
-                                    <ColumnDefinition Width="120" />
-                                    <ColumnDefinition Width="120" />
-                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="180" />
                                     <ColumnDefinition Width="60" />
                                 </Grid.ColumnDefinitions>
                                 <RadioButton Grid.Column="0" VerticalAlignment="Center"
@@ -210,7 +213,7 @@
 
                         <!-- 好友列表 -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Friends}">
+                            <ItemsControl ItemsSource="{Binding Friends}" x:Name="FriendsItemsControl">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border BorderBrush="#eeeeee" BorderThickness="0,0,0,10">
@@ -229,28 +232,42 @@
                                                              Style="{StaticResource MaterialDesignRadioButton}" />
 
                                                 <!-- 头像+昵称 -->
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                            VerticalAlignment="Center">
-                                                    <Image Width="32" Height="32"
-                                                           Source="{Binding Avatar}"
-                                                           RenderOptions.BitmapScalingMode="HighQuality">
-                                                        <Image.Clip>
-                                                            <EllipseGeometry Center="16,16" RadiusX="16" RadiusY="16" />
-                                                        </Image.Clip>
-                                                    </Image>
-                                                    <TextBlock Text="{Binding Nickname}" Margin="10,0,0,0"
-                                                               FontSize="14" VerticalAlignment="Center" />
-                                                </StackPanel>
+                                                <Grid Grid.Column="1" VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Ellipse Width="32" Height="32">
+                                                        <Ellipse.Fill>
+                                                            <ImageBrush ImageSource="{Binding Avatar}" />
+                                                        </Ellipse.Fill>
+                                                    </Ellipse>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding Nickname}"
+                                                               Margin="10,0,0,0"
+                                                               FontSize="14"
+                                                               VerticalAlignment="Center"
+                                                               TextWrapping="NoWrap"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Grid>
 
                                                 <!-- 备注 -->
-                                                <TextBlock Grid.Column="2" Text="{Binding Remark}"
-                                                           FontSize="14" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Remark}"
+                                                           FontSize="14"
+                                                           VerticalAlignment="Center"
+                                                           TextWrapping="NoWrap"
+                                                           TextTrimming="CharacterEllipsis" />
 
                                                 <!-- 分组下拉 -->
                                                 <ComboBox Grid.Column="3" Text="{Binding GroupName}"
                                                           Width="140" Height="32" FontSize="13"
                                                           VerticalAlignment="Center"
                                                           materialDesign:HintAssist.Hint="选择分组"
+                                                          SelectedValue="{Binding UserContactGroupId, Mode=TwoWay}"
+                                                          DisplayMemberPath="Label"
+                                                          SelectedValuePath="Value"
+                                                          SelectionChanged="ComboBox_SelectionChanged"
                                                           ItemsSource="{Binding DataContext.Groups, RelativeSource={RelativeSource AncestorType=Window}}"
                                                           Style="{StaticResource MaterialDesignOutlinedComboBox}">
                                                 </ComboBox>

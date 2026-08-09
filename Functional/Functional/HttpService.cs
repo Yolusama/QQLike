@@ -4,10 +4,12 @@ namespace QQLike.Functional;
 
 public class HttpService : IHttpService
 {
+    private static readonly HttpClient client = new()
+    {
+        Timeout = TimeSpan.FromMinutes(3)
+    };
     public async Task<string> Request(string url,HttpMethod method,HttpContent? content=null,Dictionary<string, string>? headers = null)
     {
-        using var client = new HttpClient();
-        client.Timeout = TimeSpan.FromMinutes(3);
         using var request = new HttpRequestMessage(method, url);
         if (headers != null)
         {

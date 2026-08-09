@@ -20,24 +20,7 @@ public partial class NotificationComponent : Window
         this.SetViewModel(viewModel);
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
-
-    public void Show(Window owner,
-        string message,
-        MessageType type = MessageType.Info,
-        long duration = 2500,
-        double offset = 16,
-        HorizontalAlignment side = HorizontalAlignment.Right)
-    {
-        ViewModel.Message = message;
-        ViewModel.MessageType = type;
-        ViewModel.Duration = duration;
-        ViewModel.Offset = offset;
-        ViewModel.Side = side;
-
-        Owner = owner;
-        base.Show();
-    }
-
+    
     public static void ShowNotification(
         Window owner,
         string message,
@@ -47,8 +30,16 @@ public partial class NotificationComponent : Window
         HorizontalAlignment side = HorizontalAlignment.Right)
     {
         var component = App.ServiceProvider.GetRequiredService<NotificationComponent>();
+        var viewModel = (NotificationViewModel)component.DataContext;
+        viewModel.Message = message;
+        viewModel.MessageType = type;
+        viewModel.Duration = duration;
+        viewModel.Offset = offset;
+        viewModel.Side = side;
+
+        component.Owner = owner;
         
-        component.Show(owner, message, type, duration, offset, side);
+        component.Show();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

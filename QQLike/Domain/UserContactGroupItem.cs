@@ -15,6 +15,5 @@ public partial class UserContactGroupItem : ObservableObject
     [ObservableProperty] private PackIcon? _icon;
     [ObservableProperty] private ObservableCollection<UserContactInfo> _userContacts = [];
     [ObservableProperty] private double _expandIconAngle;
-
-    public bool IsExpanded { get; set; }
+    [ObservableProperty] private bool _isExpanded;
 }

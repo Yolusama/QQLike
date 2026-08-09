@@ -51,15 +51,15 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Background="White" HorizontalAlignment="Stretch" CornerRadius="6" Margin="0,0,4,0">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchUserView}">
+                        <Border Background="{Binding UserViewActivatedBackColor}" HorizontalAlignment="Stretch" CornerRadius="6" Margin="0,0,4,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchUserViewCommand}">
                                 <TextBlock Text="好友" Foreground="#2196F3" FontSize="15" HorizontalAlignment="Center"
                                            VerticalAlignment="Center"  />
                             </Button>
                         </Border>
 
-                        <Border Grid.Column="1" Background="Transparent" CornerRadius="6" Margin="4,0,0,0">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchGroupView}">
+                        <Border Grid.Column="1" Background="{Binding GroupViewActivatedBackColor}" CornerRadius="6" Margin="4,0,0,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchGroupViewCommand}">
                                 <TextBlock Text="群聊" Foreground="#666" FontSize="15" HorizontalAlignment="Center"
                                            VerticalAlignment="Center"  />
                             </Button>
@@ -69,7 +69,7 @@
             </StackPanel>
 
             <Grid Grid.Row="1">
-            <TreeView ItemsSource="{Binding Groups}"
+            <TreeView ItemsSource="{Binding UserContactGroups}"
                       x:Name="UserContactTreeView">
                 <TreeView.Style>
                     <Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
@@ -83,8 +83,7 @@
                 </TreeView.Style>
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
-                        <EventSetter Event="Expanded" Handler="OnTreeViewItemExpanded" />
-                        <EventSetter Event="Collapsed" Handler="OnTreeViewItemCollapsed" />
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
                 </TreeView.ItemContainerStyle>
 
@@ -108,7 +107,12 @@
                     <!-- 分组模板 -->
                     <HierarchicalDataTemplate DataType="{x:Type domain:UserContactGroupItem}"
                                               ItemsSource="{Binding UserContacts}">
-                        <Grid>
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalContentAlignment="Left"
+                                Padding="4,2"
+                                Command="{Binding DataContext.UserGroupExpandCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                                CommandParameter="{Binding}">
+                            <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -122,7 +126,8 @@
                             </materialDesign:PackIcon>
                             <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="16"
                                        VerticalAlignment="Center" Margin="0,4" />
-                        </Grid>
+                            </Grid>
+                        </Button>
                     </HierarchicalDataTemplate>
                 </TreeView.Resources>
             </TreeView>

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QQLike.Components;
 using QQLike.Domain;
+using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.Enum;
@@ -21,8 +22,7 @@ public partial class UserContactManageViewModel(
     SysSetting setting,
     IProjectLogger logger,
     IApiService apiService,
-    ISessionStorage sessionStorage,
-    MessageComponent messageComponent)
+    ISessionStorage sessionStorage)
     : ViewModelBase<UserContactManageView>
 {
     [ObservableProperty] private string _searchText;
@@ -31,7 +31,9 @@ public partial class UserContactManageViewModel(
     [ObservableProperty] private bool _isGroup;
     [ObservableProperty] private ObservableCollection<UserContactGroupingItem> _groupingData = [];
     [ObservableProperty] private ObservableCollection<UserContactManageItem> _friends = [];
-
+    [ObservableProperty] private long _friendsCount;
+    [ObservableProperty] private ObservableCollection<ValueLabel<long>> _groups = [];
+    
     private long _currentContactGroupId;
 
     partial void OnSearchTextChanged(string value)
@@ -45,10 +47,31 @@ public partial class UserContactManageViewModel(
         IsGroupDialogOpen = true;
     }
 
+    private async Task GetUserContactGroup()
+    {
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        try
+        {
+             var res = await apiService
+                 .GetAsync<List<ValueLabel<long>>>($"api/UserContact/GetUserContactGroupSelections/{user.UserId}", null);
+             if(res.Success)
+             {
+                 Groups.Clear();
+                 res.Data.ForEach(group => Groups.Add(group));
+             }
+             else
+                 MessageComponent.ShowMessage(View, $"获取分组失败：{res.Message}", MessageType.Error);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(View, $"获取分组异常：{e.Message}", MessageType.Error);
+        }
+    }
+
     [RelayCommand]
     private async Task GetGrouping()
     {
-        GroupingData.Clear();
         try
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
@@ -56,6 +79,7 @@ public partial class UserContactManageViewModel(
                 ($"api/UserContact/GetUserContactGrouping/{user.UserId}", null);
             if (res.Success)
             {
+                GroupingData.Clear();
                 foreach (var group in res.Data)
                 {
                     GroupingData.Add(new UserContactGroupingItem
@@ -65,16 +89,15 @@ public partial class UserContactManageViewModel(
                         ContactCount = group.ContactCount,
                     });
                 }
+                FriendsCount = GroupingData.Sum(g => g.ContactCount);
             }
             else
-                MessageComponent.ShowMessage(View, $"获取分组失败：{res.Message}", MessageType.Error);
-        }
+                 MessageComponent.ShowMessage(View, $"获取分组失败：{res.Message}", MessageType.Error);        }
         catch (Exception e)
         {
             Console.WriteLine(e);
             await logger.LogAsync($"获取分组异常：{e}", "好友管理器");
-            MessageComponent.ShowMessage(View, $"出现异常：{e.Message}", MessageType.Error);
-            throw;
+            MessageComponent.ShowMessage(View, $"获取分组异常：{e.Message}", MessageType.Error);
         }
     }
 
@@ -117,9 +140,9 @@ public partial class UserContactManageViewModel(
     [RelayCommand]
     private async Task LoadFriends()
     {
-        Friends.Clear();
         try
         {
+            Friends.Clear();
             var res = await apiService.GetAsync<List<UserContactManageVO>>
                 ($"api/UserContact/GetUserManageFriends/{sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId}/{_currentContactGroupId}", null);
             if (res.Success)
@@ -131,13 +154,12 @@ public partial class UserContactManageViewModel(
                 }
             }
             else
-                messageComponent.Show(View, $"获取好友失败：{res.Message}", MessageType.Error);
+                MessageComponent.ShowMessage(View, $"获取好友失败：{res.Message}", MessageType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            messageComponent.Show(View, $"获取好友异常：{e.Message}", MessageType.Error);
-            throw;
+            MessageComponent.ShowMessage(View, $"获取好友异常：{e.Message}", MessageType.Error);
         }
     }
 
@@ -152,7 +174,30 @@ public partial class UserContactManageViewModel(
     [RelayCommand]
     private async Task LoadData()
     {
+        await GetUserContactGroup();
         await GetGrouping();
         await LoadFriends();
+    }
+
+    [RelayCommand]
+    private async Task ChangeGroup(UserContactManageItem? item)
+    {
+        if(item == null)return;
+        using var worker = sugarClient.CreateContext();
+        try
+        {
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+            await worker.Db.Updateable<UserContact>()
+                .SetColumns(u => u.UserContactGroupId == item.UserContactGroupId)
+                .Where(u => u.ContactId == item.UserId && !u.IsGroup && u.UserId == user.UserId)
+                .ExecuteCommandAsync();
+            worker.Commit();
+            await LoadData();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(View, $"更改分组异常：{e.Message}", MessageType.Error);
+        }
     }
 }

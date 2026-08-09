@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QQLike.Components;
@@ -9,6 +10,7 @@ using QQLike.Entity.Common;
 using QQLike.Entity.Enum;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
+using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
 using QQLike.Views.User;
 using SqlSugar;
@@ -24,20 +26,45 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
     [ObservableProperty]
     private ObservableCollection<UserContactGroupItem> _userContactGroups = [];
     [ObservableProperty]
-    private bool _isGroupView = false;
-    
+    private bool _isGroupView;
+    [ObservableProperty]
+    private bool _isUserView = true;
+    [ObservableProperty]
+    private Brush _userViewActivatedBackColor = Brushes.White;
+    [ObservableProperty]
+    private Brush _groupViewActivatedBackColor = Brushes.Transparent;
+    [ObservableProperty] 
+    private bool _isUserProfileVisible;
+    [ObservableProperty] 
+    private bool _isGroupProfileVisible;
     
     [RelayCommand]
-    private void SwitchUserView()
+    private async Task SwitchUserView()
     {
-        IsGroupView = false;
+        ApplyViewState(false);
+        await RefreshLoadedGroupsAsync();
     }
 
     [RelayCommand]
-    private void SwitchGroupView()
+    private async Task SwitchGroupView()
     {
-        IsGroupView = true;
+        ApplyViewState(true);
+        await RefreshLoadedGroupsAsync();
     }
+
+    private void ApplyViewState(bool isGroupView)
+    {
+        IsGroupView = isGroupView;
+        IsUserView = !isGroupView;
+        UserViewActivatedBackColor = isGroupView ? Brushes.Transparent : Brushes.White;
+        GroupViewActivatedBackColor = isGroupView ? Brushes.White : Brushes.Transparent;
+    }
+
+    private async Task RefreshLoadedGroupsAsync()
+    {
+        await LoadUserContactGroups();
+    }
+    
 
     [RelayCommand]
     private async Task LoadUserContactGroups()
@@ -45,16 +72,17 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
         try
         {
            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-           var res = await apiService.GetAsync<List<long>>($"api/UserContact/ContactGroups/{user.UserId}",
-               null);
+           var res = await apiService.GetAsync<List<UserContactGroupVO>>($"api/UserContact/ContactGroups/{user.UserId}",
+               new {IsGroup = IsGroupView});
            if (res.Success)
            {
                UserContactGroups.Clear();
-               res.Data.ForEach(contactGroupId =>
+               res.Data.ForEach(contactGroup =>
                {
                    var userContactGroupItem = new UserContactGroupItem()
                    {
-                       ContactGroupId = contactGroupId,
+                       ContactGroupId = contactGroup.Id,
+                       Name = contactGroup.Name,
                        UserContacts = new ObservableCollection<UserContactInfo>()
                    };
                    UserContactGroups.Add(userContactGroupItem);
@@ -81,36 +109,66 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
 
         if (!item.IsExpanded)
         {
-            // 展开：旋转图标 + 加载联系人
             item.ExpandIconAngle = 90;
             item.IsExpanded = true;
-
-            var userContactInfos = await sugarClient.Queryable<UserContact>()
-                .InnerJoin<User>((uc, u) => uc.ContactId == u.Id)
-                .Where(uc => uc.UserContactGroupId == item.ContactGroupId &&
-                             uc.IsGroup == IsGroupView)
-                .Select((uc, u) => new { uc, u })
-                .ToListAsync(e => new UserContactInfo
-                {
-                    Avatar = e.u.Avatar,
-                    ContactId = e.uc.ContactId,
-                    IsOnline = e.u.IsOnline.Value,
-                    Nickname = e.u.Nickname,
-                    Account = e.u.Account,
-                    Signature = e.u.Signature,
-                });
-            userContactInfos.ForEach(userContactInfo =>
-            {
-                item.UserContacts.Add(userContactInfo);
-            });
+            await LoadUserContacts(item);
         }
         else
         {
-            // 收起：旋转图标回原位
             item.ExpandIconAngle = 0;
             item.IsExpanded = false;
             item.UserContacts.Clear();
         }
+    }
+
+    private async Task LoadUserContacts(UserContactGroupItem? item)
+    {
+        if(item == null) return;
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        if(IsUserView)
+        {
+            var data = await sugarClient.Queryable<User>()
+                .LeftJoin<UserContact>((u, uc) => u.Id == uc.UserId && !uc.IsGroup)
+                .LeftJoin<UserContactGroup>((u, uc, ucg) => uc.UserContactGroupId == ucg.Id && !ucg.IsGroup)
+                .Where((u, uc, ucg) => uc.UserId == user.UserId && ucg.Id == item.ContactGroupId)
+                .Where((u, uc, ucg) => uc.ContactStatus != UserContactStatus.删除.GetValue() &&
+                                       uc.ContactStatus != UserContactStatus.被删除.GetValue())
+                .Select((u, uc, ucg) => new UserContactInfoItem
+                {
+                    Nickname = u.Nickname,
+                    Avatar = u.Avatar,
+                    Account = u.Account,
+                    Remark = uc.Remark,
+                    ContactId = uc.ContactId,
+                    Signature = u.Signature,
+                    UserContactGroupName = ucg.Name,
+                    IsOnline = u.IsOnline.Value,
+                })
+                .ToListAsync();
+            data.ForEach(item.UserContacts.Add);
+        }
+
+        if (IsGroupView)
+        {
+            var data = await sugarClient.Queryable<ChatGroup>()
+                .LeftJoin<UserContact>((c, uc) => c.Id == uc.UserId && uc.IsGroup)
+                .LeftJoin<UserContactGroup>((c, uc, ucg) => uc.UserContactGroupId == ucg.Id && ucg.IsGroup)
+                .Where((c, uc, ucg) => uc.UserId == user.UserId && ucg.Id == item.ContactGroupId)
+                .Where((c, uc, ucg) => uc.ContactStatus != UserContactStatus.删除.GetValue() &&
+                                       uc.ContactStatus != UserContactStatus.被删除.GetValue())
+                .Select((c, uc, ucg) => new UserContactInfoItem
+                {
+                    Avatar = c.Avatar,
+                    Account = c.GroupNum,
+                    Remark = uc.Remark,
+                    ContactId = uc.ContactId,
+                    GroupName = c.Name,
+                    UserContactGroupName = ucg.Name,
+                })
+                .ToListAsync();
+            data.ForEach(item.UserContacts.Add);
+        }
+        
     }
 
     [RelayCommand]

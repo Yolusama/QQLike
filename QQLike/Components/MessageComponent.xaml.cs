@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using QQLike.Entity.Enum;
+using QQLike.Functional.Utils;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -20,22 +21,16 @@ public partial class MessageComponent : Window
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
-    public void Show(Window owner, string message, MessageType type = MessageType.Info, long duration = 2000,
-        double offset = 16)
-    {
-        ViewModel.Message = message;
-        ViewModel.MessageType = type;
-        ViewModel.Duration = duration;
-        ViewModel.Offset = offset;
-        
-        Owner = owner;
-        base.Show();
-    }
-
     public static void ShowMessage(Window owner, string message, MessageType type = MessageType.Info, long duration = 2000, double offset = 16)
     {
         var component = App.ServiceProvider.GetRequiredService<MessageComponent>();
-        component.Show(owner, message, type, duration, offset);
+        var viewModel = (MessageViewModel)component.DataContext;
+        viewModel.Message = message;
+        viewModel.MessageType = type;
+        viewModel.Duration = duration;
+        viewModel.Offset = offset;
+        component.Owner = owner;
+        component.Show();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)

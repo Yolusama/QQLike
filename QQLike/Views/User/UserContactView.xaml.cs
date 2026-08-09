@@ -1,7 +1,5 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using QQLike.Domain;
 using QQLike.Services;
 using QQLike.ViewModels;
 
@@ -20,21 +18,4 @@ public partial class UserContactView : UserControl
     {
        ViewModel.LoadUserContactGroupsCommand.Execute(null);
     }
-
-    private void OnTreeViewItemExpanded(object sender, RoutedEventArgs e)
-    {
-        if (e.OriginalSource is TreeViewItem { DataContext: UserContactGroupItem item })
-        {
-            ViewModel.UserGroupExpandCommand.Execute(item);
-        }
-    }
-
-    private void OnTreeViewItemCollapsed(object sender, RoutedEventArgs e)
-    {
-        if (e.OriginalSource is TreeViewItem { DataContext: UserContactGroupItem item })
-        {
-            ViewModel.UserGroupExpandCommand.Execute(item);
-        }
-    }
-    
 }
