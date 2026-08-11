@@ -12,6 +12,7 @@ public partial class UserSearchHeader : UserControl
 {
     private readonly UserSearchHeaderViewModel _viewModel;
     private bool _isMouseOverSearchPopup;
+    private bool _isMouseOverAddPopup;
 
     public UserSearchHeader()
     {
@@ -41,7 +42,7 @@ public partial class UserSearchHeader : UserControl
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (!IsKeyboardFocusWithin)
+            if (!IsKeyboardFocusWithin && !_isMouseOverAddPopup)
             {
                 _viewModel.CancelAddingCommand.Execute(null);
             }
@@ -76,5 +77,16 @@ public partial class UserSearchHeader : UserControl
     private void SearchTextBox_MouseLeave(object sender, MouseEventArgs e)
     {
         TryCloseSearchByMouseLeave(sender, e);
+    }
+
+    private void AddPopup_MouseEnter(object sender, MouseEventArgs e)
+    {
+        _isMouseOverAddPopup = true;
+    }
+
+    private void AddPopup_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _isMouseOverAddPopup = false;
+        _viewModel.CancelAddingCommand.Execute(null);
     }
 }

@@ -160,7 +160,7 @@ public partial class ComprehensiveSearchViewModel(
         if (item is null)
             return;
         const string source = "来自 群聊搜索";
-        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), item.GroupNum, source, true);
+        VerifyDialog.ShowVerifyDialog(item.GroupNum, source, true);
     }
 
     [RelayCommand]
@@ -169,6 +169,6 @@ public partial class ComprehensiveSearchViewModel(
         if (item is null)
             return;
         const string source = "来自 好友搜索";
-        VerifyDialog.ShowVerifyDialog(Window.GetWindow(View), item.Account, source);
+        VerifyDialog.ShowVerifyDialog(item.Account, source);
     }
 }

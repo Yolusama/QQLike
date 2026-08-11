@@ -103,10 +103,6 @@ public class UserService(IFreeSql orm,
         res.Avatar = user.Avatar;
         res.Nickname = user.Nickname;
         res.UserId = user.Id;
-        var contactGroups = await orm.Select<UserContactGroup>()
-            .Where(c => c.UserId == user.Id && !c.IsGroup)
-            .ToListAsync();
-        res.ContactGroups = contactGroups;
         return ResponseResult<UserVerifyInfo>.OK("获取用户验证信息成功", res);
     }
 }

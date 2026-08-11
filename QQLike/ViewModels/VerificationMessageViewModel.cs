@@ -24,13 +24,26 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
 {
     [ObservableProperty]
     private bool _isGroupVerify;
-
     [ObservableProperty]
     private string _notificationTitle = "好友通知";
-
     [ObservableProperty]
     private ObservableCollection<VerificationMessageItem> _notices = [];
-    
+    [ObservableProperty]
+    private bool _isChecked;
+
+    /// <summary>
+    /// 同意对话框相关
+    /// </summary>
+    [ObservableProperty]
+    private bool _isAcceptDialogOpen;
+    [ObservableProperty]
+    private string _acceptRemark = string.Empty;
+    [ObservableProperty]
+    private long _selectedGroupId;
+    [ObservableProperty]
+    private ObservableCollection<ValueLabel<long>> _acceptableGroups = [];
+
+    private VerificationMessageItem? _currentAcceptItem;
 
     [RelayCommand]
     private async Task LoadNotices()
@@ -39,7 +52,7 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
             var res = await apiService.GetAsync<List<VerificationMessageVO>>
-               ($"api/{nameof(VerificationMessage)}/GetVerificationMessage/{user.UserId}",new {IsGroup= IsGroupVerify});
+               ($"api/{nameof(VerificationMessage)}/GetVerificationMessages/{user.UserId}",new {IsGroup = IsGroupVerify});
            if (res.Success)
            {
                Notices.Clear();
@@ -64,20 +77,78 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
     [RelayCommand]
     private async Task AcceptVerify(VerificationMessageItem item)
     {
+        item.IsPopupOpen = false;
+        _currentAcceptItem = item;
+        await LoadAcceptableGroups(item.IsGroup);
+        SelectedGroupId = item.UserContactGroupId;
+        AcceptRemark = item.Remark ?? string.Empty;
+        IsAcceptDialogOpen = true;
+    }
+
+    private async Task LoadAcceptableGroups(bool isGroup)
+    {
+        try
+        {
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+            var res = await apiService.GetAsync<List<ValueLabel<long>>>(
+                $"api/UserContact/GetUserContactGroupSelections/{user.UserId}", new { IsGroup = isGroup });
+            if (res.Success)
+            {
+                AcceptableGroups.Clear();
+                res.Data.ForEach(AcceptableGroups.Add);
+            }
+            else
+                MessageComponent.ShowMessage(Window.GetWindow(View), $"加载分组失败：{res.Message}", MessageType.Error);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await logger.LogAsync($"加载分组异常:{e}", "验证消息");
+            MessageComponent.ShowMessage(Window.GetWindow(View), $"加载分组异常：{e.Message}", MessageType.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ConfirmAcceptVerify()
+    {
+        if (_currentAcceptItem == null) return;
+        IsAcceptDialogOpen = false;
+
         using var worker = sugarClient.CreateContext();
         try
         {
+            var item = _currentAcceptItem;
             await worker.Db.Updateable<VerificationMessage>()
-                .SetColumns(e=>e.Status==VerificationMessageStatus.已同意.GetValue())
-                .Where(e=>e.UserId==item.UserId && e.ContactId == item.ContactId)
+                .SetColumns(e => e.Status == VerificationMessageStatus.已同意.GetValue())
+                .Where(e => e.UserId == item.UserId && e.ContactId == item.ContactId)
                 .ExecuteCommandAsync();
             await worker.Db.Updateable<VerificationMessage>()
-                .SetColumns(e=>e.Status==VerificationMessageStatus.已通过.GetValue())
-                .Where(e=>e.UserId==item.ContactId && e.ContactId==item.UserId)
+                .SetColumns(e => e.Status == VerificationMessageStatus.已通过.GetValue())
+                .Where(e => e.UserId == item.ContactId && e.ContactId == item.UserId)
                 .ExecuteCommandAsync();
             item.Status = VerificationMessageStatus.已同意.GetValue();
+
+            var userContact = new UserContact
+            {
+                UserId = item.UserId,
+                ContactId = item.ContactId,
+                IsGroup = item.IsGroup,
+                UserContactGroupId = SelectedGroupId > 0 ? SelectedGroupId : item.UserContactGroupId,
+                ContactStatus = UserContactStatus.正常.GetValue(),
+                DeleteMark = 0,
+                CreateTime = DateTime.Now,
+                Remark = AcceptRemark
+            };
+            var oppositeContact = userContact.MapTo<UserContact, UserContact>();
+            oppositeContact.Remark = string.Empty;
+            oppositeContact.UserId = userContact.ContactId;
+            oppositeContact.ContactId = userContact.UserId;
+            await worker.Db.Insertable(new List<UserContact> { userContact, oppositeContact })
+                .ExecuteCommandAsync();
             worker.Commit();
+
             var msgText = item.IsGroup ? "已加入群聊" : "已通过对方好友请求";
+            IsChecked = false;
             MessageComponent.ShowMessage(Window.GetWindow(View), msgText, MessageType.Success);
         }
         catch (Exception e)
@@ -85,11 +156,23 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
             await logger.LogAsync($"同意验证出现异常:{e}", "验证消息");
             MessageComponent.ShowMessage(Window.GetWindow(View), $"出现异常：{e.Message}", MessageType.Error);
         }
+        finally
+        {
+            _currentAcceptItem = null;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelAcceptDialog()
+    {
+        IsAcceptDialogOpen = false;
+        _currentAcceptItem = null;
     }
 
     [RelayCommand]
     private async Task RejectVerify(VerificationMessageItem item)
     {
+        item.IsPopupOpen = false;
         using var worker =  sugarClient.CreateContext();
         try
         {
@@ -102,6 +185,8 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
                 .Where(e=>e.UserId==item.ContactId && e.ContactId==item.UserId)
                 .ExecuteCommandAsync();
             item.Status = VerificationMessageStatus.已拒绝.GetValue();
+            IsChecked = false;
+            worker.Commit();
             MessageComponent.ShowMessage(Window.GetWindow(View), "已拒绝验证请求", MessageType.Error);
         }
         catch (Exception e)
@@ -114,7 +199,8 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
     [RelayCommand]
     private async Task IgnoreVerify(VerificationMessageItem item)
     {
-        using var worker = sugarClient.CreateContext(); 
+        item.IsPopupOpen = false;
+        using var worker = sugarClient.CreateContext();
         try
         {
             await worker.Db.Updateable<VerificationMessage>()
@@ -122,7 +208,9 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
                 .Where(e=>e.UserId==item.UserId && e.ContactId == item.ContactId)
                 .ExecuteCommandAsync();
             item.Status = VerificationMessageStatus.忽略.GetValue();
-            MessageComponent.ShowMessage(Window.GetWindow(View), "已忽略该验证请求", MessageType.Error);
+            worker.Commit();
+            IsChecked = false;
+            MessageComponent.ShowMessage(Window.GetWindow(View), "已忽略该验证请求");
         }
         catch (Exception e)
         {

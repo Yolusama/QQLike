@@ -17,9 +17,9 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
     [ObservableProperty]
     private string _searchText = string.Empty;
     [ObservableProperty]
-    private bool _isSearching = false;
+    private bool _isSearching;
     [ObservableProperty]
-    private bool _isAdding = false;
+    private bool _isAdding;
     [ObservableProperty]
     private ObservableCollection<UserContactItem> _userResults = new();
     [ObservableProperty]
@@ -137,7 +137,15 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
     [RelayCommand]
     private void OpenComprehensiveSearch()
     {
+        IsAdding = false;
         IsSearching = false;
-        windowFactory.GetAndShowWindow<ComprehensiveSearch>(Window.GetWindow(View));
+        windowFactory.GetAndShowWindow<ComprehensiveSearch>();
+    }
+
+    [RelayCommand]
+    private void ShowGroupCreator()
+    {
+        IsAdding = false;
+        // TODO: 实现创建群聊窗口
     }
 }

@@ -54,6 +54,28 @@ public class RedisCache(IConnectionMultiplexer redisConnection) : IRedisCache
         return await redisConnection.GetDatabase().KeyDeleteAsync(key);
     }
 
+    public bool RemoveByPattern(string pattern)
+    {
+        var server = redisConnection.GetServer(redisConnection.GetEndPoints().First());
+        var keys = server.Keys(pattern: pattern);
+        var res = true;
+        foreach (var key in keys)
+            res = res && Remove(key);
+        
+        return res;
+    }
+
+    public async Task<bool> RemoveByPatternAsync(string pattern)
+    {
+        var server = redisConnection.GetServer(redisConnection.GetEndPoints().First());
+        var keys = server.Keys(pattern: pattern);
+        var res = true;
+        foreach (var key in keys)
+           res = res && await RemoveAsync(key);
+        
+        return res;
+    }
+
     public void SetIf<T>(string key, T value)
     {
         redisConnection.GetDatabase().StringSet(key, JsonSerializer.Serialize(value), when: When.NotExists);

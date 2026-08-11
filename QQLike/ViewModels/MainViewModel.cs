@@ -127,16 +127,7 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
                 }
 
                 var bytes = await client.ReceiveAsync(_receiveBuffer, SocketFlags.None, cancellationToken);
-                if (bytes == 0)
-                {
-                    // Remote endpoint closed; keep loop alive for later reconnection.
-                    CloseSocket(client);
-                    await Task.Delay(ReceiveDelay, cancellationToken);
-                }
-                else
-                {
-                    // TODO: decode _receiveBuffer[..bytes] and dispatch the message.
-                }
+               
             }
             catch (OperationCanceledException)
             {
@@ -171,9 +162,8 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
                 return;
             }
 
-            mqConsumer.SetHandler(ConsumeMessage);
-            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, nameof(VerificationMessage));
-            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, nameof(ChatMessage));
+            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, nameof(VerificationMessage), ConsumeMessage);
+            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, nameof(ChatMessage), ConsumeMessage);
             _mqStarted = true;
         }
         finally

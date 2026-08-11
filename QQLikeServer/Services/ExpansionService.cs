@@ -45,8 +45,7 @@ public static class ExpansionService
     {
         var connectionFactory = config.MapTo(new ConnectionFactory());
         var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
-        var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-        services.AddScoped(_ => channel);
+
         services.AddSingleton(connection);
         services.AddScoped<IRabbitMQProducer, RabbitMQProducer>();
         services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();

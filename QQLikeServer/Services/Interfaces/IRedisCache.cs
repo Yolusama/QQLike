@@ -12,4 +12,6 @@ public interface IRedisCache
     public Task<bool> ExistsAsync(string key);
     public bool Remove(string key);
     public Task<bool> RemoveAsync(string key);
+    public bool RemoveByPattern(string pattern);
+    public Task<bool> RemoveByPatternAsync(string pattern);
 }

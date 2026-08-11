@@ -17,7 +17,7 @@ public class VerificationMessageController(IVerificationMessageService verificat
     }
     
     [HttpPost]
-    public async Task<ActionResult<ResponseResult>> AddVerificationMessage(VerificationMessageModel model)
+    public async Task<ActionResult<ResponseResult>> AddVerificationMessage([FromBody]VerificationMessageModel model)
     {
         return await verificationMessageService.AddVerificationMessage(model);
     }

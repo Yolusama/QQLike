@@ -22,6 +22,9 @@ public partial class MainView : Window
     private void MainView_OnClosing(object sender, CancelEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
+        {
             viewModel.ClosingApplicationCommand.Execute(null);
+            viewModel.Dispose();
+        }
     }
 }

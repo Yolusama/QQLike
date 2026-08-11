@@ -10,14 +10,18 @@ public class UserContactService(IFreeSql orm) : IUserContactService
 {
     public async Task<ResponseResult<List<UserContactGroupVO>>> GetUserContactGroups(string userId,bool isGroup)
     {
-        var groupIds = await orm.Select<UserContactGroup>()
-            .Where(ucg => ucg.UserId == userId && ucg.IsGroup == isGroup)
-            .ToListAsync(e=>new UserContactGroupVO
+        var data = await orm.Select<UserContactGroup, UserContact>()
+            .LeftJoin(e => e.t1.Id == e.t2.UserContactGroupId && 
+                           e.t2.IsGroup == isGroup)
+            .Where(e=>e.t2.UserId == userId && e.t1.IsGroup == isGroup)
+            .GroupBy(e => new { e.t1.Id, e.t1.Name })
+            .ToListAsync(e => new UserContactGroupVO
             {
-                Id = e.Id,
-                Name = e.Name
-            });
-        return ResponseResult<List<UserContactGroupVO>>.OK("获取成功", groupIds);
+                Name = e.Value.Item1.Name,
+                Id = e.Value.Item1.Id,
+                UserContactCount = e.Count()
+            }); 
+        return ResponseResult<List<UserContactGroupVO>>.OK("获取成功", data);
     }
 
     public async Task<ResponseResult<List<UserContactGroupingVO>>> GetUserContactGrouping(string userId)
@@ -25,13 +29,13 @@ public class UserContactService(IFreeSql orm) : IUserContactService
         var data = await orm.Select<UserContactGroup, UserContact>()
             .LeftJoin(e => e.t1.Id == e.t2.UserContactGroupId && 
                           !e.t2.IsGroup)
-            .Where(e=>e.t1.UserId == userId && !e.t1.IsGroup)
+            .Where(e=>e.t2.UserId == userId && !e.t1.IsGroup)
             .GroupBy(e => new { e.t1.Id, e.t1.Name })
             .ToListAsync(e => new UserContactGroupingVO
             {
                GroupName = e.Value.Item1.Name,
                ContactGroupId = e.Value.Item1.Id,
-               ContactCount = e.Count(e.Value.Item2.UserId)
+               ContactCount = e.Count()
             });
         return ResponseResult<List<UserContactGroupingVO>>.OK("获取成功", data);
     }

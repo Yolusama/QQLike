@@ -9,9 +9,10 @@
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
         SizeToContent="WidthAndHeight"
         Loaded="VerifyDialog_OnLoadedLoaded"
+        Closed="VerifyDialog_OnClosed"
         Title="申请加好友">
     <materialDesign:Card
         Padding="16"
@@ -31,7 +32,9 @@
                                          HorizontalAlignment="Right"
                                          VerticalAlignment="Top" ></materialDesign:PackIcon>
             </Button>
-            <Grid Grid.Row="0">
+            <Grid Grid.Row="0"
+                  Background="Transparent"
+                  PreviewMouseLeftButtonDown="VerifyDialog_OnMouseLeftButtonDown">
                 <TextBlock
                     Text="{Binding Title}"
                     FontSize="14"
@@ -92,8 +95,9 @@
                     <ComboBox
                         ItemsSource="{Binding Groups}"
                         IsEditable="True"
-                        SelectedItem="{Binding SelectedGroup, UpdateSourceTrigger=PropertyChanged}"
-                        DisplayMemberPath="Name"
+                        SelectedValue="{Binding SelectedGroupId, UpdateSourceTrigger=PropertyChanged}"
+                        DisplayMemberPath="Label"
+                        SelectedValuePath="Value"
                         Style="{StaticResource MaterialDesignOutlinedComboBox}"
                         Margin="0,0,0,16"/>
                 </StackPanel>

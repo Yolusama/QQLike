@@ -13,7 +13,12 @@ public partial class VerificationMessageItem : ObservableObject
     public string Source { get; set; }
     public string VerificationMessage { get; set; }
     public bool IsGroup { get; set; }
+    public string Remark { get; set; }
+    public long UserContactGroupId { get; set; }
     public string DateText => ApplyTime?.ToString("yyyy-MM-dd") ?? string.Empty;
+
+    [ObservableProperty]
+    private bool _isPopupOpen;
 
     [ObservableProperty]
     private int _status;
@@ -24,12 +29,12 @@ public partial class VerificationMessageItem : ObservableObject
     {
         0 => "待验证",
         1 => "验证中",
-        2 => "同意",
+        2 => "已同意",
         3 => "已通过",
-        4 => "拒绝",
-        5 => "被拒绝",
-        6 => "忽略",
-        7 => "过期",
+        4 => "已拒绝",
+        5 => "已被拒绝",
+        6 => "已忽略",
+        7 => "已过期",
         _ => string.Empty
     };
 

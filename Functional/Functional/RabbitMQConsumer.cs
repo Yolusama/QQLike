@@ -4,27 +4,18 @@ using RabbitMQ.Client.Events;
 
 namespace QQLike.Functional;
 
-public class RabbitMQConsumer(IChannel channel,IProjectLogger logger) : IRabbitMQConsumer
+public class RabbitMQConsumer(IConnection connection, IProjectLogger logger) : IRabbitMQConsumer
 {
     private const ushort DefaultPrefetchCount = 10;
     private readonly SemaphoreSlim _consumeGate = new(1, 1);
     private readonly HashSet<string> _consumingQueues = [];
-    private readonly AsyncEventingBasicConsumer _consumer =  new AsyncEventingBasicConsumer(channel);
+
+    private IChannel? _channel;
+    private AsyncEventingBasicConsumer? _consumer;
     private Func<object, BasicDeliverEventArgs, Task>? _messageHandler;
     private AsyncEventHandler<BasicDeliverEventArgs>? _handler;
 
-    public void SetHandler(Func<object, BasicDeliverEventArgs, Task> handler)
-    {
-        if (_handler is not null)
-        {
-            _consumer.ReceivedAsync -= _handler;
-        }
-
-        _messageHandler = handler;
-        _handler = HandleReceivedAsync;
-        _consumer.ReceivedAsync += _handler;
-    }
-    public async Task Consume(string queueName, string exChange, string routeKey)
+    public async Task Consume(string queueName, string exChange, string routeKey, Func<object, BasicDeliverEventArgs, Task> handler)
     {
         try
         {
@@ -36,11 +27,17 @@ public class RabbitMQConsumer(IChannel channel,IProjectLogger logger) : IRabbitM
                     return;
                 }
 
-                await channel.ExchangeDeclareAsync(exChange, ExchangeType.Direct, durable: true, autoDelete: false);
-                await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false);
-                await channel.QueueBindAsync(queueName, exChange, routeKey);
-                await channel.BasicQosAsync(0, DefaultPrefetchCount, false);
-                await channel.BasicConsumeAsync(queueName, autoAck: false, consumer: _consumer);
+                await EnsureConsumerAsync(handler);
+                if (_channel is null || _consumer is null)
+                {
+                    throw new InvalidOperationException("RabbitMQ consumer channel is not initialized.");
+                }
+
+                await _channel.ExchangeDeclareAsync(exChange, ExchangeType.Direct, durable: true, autoDelete: false);
+                await _channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false);
+                await _channel.QueueBindAsync(queueName, exChange, routeKey);
+                await _channel.BasicQosAsync(0, DefaultPrefetchCount, false);
+                await _channel.BasicConsumeAsync(queueName, autoAck: false, consumer: _consumer);
                 _consumingQueues.Add(queueName);
             }
             finally
@@ -60,35 +57,65 @@ public class RabbitMQConsumer(IChannel channel,IProjectLogger logger) : IRabbitM
 
     public void RemoveHandler()
     {
-        if (_handler is null)
+        if (_consumer is not null && _handler is not null)
         {
-            return;
+            _consumer.ReceivedAsync -= _handler;
         }
 
-        _consumer.ReceivedAsync -= _handler;
         _handler = null;
         _messageHandler = null;
     }
 
+    private async Task EnsureConsumerAsync(Func<object, BasicDeliverEventArgs, Task> handler)
+    {
+        if (_channel is null || !_channel.IsOpen)
+        {
+            _channel = await connection.CreateChannelAsync();
+            _consumer = new AsyncEventingBasicConsumer(_channel);
+            _consumingQueues.Clear();
+            _handler = null;
+            _messageHandler = null;
+        }
+
+        if (_consumer is null)
+        {
+            throw new InvalidOperationException("RabbitMQ consumer is not initialized.");
+        }
+
+        if (_handler is not null)
+        {
+            _consumer.ReceivedAsync -= _handler;
+        }
+
+        _messageHandler = handler;
+        _handler = HandleReceivedAsync;
+        _consumer.ReceivedAsync += _handler;
+    }
+
     private async Task HandleReceivedAsync(object sender, BasicDeliverEventArgs ea)
     {
+        if (_channel is null)
+        {
+            return;
+        }
+
         try
         {
             if (_messageHandler is null)
             {
-                await channel.BasicAckAsync(ea.DeliveryTag, false);
+                await _channel.BasicAckAsync(ea.DeliveryTag, false);
                 return;
             }
 
             await _messageHandler(sender, ea);
-            await channel.BasicAckAsync(ea.DeliveryTag, false);
+            await _channel.BasicAckAsync(ea.DeliveryTag, false);
         }
         catch (Exception e)
         {
             await logger.LogAsync($"处理队列消息出现异常: {e}", "RabbitMQ消费者");
             try
             {
-                await channel.BasicNackAsync(ea.DeliveryTag, false, requeue: true);
+                await _channel.BasicNackAsync(ea.DeliveryTag, false, requeue: true);
             }
             catch (Exception nackException)
             {

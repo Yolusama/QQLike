@@ -52,6 +52,17 @@ public class VerificationMessage
     /// 创建时间
     /// </summary>
     public DateTime? CreateTime { get; set; }
+    /// <summary>
+    /// 是否已读
+    /// </summary>
     [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint")]
     public bool IsRead { get; set; }
+    /// <summary>
+    /// 用户联系分组Id
+    /// </summary>
+    public long? UserContactGroupId { get; set; }
+    /// <summary>
+    /// 备注
+    /// </summary>
+    public string Remark {get; set;}
 }

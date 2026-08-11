@@ -24,8 +24,8 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
     [ObservableProperty] private string _avatar;
     [ObservableProperty] private string _verifyMessage;
     [ObservableProperty] private string _remark;
-    [ObservableProperty] private UserContactGroup _selectedGroup;
-    [ObservableProperty] private ObservableCollection<UserContactGroup> _groups = [];
+    [ObservableProperty] private long _selectedGroupId;
+    [ObservableProperty] private ObservableCollection<ValueLabel<long>> _groups = [];
     [ObservableProperty] private string _groupNum;
     private string _contactId;
     public bool IsGroup { get; set; }
@@ -47,17 +47,16 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
                 var userInfo = res.Data;
                 Nickname = userInfo.Nickname;
                 Avatar = $"{setting.ApiUrl}/Files/Images/{userInfo.Avatar}";
-                Groups = new ObservableCollection<UserContactGroup>(userInfo.ContactGroups);
                 _contactId =  userInfo.UserId;
+                await LoadUserContactGroups();
             }
             else 
-                NotificationComponent.ShowNotification(View.Owner,res.Message,MessageType.Error);
+                NotificationComponent.ShowNotification(View,res.Message,MessageType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            NotificationComponent.ShowNotification(View.Owner,$"程序出现异常：{e.Message}",MessageType.Error);
-            throw;
+            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",MessageType.Error);
         }
     }
 
@@ -75,21 +74,25 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
             model.VerificationMessage = VerifyMessage;
             model.Status = VerificationMessageStatus.验证中.GetValue();
             model.UserId = user.UserId;
+            model.UserContactGroupId = SelectedGroupId;
+            model.Remark = Remark;
+            
             var res = await apiService.PostAsync<object>($"api/{nameof(VerificationMessage)}/AddVerificationMessage",
                 model);
             if (res.Success)
             {
+                NotificationComponent.ShowNotification(View,"已发送验证信息",MessageType.Success);
                 if(ConfirmCallback!=null)
                     await ConfirmCallback.Invoke();
             }
             else
-                NotificationComponent.ShowNotification(View.Owner,res.Message,MessageType.Error);
+                NotificationComponent.ShowNotification(View,res.Message,MessageType.Error);
             View.Close();
         }
         catch (Exception ex)
         {
             await logger.LogAsync($"发送验证信息出现异常:{ex}", "验证消息");
-            NotificationComponent.ShowNotification(View.Owner,$"发送验证信息出现异常：{ex.Message}",MessageType.Error);
+            NotificationComponent.ShowNotification(View,$"发送验证信息出现异常：{ex.Message}",MessageType.Error);
         }
        
     }
@@ -106,5 +109,27 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
     private void Close()
     {
         View.Close();
+    }
+
+    private async Task LoadUserContactGroups()
+    {
+        try
+        {
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+            var res = await apiService.GetAsync<List<ValueLabel<long>>>
+                ($"api/UserContact/GetUserContactGroupSelections/{user.UserId}", new { IsGroup });
+            if (res.Success)
+            {
+               Groups.Clear();
+               res.Data.ForEach(Groups.Add);
+            }
+            else
+                NotificationComponent.ShowNotification(View, res.Message, MessageType.Error);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",MessageType.Error);
+        }
     }
 }

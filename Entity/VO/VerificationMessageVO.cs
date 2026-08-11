@@ -9,4 +9,5 @@ public class VerificationMessageVO
     public int Status { get; set; }
     public string Source { get; set; }
     public string VerificationMessage { get; set; }
+    public string ContactId { get; set; }
 }

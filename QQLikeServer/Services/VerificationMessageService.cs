@@ -15,16 +15,19 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
 {
     public async Task<ResponseResult<List<VerificationMessageVO>>> GetVerificationMessages(string userId, bool? isGroup)
     {
-        var data = await orm.Select<VerificationMessage,User>()
+        var data = await orm.Select<VerificationMessage,User,User>()
             .InnerJoin(e=>e.t1.UserId==e.t2.Id)
+            .InnerJoin(e=>e.t1.ContactId==e.t3.Id)
             .WhereIf(isGroup!=null,e=>e.t1.IsGroup==isGroup)
             .Where(e=>e.t1.UserId==userId)
+            .OrderByDescending(e=>e.t1.CreateTime)
             .ToListAsync(e=>new  VerificationMessageVO
             {
-                UserId = e.t1.UserId,
+                UserId = e.t2.Id,
+                ContactId = e.t3.Id,
                 VerificationMessage = e.t1.Message,
                 ApplyTime = e.t1.CreateTime,
-                Nickname = e.t2.Nickname,
+                Nickname = e.t3.Nickname,
                 Avatar = e.t2.Avatar,
                 Status = e.t1.Status,
                 Source = e.t1.Source
@@ -47,12 +50,16 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
                 CreateTime = DateTime.Now,
                 IsGroup = model.IsGroup,
                 NeedConfirm = model.NeedConfirm,
+                Remark =  model.Remark,
+                UserContactGroupId = model.UserContactGroupId,
                 Expire = (long)TimeSpan.FromDays(7).TotalMilliseconds // 设置过期时间为7天后
             };
             var entity1 = entity.MapTo(new VerificationMessage());
             entity1.ContactId = entity.UserId;
             entity1.UserId = model.ContactId;
+            entity1.Remark = string.Empty;
             entity1.Status = VerificationMessageStatus.待验证.GetValue();
+            entity1.UserContactGroupId = null;
             await orm.Insert(new List<VerificationMessage> { entity, entity1 })
                 .ExecuteAffrowsAsync();
             await mqProducer.Produce(nameof(VerificationMessage),Constants.MQExchange,
@@ -64,7 +71,7 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
         {
             worker.Rollback();
             Console.WriteLine(e);
-            throw;
+            return ResponseResult.Fail($"添加验证消息过程中程序出现异常:{e.Message}");
         }
     }
 }

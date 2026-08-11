@@ -56,7 +56,14 @@ public partial class App : Application
         services.AddSingleton(setting);
         services.AddSingleton<ISqlSugarClient>(_ =>
         {
-            var sqlSugarClient = new SqlSugarClient(new ConnectionConfig
+            /*var sqlSugarClient = new SqlSugarClient(new ConnectionConfig
+            {
+                ConnectionString = setting.DbConnectionString,
+                DbType = DbType.MySql,
+                IsAutoCloseConnection = true
+            });*/
+            
+            var sqlSugarClient = new SqlSugarScope(new ConnectionConfig
             {
                 ConnectionString = setting.DbConnectionString,
                 DbType = DbType.MySql,
@@ -105,10 +112,9 @@ public partial class App : Application
         services.AddSingleton(rabbitMQConfig);
         var connectionFactory = rabbitMQConfig.MapTo<RabbitMQConfig,ConnectionFactory>();
         var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
-        var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-        services.AddScoped(_ => channel);
+
         services.AddSingleton(connection);
-        services.AddSingleton<IRabbitMQProducer, RabbitMQProducer>();
+        services.AddScoped<IRabbitMQProducer, RabbitMQProducer>();
         services.AddScoped<IRabbitMQConsumer,RabbitMQConsumer>();
     }
 

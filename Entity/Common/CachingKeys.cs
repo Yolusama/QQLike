@@ -8,4 +8,5 @@ public static class CachingKeys
     public const string UserAccounts = nameof(UserAccounts);
     public const string User = nameof(User);
     public const string CurrentUser = nameof(CurrentUser);
+    public const string UserContactCurrentUserId =  nameof(UserContactCurrentUserId);
 }

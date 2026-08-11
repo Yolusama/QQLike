@@ -13,9 +13,9 @@ public partial class UserContactView : UserControl
         InitializeComponent();
         this.SetViewModel<UserContactViewModel,UserContactView>();
     }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-       ViewModel.LoadUserContactGroupsCommand.Execute(null);
+        if ((bool)e.NewValue)
+            ViewModel.LoadUserContactGroupsCommand.Execute(null);
     }
 }

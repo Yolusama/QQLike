@@ -51,28 +51,31 @@
                                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
             </Button>
 
-            <Popup Grid.Row="0"
+            <Popup x:Name="AddPopup"
+                   Grid.Row="0"
                    Grid.Column="1"
                    PlacementTarget="{Binding ElementName=AddButton}"
                    Placement="Bottom"
                    VerticalOffset="8"
                    AllowsTransparency="True"
-                   StaysOpen="False"
+                   StaysOpen="True"
                    IsOpen="{Binding IsAdding, Mode=TwoWay}">
                 <Border MinWidth="150"
                         Background="White"
                         BorderThickness="1"
                         BorderBrush="#ddd"
                         CornerRadius="4"
-                        Effect="{DynamicResource MaterialDesignElevationShadow2}">
+                        Effect="{DynamicResource MaterialDesignElevationShadow2}"
+                        MouseEnter="AddPopup_MouseEnter"
+                        MouseLeave="AddPopup_MouseLeave">
                     <StackPanel Margin="0,8,0,0" Orientation="Vertical">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000" Command="{Binding OpenComprehensiveSearchCommand}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                 <materialDesign:PackIcon Kind="AccountOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
                                 <Label Content="加好友/群" VerticalAlignment="Center" FontSize="12"></Label>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000" Command="{Binding ShowGroupCreatorCommand}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                 <materialDesign:PackIcon Kind="AccountGroupOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
                                 <Label Content="创建群聊" VerticalAlignment="Center" FontSize="12"></Label>

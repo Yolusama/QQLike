@@ -108,6 +108,8 @@ public partial class IndexViewModel(IWindowFactory windowFactory,
             }
             else
             {
+                await Task.Delay(1500);
+                loading.Complete();
                 await logger.LogAsync($"登录失败:{res.Message}", "用户登录");
                 MessageComponent.ShowMessage(View,$"登录失败，原因:{res.Message}", MessageType.Error);
             }
@@ -115,6 +117,7 @@ public partial class IndexViewModel(IWindowFactory windowFactory,
         catch (Exception e)
         {
             Console.WriteLine(e);
+            loading.Complete();
             await logger.LogAsync($"登录过程中程序出现异常:{e}", "用户登录");
             MessageComponent.ShowMessage(View, $"登录过程中发生异常:{e.Message}，请稍后重试", MessageType.Error);
         }

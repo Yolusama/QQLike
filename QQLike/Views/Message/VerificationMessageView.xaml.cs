@@ -13,9 +13,10 @@ public partial class VerificationMessageView : UserControl
         this.SetViewModel<VerificationMessageViewModel,VerificationMessageView>();
     }
 
-    private void VerificationMessageView_OnLoaded(object sender, RoutedEventArgs e)
+    private void VerificationMessageView_OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         var viewModel = this.GetViewModel<VerificationMessageViewModel>();
-        viewModel.LoadNoticesCommand.Execute(null);
+        if ((bool)e.NewValue)
+            viewModel.LoadNoticesCommand.Execute(null);
     }
 }

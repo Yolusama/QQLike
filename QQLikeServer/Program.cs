@@ -59,6 +59,7 @@ builder.Services.AddScoped<IRandomGenerator, RandomGenerator>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserContactService, UserContactService>();
+builder.Services.AddScoped<IVerificationMessageService, VerificationMessageService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 
