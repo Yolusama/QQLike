@@ -91,4 +91,27 @@ public class UserContactService(IFreeSql orm) : IUserContactService
             });
         return ResponseResult<List<ValueLabel<long>>>.OK("获取成功", contactGroup);
     }
+
+    public async Task<ResponseResult> UpdateRemark(UserContactRemarkModel model)
+    {
+        using var worker = orm.CreateUnitOfWork();
+        try
+        {
+            var affected = await worker.Orm.Update<UserContact>()
+                .Set(e => e.Remark, model.Remark)
+                .Where(e => e.UserId == model.UserId && e.ContactId == model.ContactId && !e.IsGroup)
+                .ExecuteAffrowsAsync();
+            worker.Commit();
+
+            if (affected > 0)
+                return ResponseResult.OK("备注修改成功");
+            return ResponseResult.Fail("未找到对应好友关系，备注修改失败");
+        }
+        catch (Exception e)
+        {
+            worker.Rollback();
+            Console.WriteLine(e);
+            return ResponseResult.Fail($"修改备注时程序出现异常:{e.Message}");
+        }
+    }
 }

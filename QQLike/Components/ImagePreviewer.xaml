@@ -5,124 +5,285 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:QQLike.Components"
+        xmlns:converters="clr-namespace:QQLike.Converters"
         mc:Ignorable="d"
         Title="ImagePreviewer" Height="600" Width="900"
         WindowStyle="None"
+        Loaded="Window_Loaded"
         AllowsTransparency="True"
         Background="Transparent"
         WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <converters:EditToolToColorConverter x:Key="EditToolToColorConverter" />
+    </Window.Resources>
 
     <Border CornerRadius="8" Background="#1E1E1E" ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
                 <!-- 标题栏 -->
-                <RowDefinition Height="36"/>
+                <RowDefinition Height="36" />
                 <!-- 图片显示区域 -->
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="*" />
                 <!-- 底部工具栏 -->
-                <RowDefinition Height="48"/>
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- ==================== 标题栏 ==================== -->
             <Border Grid.Row="0" Background="#2D2D2D" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <TextBlock Text="图片预览" VerticalAlignment="Center" Margin="12,0,0,0"
-                               Foreground="#CCCCCC" FontSize="13"/>
-                   <local:CommonToolHeader></local:CommonToolHeader>
+                               Foreground="#CCCCCC" FontSize="13" />
+                    <local:CommonToolHeader></local:CommonToolHeader>
                 </Grid>
             </Border>
 
             <!-- ==================== 图片显示区域 ==================== -->
             <Grid Grid.Row="1" Background="#1E1E1E" ClipToBounds="True">
-                <!-- 图片容器，支持缩放和平移 -->
                 <Viewbox x:Name="ImageViewbox" Stretch="Uniform">
-                    <Image x:Name="PreviewImage" Stretch="None"
-                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <Grid x:Name="ImageGrid"
+                          RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
+                                <RotateTransform Angle="{Binding RotationAngle}" />
+                            </TransformGroup>
+                        </Grid.RenderTransform>
+                        <Image Stretch="None" Source="{Binding ImageSource}" x:Name="ImageContainer" />
+                        <!-- 编辑标注画布 -->
+                        <Canvas x:Name="DrawingCanvas" Background="Transparent"
+                                MouseLeftButtonDown="DrawingCanvas_MouseLeftButtonDown"
+                                MouseMove="DrawingCanvas_MouseMove"
+                                MouseLeftButtonUp="DrawingCanvas_MouseLeftButtonUp"
+                                Visibility="{Binding IsEditMode, Converter={StaticResource BoolVisibilityConverter2}}" />
+                    </Grid>
                 </Viewbox>
             </Grid>
 
             <!-- ==================== 底部工具栏 ==================== -->
-            <Border Grid.Row="2" Background="#2D2D2D">
+            <Border Grid.Row="2" Background="#2D2D2D" MinHeight="48"
+                    Visibility="{Binding IsBottomToolbarVisible, Converter={StaticResource BoolVisibilityConverter}}">
                 <Grid Margin="8,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <!-- 左侧：缩放控制 -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- 缩小 -->
-                        <Button x:Name="BtnZoomOut" Width="36" Height="36"
+                        <Button x:Name="BtnZoomOut" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="缩小" Command="{Binding ZoomOutCommand}">
-                            <materialDesign:PackIcon Kind="MagnifyMinusOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="MagnifyMinusOutline" Width="20" Height="20" />
                         </Button>
                         <!-- 缩放比例 -->
                         <TextBlock Text="{Binding ScaleText}" VerticalAlignment="Center"
                                    Foreground="#CCCCCC" FontSize="13" Margin="8,0"
-                                   MinWidth="48" TextAlignment="Center"/>
+                                   MinWidth="48" TextAlignment="Center" />
                         <!-- 放大 -->
-                        <Button x:Name="BtnZoomIn" Width="36" Height="36"
+                        <Button x:Name="BtnZoomIn" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="放大" Command="{Binding ZoomInCommand}">
-                            <materialDesign:PackIcon Kind="MagnifyPlusOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="MagnifyPlusOutline" Width="20" Height="20" />
                         </Button>
                         <!-- 分隔线 -->
-                        <Border Width="1" Height="20" Background="#555555" Margin="8,0"/>
+                        <Border Width="1" Height="20" Background="#555555" Margin="8,0" />
                         <!-- 原始大小 1:1 -->
-                        <Button x:Name="BtnActualSize" Width="36" Height="36"
+                        <Button x:Name="BtnActualSize" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="原始大小" Command="{Binding BackToActualSizeCommand}">
-                            <materialDesign:PackIcon Kind="FitToScreenOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="FitToScreenOutline" Width="20" Height="20" />
                         </Button>
                     </StackPanel>
 
                     <!-- 右侧：操作按钮 -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- 旋转 -->
-                        <Button x:Name="BtnRotate" Width="36" Height="36"
+                        <Button x:Name="BtnRotate" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="旋转" Command="{Binding RotateCommand}">
-                            <materialDesign:PackIcon Kind="RotateRight" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="RotateRight" Width="20" Height="20" />
                         </Button>
                         <!-- 编辑 -->
-                        <Button x:Name="BtnEdit" Width="36" Height="36"
+                        <Button x:Name="BtnEdit" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="编辑" Command="{Binding EditCommand}">
-                            <materialDesign:PackIcon Kind="PencilOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="PencilOutline" Width="20" Height="20" />
                         </Button>
-                        <!-- 裁剪 -->
-                        <Button x:Name="BtnCrop" Width="36" Height="36"
+                        <!-- 提取文字 -->
+                        <Button x:Name="BtnTakeText" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="#CCCCCC" ToolTip="裁剪" Command="{Binding CropCommand}">
-                            <materialDesign:PackIcon Kind="Crop" Width="20" Height="20"/>
-                        </Button>
-                        <!-- 标注 -->
-                        <Button x:Name="BtnAnnotate" Width="36" Height="36"
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="#CCCCCC" ToolTip="标注" Command="{Binding AnnotateCommand}">
-                            <materialDesign:PackIcon Kind="FormatText" Width="20" Height="20"/>
+                                Foreground="#CCCCCC" ToolTip="提取文字" Command="{Binding TakeTextCommand}">
+                            <materialDesign:PackIcon Kind="AlphaABoxOutline" Width="20" Height="20" />
                         </Button>
                         <!-- 分隔线 -->
-                        <Border Width="1" Height="20" Background="#555555" Margin="8,0"/>
+                        <Border Width="1" Height="20" Background="#555555" Margin="8,0" />
                         <!-- 分享 -->
-                        <Button x:Name="BtnShare" Width="36" Height="36"
+                        <Button x:Name="BtnShare" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="分享" Command="{Binding ShareCommand}">
-                            <materialDesign:PackIcon Kind="ShareVariantOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="ShareVariantOutline" Width="20" Height="20" />
                         </Button>
                         <!-- 下载/保存 -->
-                        <Button x:Name="BtnSave" Width="36" Height="36"
+                        <Button x:Name="BtnSave" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="保存" Command="{Binding SaveCommand}">
-                            <materialDesign:PackIcon Kind="DownloadOutline" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="DownloadOutline" Width="20" Height="20" />
                         </Button>
                         <!-- 更多 -->
-                        <Button x:Name="BtnMore" Width="36" Height="36"
+                        <Button x:Name="BtnMore" Width="36" Height="36" Padding="5"
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Foreground="#CCCCCC" ToolTip="更多" Command="{Binding MoreCommand}">
-                            <materialDesign:PackIcon Kind="DotsHorizontal" Width="20" Height="20"/>
+                            <materialDesign:PackIcon Kind="DotsHorizontal" Width="20" Height="20" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <!-- ==================== 编辑工具栏 ==================== -->
+            <Border Grid.Row="2" VerticalAlignment="Top" HorizontalAlignment="Center"
+                    Background="#2D2D2D" CornerRadius="6" Padding="6,4"
+                    Visibility="{Binding IsEditMode, Converter={StaticResource BoolVisibilityConverter2}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <!-- 笔刷大小 -->
+                        <Button Width="32" Height="32" Padding="4" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="小号笔刷"
+                                Command="{Binding ChooseStrokeSizeCommand}"
+                                CommandParameter="Small">
+                            <Ellipse Width="4" Height="4" Fill="White" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="中号笔刷"
+                                Command="{Binding ChooseStrokeSizeCommand}"
+                                CommandParameter="Medium">
+                            <Ellipse Width="6" Height="6" Fill="White" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="大号笔刷"
+                                Command="{Binding ChooseStrokeSizeCommand}"
+                                CommandParameter="Large">
+                            <Ellipse Width="8" Height="8" Fill="White" />
+                        </Button>
+
+
+                        <!-- 分隔线 -->
+                        <Border Width="1" Height="20" Background="#555555" Margin="6,0" VerticalAlignment="Center" />
+
+                        <!-- 颜色选择 -->
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="红色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Red">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="Red" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="黄色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Yellow">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="#FF0" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="绿色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Green">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="#0D6" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="蓝色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Blue">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="#09F" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="白色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="White">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="White" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="灰色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Gray">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="#A9A9A9" />
+                        </Button>
+                        <Button Width="28" Height="28" Padding="2" Margin="2,0"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                ToolTip="黑色"
+                                Command="{Binding ChooseColorCommand}"
+                                CommandParameter="Black">
+                            <Border Width="16" Height="16" CornerRadius="3" Background="#000" />
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Grid.Row="1">
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{Binding SelectedTool, Converter={StaticResource EditToolToColorConverter}, ConverterParameter=Rectangle}"
+                                ToolTip="矩形" Command="{Binding SelectRectangleCommand}">
+                            <materialDesign:PackIcon Kind="RectangleOutline" Width="18" Height="18" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{Binding SelectedTool, Converter={StaticResource EditToolToColorConverter}, ConverterParameter=Circle}"
+                                ToolTip="圆形" Command="{Binding SelectCircleCommand}">
+                            <materialDesign:PackIcon Kind="CircleOutline" Width="18" Height="18" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{Binding SelectedTool, Converter={StaticResource EditToolToColorConverter}, ConverterParameter=Arrow}"
+                                ToolTip="箭头" Command="{Binding SelectArrowCommand}">
+                            <materialDesign:PackIcon Kind="ArrowTopRight" Width="18" Height="18" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{Binding SelectedTool, Converter={StaticResource EditToolToColorConverter}, ConverterParameter=Pencil}"
+                                ToolTip="画笔" Command="{Binding SelectPencilCommand}">
+                            <materialDesign:PackIcon Kind="PencilOutline" Width="20" Height="20" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{Binding SelectedTool, Converter={StaticResource EditToolToColorConverter}, ConverterParameter=Text}"
+                                ToolTip="文字" Command="{Binding SelectTextCommand}">
+                            <materialDesign:PackIcon Kind="FormatText" Width="20" Height="20" />
+                        </Button>
+
+                        <!-- 分隔线 -->
+                        <Border Width="1" Height="20" Background="#555555" Margin="6,0" VerticalAlignment="Center" />
+
+                        <!-- 操作按钮 -->
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="撤销" Command="{Binding UndoCommand}">
+                            <materialDesign:PackIcon Kind="Undo" Width="20" Height="20" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="保存" Command="{Binding SaveEditCommand}">
+                            <materialDesign:PackIcon Kind="ContentSaveOutline" Width="20" Height="20" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="取消" Command="{Binding CancelEditCommand}">
+                            <materialDesign:PackIcon Kind="Close" Width="20" Height="20" />
+                        </Button>
+                        <Button Width="32" Height="32" Padding="4"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="#CCCCCC" ToolTip="确认" Command="{Binding ConfirmEditCommand}">
+                            <materialDesign:PackIcon Kind="Check" Width="20" Height="20" />
                         </Button>
                     </StackPanel>
                 </Grid>

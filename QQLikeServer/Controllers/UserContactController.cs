@@ -47,4 +47,11 @@ public class UserContactController(IUserContactService userContactService) : Con
     {
         return await userContactService.GetUserContactGroupSelections(userId,isGroup);
     }
+
+    [RequestAuthorize]
+    [HttpPut]
+    public async Task<ActionResult<ResponseResult>> UpdateRemark([FromBody] UserContactRemarkModel model)
+    {
+        return await userContactService.UpdateRemark(model);
+    }
 }

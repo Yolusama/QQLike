@@ -3,77 +3,170 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:local="clr-namespace:QQLike.Views.User"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         IsVisibleChanged="UserProfileView_IsVisibleChanged"
         mc:Ignorable="d"
+        Background="#f5f5f5"
         Height="550" Width="800">
-    <Grid Margin="80">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="Auto"></RowDefinition>
-            <RowDefinition Height="*"></RowDefinition>
-        </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Ellipse Grid.Column="0" Width="100" Height="100" Stroke="Transparent" StrokeThickness="2">
-                <Ellipse.Fill>
-                   <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
-                </Ellipse.Fill>
-            </Ellipse>
-            <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center" Orientation="Vertical">
-                <TextBlock Text="{Binding Nickname}" FontSize="24" FontWeight="Bold"></TextBlock>
-                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <TextBlock Text="QQLike" FontSize="13" Foreground="#868686"></TextBlock>
-                    <TextBlock Text="{Binding Account}" FontSize="13" Foreground="#868686" Margin="5,0,0,0"></TextBlock>
-                </StackPanel>
-            </StackPanel>
-        </Grid>
-        <Grid Grid.Row="1"  Margin="0,5,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.2*"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <materialDesign:PackIcon Grid.Column="0" Kind="SquareEditOutline" Height="16" Width="16" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="0" Text="个性签名:" FontSize="13" VerticalAlignment="Center" Margin="20,0,0,0"></TextBlock>
-            <TextBlock Grid.Column="1" Text="{Binding Signature}" FontSize="13" Foreground="#868686" Margin="15,0,10,0" VerticalAlignment="Center"></TextBlock>
-        </Grid>
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="10,20,0,10">
-            <StackPanel Orientation="Horizontal">
-               <materialDesign:PackIcon Kind="{Binding GenderIcon}" Width="16" Height="16" VerticalAlignment="Center"
-                                         Foreground="{Binding GenderIconColor}">
-                </materialDesign:PackIcon> 
-                <TextBlock Text="{Binding GenderText}" FontSize="13" Margin="5,0,0,0"></TextBlock>
-            </StackPanel>
-        </StackPanel>
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.8*"></ColumnDefinition>
-                <ColumnDefinition Width="Auto"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal">
-                <materialDesign:PackIcon Kind="AccountGroupOutline" Width="16" Height="16" VerticalAlignment="Center">
-                </materialDesign:PackIcon>
-                <TextBlock Text="好友分组" FontSize="14" Margin="5,0,0,0" VerticalAlignment="Center"></TextBlock>
-            </StackPanel>
-            <ComboBox Grid.Column="1" Width="150" Height="30" Margin="10,10,0,10"
-                      ItemsSource="{Binding FriendGroups}" DisplayMemberPath="Label"
-                      SelectedValuePath="Value"
-                      SelectedValue="{Binding SelectedGroupId}" /> 
-        </Grid>
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,20,0,20" HorizontalAlignment="Center">
-            <Button Content="编辑资料" Width="100" Height="30" Margin="0,0,10,0" Background="#fff" Visibility="{Binding UserProfileEditable, Converter={StaticResource BoolVisibilityConverter}}"
-                    Foreground="#000" materialDesign:ButtonAssist.CornerRadius="8" Command="{Binding OpenProfileEditorCommand}"></Button>
-            <Button Content="发消息" Width="100" Height="30" Margin="0,0,10,0" Background="#09f"
-                    Foreground="White" materialDesign:ButtonAssist.CornerRadius="8" Command="{Binding OpenMessageCommand}"></Button>
-            <Button Content="加好友" Width="100" Height="30" Background="#fff" Foreground="#000"
-                    materialDesign:ButtonAssist.CornerRadius="8" Command="{Binding AddFriendCommand}"></Button>
-        </StackPanel>
+
+    <UserControl.Resources>
+        <!-- 信息行标签统一样式 -->
+        <Style x:Key="InfoLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#9E9E9E" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 信息行图标统一样式 -->
+        <Style x:Key="InfoIcon" TargetType="materialDesign:PackIcon">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="#9E9E9E" />
+        </Style>
+
+        <!-- 可点击备注按钮：悬浮时出现浅色背景 -->
+        <Style x:Key="RemarkButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="6,2">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#EFF6FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="48,32">
+        <Border Background="White" CornerRadius="12" Padding="36,30"
+                BorderBrush="#E8E8E8" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- ==================== 顶部：头像 + 昵称 + 账号 ==================== -->
+                <Grid Grid.Row="0" Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Width="96" Height="96" CornerRadius="48"
+                            Background="#EEEEEE" ClipToBounds="True"
+                            BorderBrush="#E0E0E0" BorderThickness="1">
+                        <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="20,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Nickname}" FontSize="22" FontWeight="Bold"
+                                       Foreground="#222222" VerticalAlignment="Center" />
+                            <Border Background="{Binding GenderIconColor}" CornerRadius="4"
+                                    Padding="4,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="{Binding GenderIcon}" Width="12" Height="12"
+                                                         Foreground="White" />
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Text="QQLike" FontSize="12" Foreground="#868686" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Account}" FontSize="12" Foreground="#868686"
+                                       Margin="6,0,0,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding GenderText}" FontSize="12" Foreground="#868686"
+                                       Margin="6,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ==================== 个性签名 ==================== -->
+                <Grid Grid.Row="1" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <materialDesign:PackIcon Grid.Column="0" Kind="CommentTextOutline" Style="{StaticResource InfoIcon}" />
+                    <TextBlock Grid.Column="0" Text="个性签名:" Style="{StaticResource InfoLabel}" Margin="24,0,0,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Signature}" FontSize="13" Foreground="#4A4A4A"
+                               Margin="14,0,8,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </Grid>
+
+                <!-- ==================== 备注（可点击修改） ==================== -->
+                <Grid Grid.Row="2" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <materialDesign:PackIcon Grid.Column="0" Kind="TagOutline" Style="{StaticResource InfoIcon}" />
+                    <TextBlock Grid.Column="0" Text="备注:" Style="{StaticResource InfoLabel}" Margin="24,0,0,0" />
+                    <Button Grid.Column="1" Style="{StaticResource RemarkButton}"
+                            Margin="8,0,0,0"
+                            Command="{Binding OpenRemarkDialogCommand}"
+                            ToolTip="点击修改备注">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Remark}" FontSize="13" Foreground="#4A4A4A"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <materialDesign:PackIcon Kind="PencilOutline" Width="14" Height="14"
+                                                     Foreground="#B0B0B0" Margin="8,0,0,0"
+                                                     VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- ==================== 好友分组 ==================== -->
+                <Grid Grid.Row="3" Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <materialDesign:PackIcon Grid.Column="0" Kind="AccountGroupOutline" Style="{StaticResource InfoIcon}" />
+                    <TextBlock Grid.Column="0" Text="好友分组" Style="{StaticResource InfoLabel}" Margin="24,0,0,0" />
+                    <ComboBox Grid.Column="1" Width="160" Height="32" Margin="8,0,0,0"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding FriendGroups}" DisplayMemberPath="Label"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              Padding="8"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding SelectedGroupId}" />
+                </Grid>
+
+                <!-- ==================== 底部操作按钮 ==================== -->
+                <Border Grid.Row="4" BorderBrush="#F0F0F0" BorderThickness="0,1,0,0" Padding="0,24,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="编辑资料" Width="100" Height="34" Margin="0,0,10,0"
+                                Background="#fff" Foreground="#333333"
+                                BorderBrush="#DDDDDD" BorderThickness="1"
+                                Visibility="{Binding UserProfileEditable, Converter={StaticResource BoolVisibilityConverter}}"
+                                materialDesign:ButtonAssist.CornerRadius="8"
+                                Command="{Binding OpenProfileEditorCommand}" />
+                        <Button Content="发消息" Width="100" Height="34" Margin="0,0,10,0"
+                                Background="#09f" Foreground="White"
+                                materialDesign:ButtonAssist.CornerRadius="8"
+                                Command="{Binding OpenMessageCommand}" />
+                        <Button Content="加好友" Width="100" Height="34"
+                                Background="#fff" Foreground="#333333"
+                                BorderBrush="#DDDDDD" BorderThickness="1"
+                                materialDesign:ButtonAssist.CornerRadius="8"
+                                Visibility="{Binding CanAddFriend, Converter={StaticResource BoolVisibilityConverter}}"
+                                Command="{Binding AddFriendCommand}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

@@ -18,14 +18,14 @@
     </UserControl.Resources>
     <Grid Background="{DynamicResource MaterialDesignPaper}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.1*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0.3*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <components:UserSearchHeader/>
+        <components:UserSearchHeader Grid.ColumnSpan="2" />
 
         <Grid Grid.Column="0" Grid.Row="1" Margin="12,14,12,12">
             <Grid.RowDefinitions>
@@ -225,13 +225,13 @@
             
         </Grid>
         </Grid>
-        <Grid Grid.Row="1" Grid.Column="1">
+        <Grid Grid.Row="1" Grid.Column="1" Margin="0,20,0,0">
             <user:UserProfileView 
                 Margin="12,0,0,0" HorizontalAlignment="Center" 
-                VerticalAlignment="Center"  Visibility="{Binding DataContext.IsUserProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
+                VerticalAlignment="Top"  Visibility="{Binding DataContext.IsUserProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
             <group:GroupProfileView 
                  Margin="12,0,0,0" HorizontalAlignment="Center" 
-                VerticalAlignment="Center" Visibility="{Binding DataContext.IsGroupProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
+                VerticalAlignment="Top" Visibility="{Binding DataContext.IsGroupProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
         </Grid>
     </Grid>
 </UserControl>

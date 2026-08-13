@@ -39,7 +39,13 @@ public partial class UserProfileViewModel(SysSetting setting,
     [ObservableProperty]
     private string _genderText;
     [ObservableProperty]
+    private string _genderIcon;
+    [ObservableProperty]
+    private string _genderIconColor;
+    [ObservableProperty]
     private string _signature;
+
+    private string _currentContactId = string.Empty;
     
     public bool UserProfileEditable {get; private set;}
 
@@ -97,7 +103,10 @@ public partial class UserProfileViewModel(SysSetting setting,
         Signature = userInfo.Signature;
         SelectedGroupId = userInfo.UserContactGroupId;
         GenderText =  userInfo.Gender == UserGender.男.GetValue() ? "男" : "女";
+        GenderIcon = userInfo.Gender == UserGender.男.GetValue() ? "GenderMale" : "GenderFemale";
+        GenderIconColor = userInfo.Gender == UserGender.男.GetValue() ? "#2196F3" : "#E91E63";
         UserProfileEditable = user.UserId == toSeeUserId;
+        _currentContactId = toSeeUserId;
     }
     
     private async Task LoadFriendGroups()
@@ -120,6 +129,42 @@ public partial class UserProfileViewModel(SysSetting setting,
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Window.GetWindow(View), $"程序程序异常：{e.Message}", MessageType.Error);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenRemarkDialog()
+    {
+        if (string.IsNullOrEmpty(_currentContactId))
+            return;
+
+        RemarkDialog.ShowRemarkDialog(_currentContactId, Remark, SaveRemarkAsync);
+    }
+
+    private async Task<bool> SaveRemarkAsync(string newRemark)
+    {
+        try
+        {
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+            var res = await apiService.PutAsync<object>(
+                "api/UserContact/UpdateRemark",
+                new { user.UserId, ContactId = _currentContactId, Remark = newRemark });
+
+            if (res.Success)
+            {
+                Remark = newRemark;
+                MessageComponent.ShowMessage(Window.GetWindow(View), "备注修改成功", MessageType.Success);
+                return true;
+            }
+
+            MessageComponent.ShowMessage(Window.GetWindow(View), res.Message, MessageType.Error);
+            return false;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(Window.GetWindow(View), $"修改备注出现异常：{e.Message}", MessageType.Error);
+            return false;
         }
     }
 }
