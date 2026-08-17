@@ -20,5 +20,7 @@ public partial class UserProfileView : UserControl
     {
         if ((bool)e.NewValue)
             ViewModel.LoadDataCommand.Execute(null);
+        else
+            ViewModel.UnloadCommand.Execute(null);
     }
 }

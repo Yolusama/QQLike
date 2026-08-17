@@ -76,6 +76,8 @@
                 </Viewbox>
             </Grid>
         </Border>
+        <message:ChatMessageView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[0].Activated, 
+        RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"></message:ChatMessageView>
         <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[1].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
         <message:VerificationMessageView Grid.Column="1" Width="Auto" Height="Auto"
                                          Grid.Row="1" Visibility="{Binding DataContext.MenuItems[2].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>

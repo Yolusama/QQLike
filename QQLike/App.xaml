@@ -15,6 +15,7 @@
             <!-- Converters -->
             <converters:BoolVisibilityConverter x:Key="BoolVisibilityConverter" />
             <converters:BoolVisibilityConverter2 x:Key="BoolVisibilityConverter2" />
+            <converters:UnreadCountToTextConverter x:Key="UnreadCountToTextConverter" />
             
             <Style x:Key="OutlineTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
                 <Setter Property="Padding" Value="10" />

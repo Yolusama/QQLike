@@ -41,12 +41,11 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        base.OnExit(e);
-
-        // 释放容器会确定性 Dispose 单例服务（如 TesseractEngine），
-        // 避免进程退出时由 GC 终结器兜底清理导致的原生资源泄漏告警
+        // 先释放容器中的单例资源（如 TesseractEngine），再走 WPF 默认退出流程
         if (ServiceProvider is IDisposable disposable)
             disposable.Dispose();
+
+        base.OnExit(e);
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -129,9 +128,11 @@ public partial class App : Application
 
     private void AddOcrEngine(IServiceCollection services)
     {
-        var tessdataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
-        var ocrEngine = new TesseractEngine(tessdataPath, "chi_sim+eng", EngineMode.Default);
-        services.AddSingleton(ocrEngine);
+        services.AddSingleton<TesseractEngine>(_ =>
+        {
+            var tessdataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
+            return new TesseractEngine(tessdataPath, "chi_sim+eng", EngineMode.Default);
+        });
     }
 
     private void RegisterViewOptions(IServiceCollection services)
@@ -170,5 +171,7 @@ public partial class App : Application
         services.AddTransient<RemarkDialog>();
         services.AddTransient<UserProfileViewModel>();
         services.AddTransient<UserProfileView>();
+        services.AddTransient<ChatMessageViewModel>();
+        services.AddTransient<ChatMessageView>();
     }
 }

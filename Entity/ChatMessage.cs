@@ -1,4 +1,5 @@
 ﻿using FreeSql.DataAnnotations;
+using SqlSugar;
 
 namespace QQLike.Entity;
 
@@ -37,4 +38,6 @@ public class ChatMessage
     /// 关联头信息Id
     /// </summary>
     public string HeadMessageId {get; set;}
+    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint")]
+    public bool IsRead {get; set;}
 }

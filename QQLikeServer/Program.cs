@@ -1,8 +1,4 @@
-using System.Text;
 using FreeSql;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.IdentityModel.Tokens;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;
 using QQLike.Functional.Instructure;
@@ -60,6 +56,7 @@ builder.Services.AddScoped<IRandomGenerator, RandomGenerator>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserContactService, UserContactService>();
 builder.Services.AddScoped<IVerificationMessageService, VerificationMessageService>();
+builder.Services.AddScoped<IHeadMessageService, HeadMessageService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 

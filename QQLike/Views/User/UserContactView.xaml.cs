@@ -17,5 +17,6 @@ public partial class UserContactView : UserControl
     {
         if ((bool)e.NewValue)
             ViewModel.LoadUserContactGroupsCommand.Execute(null);
+        else ViewModel.UnloadCommand.Execute(null);
     }
 }

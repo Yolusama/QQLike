@@ -1,0 +1,374 @@
+﻿<UserControl x:Class="QQLike.Views.Message.ChatMessageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:components="clr-namespace:QQLike.Components"
+             mc:Ignorable="d"
+             IsVisibleChanged="ChatMessageView_OnIsVisibleChanged"
+             d:DesignHeight="720" d:DesignWidth="1120">
+    <UserControl.Resources>
+        <Style x:Key="ConversationListBoxStyle" TargetType="ListBox" BasedOn="{StaticResource MaterialDesignListBox}">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="White" />
+        </Style>
+
+        <Style x:Key="ConversationItemStyle" TargetType="ListBoxItem"
+               BasedOn="{StaticResource MaterialDesignListBoxItem}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="MinHeight" Value="82" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid SnapsToDevicePixels="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 选中指示条 -->
+                            <Border x:Name="Indicator"
+                                    Grid.Column="0"
+                                    Background="#2196F3"
+                                    Visibility="Collapsed" />
+
+                            <Border x:Name="ItemBorder" Grid.Column="1" Background="Transparent">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#EAF2FE" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsSelected" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#F5F6F8" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChatMessageItemStyle" TargetType="ListBoxItem"
+               BasedOn="{StaticResource MaterialDesignListBoxItem}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+
+        <DataTemplate x:Key="TextChatMessageTemplate">
+            <Grid Margin="12,6" HorizontalAlignment="{Binding MessageHorizontalAlignment}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="LeftAvatar"
+                        Grid.Column="0"
+                        Width="38"
+                        Height="38"
+                        Margin="0,0,8,0"
+                        CornerRadius="19"
+                        Background="#E9EEF4"
+                        ClipToBounds="True"
+                        Visibility="{Binding LeftAvatarVisibility}">
+                    <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                </Border>
+
+                <StackPanel x:Name="MessageBody" Grid.Column="1" MaxWidth="520">
+                    <TextBlock x:Name="SenderNameText"
+                               Text="{Binding DisplayName}"
+                               Margin="0,0,0,4"
+                               FontSize="12"
+                               Foreground="#7D7D7D"
+                               Visibility="{Binding SenderNameVisibility}" />
+
+                    <Border x:Name="MessageBubble"
+                            MaxWidth="460"
+                            Padding="12,8"
+                            CornerRadius="8"
+                            Background="{Binding BubbleBackground}"
+                            BorderBrush="{Binding BubbleBorderBrush}"
+                            BorderThickness="1">
+                        <TextBlock Text="{Binding Content}"
+                                   FontSize="14"
+                                   Foreground="#1F1F1F"
+                                   TextWrapping="Wrap" />
+                    </Border>
+
+                    <TextBlock x:Name="MessageTime"
+                               Text="{Binding TimeText}"
+                               Margin="0,4,0,0"
+                               FontSize="11"
+                               Foreground="#A9A9A9"
+                               TextAlignment="{Binding MessageTimeAlignment}" />
+                </StackPanel>
+
+                <Border x:Name="RightAvatar"
+                        Grid.Column="2"
+                        Width="38"
+                        Height="38"
+                        Margin="8,0,0,0"
+                        CornerRadius="19"
+                        Background="#E9EEF4"
+                        ClipToBounds="True"
+                        Visibility="{Binding RightAvatarVisibility}">
+                    <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid Background="#F6F7FB">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0">
+            <ListBox ItemsSource="{Binding HeadMessages}"
+                     SelectedItem="{Binding SelectedHeadMessage, Mode=TwoWay}"
+                     ItemContainerStyle="{StaticResource ConversationItemStyle}"
+                     Style="{StaticResource ConversationListBoxStyle}"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.CanContentScroll="True">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding DataContext.CheckMessagesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding }"
+                                Style="{StaticResource TextButtonStyle}"
+                                HorizontalContentAlignment="Stretch"
+                                HorizontalAlignment="Stretch">
+                            <Grid Margin="10,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 头像（无头像时显示首字母占位） -->
+                                <Border Width="50" Height="50" CornerRadius="25" Background="#E9EEF4"
+                                        Margin="0,0,12,0" ClipToBounds="True">
+                                    <Grid>
+                                        <TextBlock Text="{Binding AvatarInitial}" FontSize="20" FontWeight="SemiBold"
+                                                   Foreground="#7D7D7D"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- 文本区：名字/时间 + 内容/未读 -->
+                                <Grid Grid.Column="1" VerticalAlignment="Center">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="#1F1F1F" TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="#A5A5A5"
+                                                   FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <Grid Grid.Row="1" Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding LastContent}" FontSize="12" Foreground="#8F8F8F"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1" Background="#F44336" CornerRadius="10" Padding="5,1"
+                                                MinWidth="20" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding UnreadCount}" Value="0">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding UnreadCount, Converter={StaticResource UnreadCountToTextConverter}}"
+                                                       Foreground="White" FontSize="11" TextAlignment="Center" />
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <Grid Grid.Column="1" Background="#FAFAFA">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.25"
+                        Visibility="{Binding IsNoSelection, Converter={StaticResource BoolVisibilityConverter2}}">
+                <materialDesign:PackIcon Kind="AccountCircleOutline" Width="170" Height="170" Foreground="#C7C7C7"
+                                         HorizontalAlignment="Center" />
+                <TextBlock Text="选择一个会话查看详情" Margin="0,12,0,0" FontSize="20" Foreground="#A7A7A7"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+            <Grid Visibility="{Binding HasSelection, Converter={StaticResource BoolVisibilityConverter2}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,0,1" Padding="16,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="42" Height="42" CornerRadius="21" Background="#E9EEF4" ClipToBounds="True">
+                            <Image Source="{Binding SelectedHeadMessage.Avatar}" Stretch="UniformToFill" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="#1F1F1F"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="会话中"
+                                       Margin="0,2,0,0"
+                                       FontSize="12"
+                                       Foreground="#9A9A9A" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <components:InfinityScrollView
+                    Grid.Row="1"
+                    LoadMoreCommand="{Binding ScrollToTopCommand}" Direction="Up"
+                    VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                    <ListBox ItemsSource="{Binding ChatMessages}"
+                             ItemContainerStyle="{StaticResource ChatMessageItemStyle}"
+                             ItemTemplate="{StaticResource TextChatMessageTemplate}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel IsItemsHost="True" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                </components:InfinityScrollView>
+
+                <Border Grid.Row="2" Background="White" BorderBrush="#E6E6E6" BorderThickness="1,1,0,0" Padding="12,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" MinHeight="80" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Toolbar Row -->
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                <Button Width="32" Height="32" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="表情">
+                                    <materialDesign:PackIcon Kind="EmoticonOutline" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="截图">
+                                    <materialDesign:PackIcon Kind="ContentCut" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="文件夹">
+                                    <materialDesign:PackIcon Kind="FolderOutline" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="图片">
+                                    <materialDesign:PackIcon Kind="ImageOutline" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="视频">
+                                    <materialDesign:PackIcon Kind="VideoOutline" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="邮件">
+                                    <materialDesign:PackIcon Kind="EmailOutline" Width="20" Height="20" />
+                                </Button>
+                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Foreground="#757575" ToolTip="语音">
+                                    <materialDesign:PackIcon Kind="MicrophoneOutline" Width="20" Height="20" />
+                                </Button>
+                            </StackPanel>
+
+                            <Button Grid.Column="1" Width="32" Height="32" Padding="5"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="#757575" ToolTip="历史记录">
+                                <materialDesign:PackIcon Kind="ClockOutline" Width="20" Height="20" />
+                            </Button>
+                        </Grid>
+
+                        <!-- Text Input Area -->
+                        <TextBox Grid.Row="1"
+                                 Text="{Binding NewMessageText}"
+                                 MinHeight="100"
+                                 VerticalContentAlignment="Top"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 x:Name="ContentWriteTo"
+                                 FontSize="14"
+                                 Padding="4" />
+
+                        <!-- Send Button Row -->
+                        <Grid Grid.Row="2" HorizontalAlignment="Right" Margin="0,6,0,0">
+                            <Border Background="#2196F3" CornerRadius="6" Padding="16,6">
+                                <Button Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="White"
+                                        FontSize="14"
+                                        Content="发送"
+                                        ToolTip="发送消息 (Enter)"
+                                        Padding="8,2" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

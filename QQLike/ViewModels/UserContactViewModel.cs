@@ -104,6 +104,15 @@ public partial class UserContactViewModel(ISqlSugarClient sugarClient,
             await logger.LogAsync($"加载联系人分组失败,出现异常：{e}","用户联系人");
         }
     }
+
+    [RelayCommand]
+    private void Unload()
+    {
+        IsUserProfileVisible = false;
+        IsGroupProfileVisible = false;
+        IsGroupView = false;
+        IsUserView = true;
+    }
     
     [RelayCommand]
     private async Task UserGroupExpand(UserContactGroupItem? item)

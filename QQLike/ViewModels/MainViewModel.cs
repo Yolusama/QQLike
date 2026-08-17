@@ -30,7 +30,7 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
     [ObservableProperty]
     private ObservableCollection<MDMenuItem> _menuItems =
     [
-        new MDMenuItem { Key = nameof(ChatMessage), Title = "消息", SelectedIcon = PackIconKind.MessageText, UnselectedIcon = PackIconKind.MessageTextOutline },
+        new MDMenuItem { Key = nameof(ChatMessage), Title = "消息", SelectedIcon = PackIconKind.MessageText, UnselectedIcon = PackIconKind.MessageTextOutline,Activated = true},
         new MDMenuItem { Key = nameof(UserContact), Title = "联系人", SelectedIcon = PackIconKind.AccountGroup, UnselectedIcon = PackIconKind.AccountGroupOutline },
         new MDMenuItem { Key = nameof(VerificationMessage), Title = "验证消息", SelectedIcon = PackIconKind.MessageAlert, UnselectedIcon = PackIconKind.MessageAlertOutline },
         new MDMenuItem { Key = nameof(SysSetting), Title = "设置", SelectedIcon = PackIconKind.Cog, UnselectedIcon = PackIconKind.CogOutline }
@@ -45,6 +45,8 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
     private CancellationTokenSource _cts = new();
     private bool _mqStarted;
     private bool _disposed;
+
+    public Socket Client => _client;
 
     [RelayCommand]
     private async Task ConnectSocketServer()
@@ -90,21 +92,13 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
         foreach (var item in MenuItems)
             item.Activated = false;
         SelectedMenuItem.Activated = true;
-        SwitchPage(value.Title);
     }
 
-    private void SwitchPage(string title)
+    public void ShowMenu(string key)
     {
-        switch (title)
-        {
-            case "消息":
-                break;
-            case "联系人":
-            case "验证消息":
-                break;
-            case "设置":
-                break;
-        }
+        var menuItem = MenuItems.FirstOrDefault(e => e.Key == key);
+        if (menuItem != null)
+            SelectedMenuItem = menuItem;
     }
 
     [RelayCommand]
@@ -188,7 +182,7 @@ public partial class MainViewModel(ISessionStorage sessionStorage,
             var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(ChatMessage));
             if (menuItem is null) return;
             var unreadCount = await sugarClient.Queryable<ChatMessage>()
-                //.Where(e=>!e.IsRead)
+                .Where(e=>!e.IsRead)
                 .CountAsync();
             menuItem.Notification = unreadCount.ToString();
         }

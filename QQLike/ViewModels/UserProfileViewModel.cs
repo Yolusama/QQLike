@@ -3,14 +3,15 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QQLike.Components;
-using QQLike.Domain;
 using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.Enum;
+using QQLike.Entity.Model;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
+using QQLike.Services;
 using QQLike.Services.Interfaces;
 using QQLike.Views.User;
 using SqlSugar;
@@ -19,7 +20,6 @@ namespace QQLike.ViewModels;
 
 public partial class UserProfileViewModel(SysSetting setting, 
     ISessionStorage sessionStorage, 
-    IWindowFactory windowFactory,
     IApiService apiService,
     ISqlSugarClient sugarClient) 
     : ViewModelBase<UserProfileView>
@@ -54,6 +54,23 @@ public partial class UserProfileViewModel(SysSetting setting,
     {
         await LoadUserInfo();
         await LoadFriendGroups();
+    }
+
+    [RelayCommand]
+    private void Unload()
+    {
+        Nickname = string.Empty;
+        Avatar = string.Empty;
+        Account = string.Empty;
+        Remark = string.Empty;
+        Signature = string.Empty;
+        GenderText = string.Empty;
+        GenderIcon = string.Empty;
+        GenderIconColor = string.Empty;
+        SelectedGroupId = 0;
+        FriendGroups.Clear();
+        UserProfileEditable = false;
+        _currentContactId = string.Empty;
     }
 
     private async Task LoadUserInfo()
@@ -139,6 +156,36 @@ public partial class UserProfileViewModel(SysSetting setting,
             return;
 
         RemarkDialog.ShowRemarkDialog(_currentContactId, Remark, SaveRemarkAsync);
+    }
+    
+    [RelayCommand]
+    private async Task OpenMessage()
+    {
+        var window = Window.GetWindow(View);
+        try
+        {
+            var model = new HeadMessageModel()
+            {
+                UserId = sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId,
+                ContactId = _currentContactId
+            };
+            var res = await apiService
+                .PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);
+            if(res.Success)
+            {
+                sessionStorage.Set(CachingKeys.ChatMessageCurrentHeadId, res.Data);
+                var viewModel = window.GetViewModel<MainViewModel>();
+                viewModel.ShowMenu(nameof(ChatMessage));
+            }
+            else 
+                MessageComponent.ShowMessage(window, res.Message, MessageType.Error);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(window, $"程序异常：{e.Message}", MessageType.Error);
+        }
+ 
     }
 
     private async Task<bool> SaveRemarkAsync(string newRemark)

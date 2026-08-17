@@ -9,4 +9,5 @@ public static class CachingKeys
     public const string User = nameof(User);
     public const string CurrentUser = nameof(CurrentUser);
     public const string UserContactCurrentUserId =  nameof(UserContactCurrentUserId);
+    public const string ChatMessageCurrentHeadId = nameof(ChatMessageCurrentHeadId);
 }
