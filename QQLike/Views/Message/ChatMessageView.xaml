@@ -5,6 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:components="clr-namespace:QQLike.Components"
+             xmlns:views="clr-namespace:QQLike.Views.Message"
+             xmlns:templates="clr-namespace:QQLike.Views.Templates"
              mc:Ignorable="d"
              IsVisibleChanged="ChatMessageView_OnIsVisibleChanged"
              d:DesignHeight="720" d:DesignWidth="1120">
@@ -70,14 +72,15 @@
             <Setter Property="Focusable" Value="False" />
         </Style>
 
-        <DataTemplate x:Key="TextChatMessageTemplate">
-            <Grid Margin="12,6" HorizontalAlignment="{Binding MessageHorizontalAlignment}">
+        <DataTemplate x:Key="ChatMessageTemplate">
+            <Grid Margin="12,6">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
+                <!-- 左侧头像（对方消息时显示） -->
                 <Border x:Name="LeftAvatar"
                         Grid.Column="0"
                         Width="38"
@@ -86,39 +89,23 @@
                         CornerRadius="19"
                         Background="#E9EEF4"
                         ClipToBounds="True"
-                        Visibility="{Binding LeftAvatarVisibility}">
-                    <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
-                </Border>
+                        Visibility="{Binding LeftAvatarVisibility}" />
 
-                <StackPanel x:Name="MessageBody" Grid.Column="1" MaxWidth="520">
-                    <TextBlock x:Name="SenderNameText"
-                               Text="{Binding DisplayName}"
-                               Margin="0,0,0,4"
-                               FontSize="12"
-                               Foreground="#7D7D7D"
-                               Visibility="{Binding SenderNameVisibility}" />
-
-                    <Border x:Name="MessageBubble"
-                            MaxWidth="460"
-                            Padding="12,8"
-                            CornerRadius="8"
-                            Background="{Binding BubbleBackground}"
-                            BorderBrush="{Binding BubbleBorderBrush}"
-                            BorderThickness="1">
-                        <TextBlock Text="{Binding Content}"
-                                   FontSize="14"
-                                   Foreground="#1F1F1F"
-                                   TextWrapping="Wrap" />
-                    </Border>
+                <!-- 气泡+时间组合容器（居中列，根据消息方向对齐） -->
+                <StackPanel x:Name="MessageBody" Grid.Column="1" MaxWidth="520"
+                            HorizontalAlignment="{Binding BubbleHorizontalAlignment}">
+                    <ContentControl Content="{Binding}"
+                                    ContentTemplateSelector="{DynamicResource ChatMessageBodyTemplateSelector}" />
 
                     <TextBlock x:Name="MessageTime"
                                Text="{Binding TimeText}"
                                Margin="0,4,0,0"
                                FontSize="11"
                                Foreground="#A9A9A9"
-                               TextAlignment="{Binding MessageTimeAlignment}" />
+                               HorizontalAlignment="Center" />
                 </StackPanel>
 
+                <!-- 右侧头像（自己消息时显示） -->
                 <Border x:Name="RightAvatar"
                         Grid.Column="2"
                         Width="38"
@@ -127,11 +114,119 @@
                         CornerRadius="19"
                         Background="#E9EEF4"
                         ClipToBounds="True"
-                        Visibility="{Binding RightAvatarVisibility}">
-                    <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
-                </Border>
+                        Visibility="{Binding RightAvatarVisibility}" />
             </Grid>
         </DataTemplate>
+
+        <DataTemplate x:Key="TextMessageBodyTemplate">
+            <Border MaxWidth="460"
+                    Padding="12,8"
+                    CornerRadius="8"
+                    Background="{Binding BubbleBackground}"
+                    BorderBrush="{Binding BubbleBorderBrush}"
+                    BorderThickness="1">
+                <TextBlock Text="{Binding Content}"
+                           FontSize="14"
+                           Foreground="#1F1F1F"
+                           TextWrapping="Wrap" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ImageMessageBodyTemplate">
+            <Border MaxWidth="260" MaxHeight="320" CornerRadius="8" ClipToBounds="True"
+                    Background="{Binding BubbleBackground}"
+                    BorderBrush="{Binding BubbleBorderBrush}"
+                    BorderThickness="1">
+                <Image Source="{Binding MediaUrl}"
+                       Stretch="Uniform"
+                       MaxWidth="260"
+                       MaxHeight="320" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="AudioMessageBodyTemplate">
+            <Border MaxWidth="320" MinWidth="220" Padding="12,8" CornerRadius="8"
+                    Background="{Binding BubbleBackground}"
+                    BorderBrush="{Binding BubbleBorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton x:Name="PlayToggle"
+                                  Width="36" Height="36" Padding="8"
+                                  Style="{StaticResource MaterialDesignFlatButton}"
+                                  Foreground="#2196F3"
+                                  Click="ToggleMediaPlay"
+                                  ToolTip="播放/暂停">
+                        <materialDesign:PackIcon x:Name="PlayIcon" Kind="Play" Width="20" Height="20" />
+                    </ToggleButton>
+                    <MediaElement Grid.Column="1"
+                                  x:Name="AudioMedia"
+                                  Width="0" Height="0"
+                                  Source="{Binding MediaUrl}"
+                                  LoadedBehavior="Manual"
+                                  UnloadedBehavior="Stop"
+                                  Volume="1" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="VideoMessageBodyTemplate">
+            <Border MaxWidth="360" CornerRadius="8" ClipToBounds="True"
+                    Background="#1F1F1F"
+                    BorderBrush="{Binding BubbleBorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <MediaElement x:Name="VideoMedia"
+                                  Width="360" Height="240"
+                                  Source="{Binding MediaUrl}"
+                                  LoadedBehavior="Manual"
+                                  UnloadedBehavior="Stop"
+                                  Stretch="Uniform" />
+                    <ToggleButton x:Name="PlayToggle"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Width="48" Height="48" Padding="8"
+                                  Style="{StaticResource MaterialDesignFlatButton}"
+                                  Foreground="White"
+                                  Click="ToggleMediaPlay"
+                                  ToolTip="播放/暂停">
+                        <materialDesign:PackIcon x:Name="PlayIcon" Kind="Play" Width="28" Height="28" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FileMessageBodyTemplate">
+            <Border MaxWidth="320" MinWidth="220" Padding="12,10" CornerRadius="8"
+                    Background="{Binding BubbleBackground}"
+                    BorderBrush="{Binding BubbleBorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <materialDesign:PackIcon Kind="FileOutline" Width="44" Height="44" Foreground="#2196F3"
+                                             VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding FileName}" FontSize="14" Foreground="#1F1F1F"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="文件" FontSize="12" Foreground="#A9A9A9" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <templates:ChatMessageBodyTemplateSelector x:Key="ChatMessageBodyTemplateSelector"
+                                                   TextTemplate="{StaticResource TextMessageBodyTemplate}"
+                                                   ImageTemplate="{StaticResource ImageMessageBodyTemplate}"
+                                                   AudioTemplate="{StaticResource AudioMessageBodyTemplate}"
+                                                   VideoTemplate="{StaticResource VideoMessageBodyTemplate}"
+                                                   FileTemplate="{StaticResource FileMessageBodyTemplate}" />
+
+
     </UserControl.Resources>
 
     <Grid Background="#F6F7FB">
@@ -150,11 +245,12 @@
                      ScrollViewer.CanContentScroll="True">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Button Command="{Binding DataContext.CheckMessagesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding }"
-                                Style="{StaticResource TextButtonStyle}"
-                                HorizontalContentAlignment="Stretch"
-                                HorizontalAlignment="Stretch">
+                        <Button
+                            Command="{Binding DataContext.CheckMessagesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding }"
+                            Style="{StaticResource TextButtonStyle}"
+                            HorizontalContentAlignment="Stretch"
+                            HorizontalAlignment="Stretch">
                             <Grid Margin="10,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -210,8 +306,9 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock Text="{Binding UnreadCount, Converter={StaticResource UnreadCountToTextConverter}}"
-                                                       Foreground="White" FontSize="11" TextAlignment="Center" />
+                                            <TextBlock
+                                                Text="{Binding UnreadCount, Converter={StaticResource UnreadCountToTextConverter}}"
+                                                Foreground="White" FontSize="11" TextAlignment="Center" />
                                         </Border>
                                     </Grid>
                                 </Grid>
@@ -244,20 +341,14 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Width="42" Height="42" CornerRadius="21" Background="#E9EEF4" ClipToBounds="True">
-                            <Image Source="{Binding SelectedHeadMessage.Avatar}" Stretch="UniformToFill" />
-                        </Border>
-
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Foreground="#1F1F1F"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="会话中"
-                                       Margin="0,2,0,0"
-                                       FontSize="12"
-                                       Foreground="#9A9A9A" />
+                        <StackPanel Grid.Column="1" Margin="12,5,0,5" VerticalAlignment="Center">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}">
+                                <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1F1F1F"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -268,7 +359,7 @@
                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                     <ListBox ItemsSource="{Binding ChatMessages}"
                              ItemContainerStyle="{StaticResource ChatMessageItemStyle}"
-                             ItemTemplate="{StaticResource TextChatMessageTemplate}"
+                             ItemTemplate="{StaticResource ChatMessageTemplate}"
                              BorderThickness="0"
                              Background="Transparent"
                              ScrollViewer.VerticalScrollBarVisibility="Disabled"
@@ -297,11 +388,6 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Orientation="Horizontal" Grid.Column="0">
-                                <Button Width="32" Height="32" Padding="5"
-                                        Style="{StaticResource MaterialDesignFlatButton}"
-                                        Foreground="#757575" ToolTip="表情">
-                                    <materialDesign:PackIcon Kind="EmoticonOutline" Width="20" Height="20" />
-                                </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
                                         Foreground="#757575" ToolTip="截图">
@@ -309,7 +395,7 @@
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
-                                        Foreground="#757575" ToolTip="文件夹">
+                                        Foreground="#757575" ToolTip="打开文件">
                                     <materialDesign:PackIcon Kind="FolderOutline" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
@@ -321,11 +407,6 @@
                                         Style="{StaticResource MaterialDesignFlatButton}"
                                         Foreground="#757575" ToolTip="视频">
                                     <materialDesign:PackIcon Kind="VideoOutline" Width="20" Height="20" />
-                                </Button>
-                                <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
-                                        Style="{StaticResource MaterialDesignFlatButton}"
-                                        Foreground="#757575" ToolTip="邮件">
-                                    <materialDesign:PackIcon Kind="EmailOutline" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
@@ -363,6 +444,7 @@
                                         FontSize="14"
                                         Content="发送"
                                         ToolTip="发送消息 (Enter)"
+                                        Command="{Binding SendMessageCommand}"
                                         Padding="8,2" />
                             </Border>
                         </Grid>

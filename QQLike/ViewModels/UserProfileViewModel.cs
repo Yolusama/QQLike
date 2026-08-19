@@ -167,7 +167,9 @@ public partial class UserProfileViewModel(SysSetting setting,
             var model = new HeadMessageModel()
             {
                 UserId = sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId,
-                ContactId = _currentContactId
+                ContactId = _currentContactId,
+                Content = string.Empty,
+                LastMessageTime = null
             };
             var res = await apiService
                 .PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);

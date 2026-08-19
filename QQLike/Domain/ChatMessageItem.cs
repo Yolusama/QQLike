@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using QQLike.Entity.Enum;
 
 namespace QQLike.Domain;
 
@@ -18,9 +19,17 @@ public partial class ChatMessageItem : ObservableObject
     private DateTime? _messageTime = null;
     [ObservableProperty]
     private bool _isSelf;
+    [ObservableProperty]
+    private ChatMessageType _messageType = ChatMessageType.Text;
+    [ObservableProperty]
+    private string _fileName = string.Empty;
+    [ObservableProperty]
+    private string _mediaUrl = string.Empty;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;
+    [ObservableProperty]
+    private HorizontalAlignment _bubbleHorizontalAlignment = HorizontalAlignment.Left;
     [ObservableProperty] 
     private Visibility _leftAvatarVisibility = Visibility.Visible;
     [ObservableProperty]
@@ -42,6 +51,7 @@ public partial class ChatMessageItem : ObservableObject
         if (value)
         {
             MessageHorizontalAlignment = HorizontalAlignment.Right;
+            BubbleHorizontalAlignment = HorizontalAlignment.Right;
             LeftAvatarVisibility = Visibility.Collapsed;
             RightAvatarVisibility = Visibility.Visible;
             SenderNameVisibility = Visibility.Collapsed;
@@ -52,6 +62,7 @@ public partial class ChatMessageItem : ObservableObject
         }
 
         MessageHorizontalAlignment = HorizontalAlignment.Left;
+        BubbleHorizontalAlignment = HorizontalAlignment.Left;
         LeftAvatarVisibility = Visibility.Visible;
         RightAvatarVisibility = Visibility.Collapsed;
         SenderNameVisibility = Visibility.Visible;
@@ -60,4 +71,3 @@ public partial class ChatMessageItem : ObservableObject
         MessageTimeAlignment = TextAlignment.Left;
     }
 }
-

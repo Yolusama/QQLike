@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using QQLike.Entity;
 using QQLike.Entity.Common;
+using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Entity.Result;
@@ -62,8 +63,13 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
             entity1.UserContactGroupId = null;
             await orm.Insert(new List<VerificationMessage> { entity, entity1 })
                 .ExecuteAffrowsAsync();
+            var body = new MQMessageBody
+            {
+                Identifier = entity1.UserId,
+                Body = entity1
+            };
             await mqProducer.Produce(nameof(VerificationMessage),Constants.MQExchange,
-                nameof(VerificationMessage),JsonSerializer.Serialize(entity1));
+                nameof(VerificationMessage),JsonSerializer.Serialize(body));
             worker.Commit();
             return ResponseResult.OK("添加成功");
         }

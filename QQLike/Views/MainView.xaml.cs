@@ -16,7 +16,10 @@ public partial class MainView : Window
     private void MainView_OnLoaded(object sender, RoutedEventArgs e)
     {
         if(DataContext is MainViewModel viewModel)
+        {
+            viewModel.ConnectSocketServerCommand.Execute(null);
             viewModel.StartMQConsumingCommand.Execute(null);
+        }
     }
 
     private void MainView_OnClosing(object sender, CancelEventArgs e)

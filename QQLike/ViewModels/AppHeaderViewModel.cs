@@ -8,7 +8,7 @@ using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
-using QQLike.Views.User;
+
 
 namespace QQLike.ViewModels;
 

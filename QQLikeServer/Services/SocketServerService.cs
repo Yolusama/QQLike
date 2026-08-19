@@ -3,10 +3,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using QQLike.Entity;
 using QQLike.Entity.Configuration.Server;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Functional.Instructure;
+using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
 
 namespace QQLike.Services;
@@ -25,7 +27,7 @@ public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISo
    private int _isStarted;
    private const int MaxQueueCount = 1000;
    private const int BufferSize = 4096;
-   private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(30);
+   private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(120);
    private static readonly TimeSpan ReceiveLoopInterval = TimeSpan.FromMilliseconds(100);
 
    public void Run()
@@ -50,8 +52,9 @@ public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISo
          try
          {
             var socket = await _serverSocket.AcceptAsync(token);
-            var port = (socket.RemoteEndPoint as IPEndPoint)?.Port ?? socket.GetHashCode();
-            _temp[port] = socket;
+            var port = (socket.RemoteEndPoint as IPEndPoint)?.Port;
+            if(port == null)continue;
+            _temp[port.Value] = socket;
             _lastHeartbeat[socket] = DateTime.UtcNow;
             
             //_sockets.TryAdd(ip.Port, socket);
@@ -147,15 +150,26 @@ public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISo
                else if (model.Type == ChatMessageType.Heartbeat)
                {
                   _lastHeartbeat[socket] = DateTime.UtcNow;
-                  var transModel = new ChatMessageTransModel
-                  {
-                     Type = ChatMessageType.Heartbeat,
-                     Message = "收到心跳消息!"
-                  };
-                  await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(transModel))), SocketFlags.None, token);
+                  Console.WriteLine($"收到心跳消息，来自{socket.RemoteEndPoint}");
+                  await logger.LogAsync($"收到心跳消息，来自{socket.RemoteEndPoint}", "聊天服务器");
                }
                else if (model.Type == ChatMessageType.Text)
                {
+                  var message = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
+                  var contactId = message.ContactId;
+                  if (!string.IsNullOrWhiteSpace(contactId) )
+                  {
+                     var contactMessage = message.MapTo(new ChatMessage());
+                     contactMessage.Id = 0;
+                     contactMessage.ContactId = message.UserId;
+                     contactMessage.UserId = message.ContactId;
+                     contactMessage.IsRead = false;
+                     var transModel = model.MapTo(new ChatMessageTransModel());
+                     transModel.Data = contactMessage;
+                     var data = JsonSerializer.Serialize(transModel);
+                     if(_userSockets.TryGetValue(contactId, out var contactSocket) && contactSocket.Connected)
+                        await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)), SocketFlags.None, token);
+                  }
                   _lastHeartbeat[socket] = DateTime.UtcNow;
                }
                else

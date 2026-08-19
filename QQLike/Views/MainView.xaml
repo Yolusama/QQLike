@@ -14,7 +14,7 @@
         WindowStyle="None"
         Loaded="MainView_OnLoaded"
         Closing="MainView_OnClosing"
-        Title="MainView" Height="720" Width="1200">
+        Title="QQLike" Height="720" Width="1200">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="0.1*" />
@@ -76,7 +76,8 @@
                 </Viewbox>
             </Grid>
         </Border>
-        <message:ChatMessageView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[0].Activated, 
+        <MediaElement x:Name="Player" Visibility="Collapsed"></MediaElement>
+        <message:ChatMessageView Grid.Column="1" Grid.Row="1" x:Name="ChatMessageView" Visibility="{Binding DataContext.MenuItems[0].Activated, 
         RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"></message:ChatMessageView>
         <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[1].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>
         <message:VerificationMessageView Grid.Column="1" Width="Auto" Height="Auto"

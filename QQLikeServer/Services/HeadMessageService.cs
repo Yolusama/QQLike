@@ -30,9 +30,17 @@ public class HeadMessageService(IFreeSql orm,IRandomGenerator generator) : IHead
                     CreateTime = DateTime.Now,
                     LastMessageTime = DateTime.Now
                 };
-                await orm.Insert(headMessage).ExecuteAffrowsAsync();
-                worker.Commit();
+                await worker.Orm.Insert(headMessage).ExecuteAffrowsAsync();
             }
+            else
+            {
+                headMessage.Content = model.Content;
+                headMessage.LastMessageTime = model.LastMessageTime;
+                await worker.Orm.Update<HeadMessage>()
+                    .SetSource(headMessage)
+                    .ExecuteAffrowsAsync();
+            }
+            worker.Commit();
             return ResponseResult<string>.OK(headMessage.Id);
         }
         catch (Exception e)

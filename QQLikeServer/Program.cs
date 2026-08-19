@@ -61,7 +61,7 @@ builder.Services.AddScoped<IHeadMessageService, HeadMessageService>();
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 
 builder.Services.AddScoped<ISocketServerService, SocketServerService>();
-//builder.Services.AddHostedService<SocketServerHostedService>();
+builder.Services.AddHostedService<SocketServerHostedService>();
 
 builder.Services.AddRedis(setting.RedisConnectionString);
 /*builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

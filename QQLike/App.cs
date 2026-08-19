@@ -173,5 +173,9 @@ public partial class App : Application
         services.AddTransient<UserProfileView>();
         services.AddTransient<ChatMessageViewModel>();
         services.AddTransient<ChatMessageView>();
+        services.AddTransient<UserContactSimpleCardViewModel>();
+        services.AddTransient<UserContactSimpleCard>();
+        services.AddTransient<UserContactGroupViewModel>();
+        services.AddTransient<UserContactGroupView>();
     }
 }
