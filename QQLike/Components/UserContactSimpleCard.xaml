@@ -3,10 +3,101 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:local="clr-namespace:QQLike.Components"
+        IsVisibleChanged="UserContactSimpleCard_OnIsVisibleChanged"
+        xmlns:behaviors="clr-namespace:QQLike.Behaviors"
         mc:Ignorable="d"
-        Height="450" Width="800">
-    <Grid>
-        
-    </Grid>
+        Height="325" Width="400">
+    <Border Background="White" CornerRadius="12" Padding="24">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Header: Avatar + Nickname + QQ + Online Status -->
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" Background="#F5F7FB" HorizontalAlignment="Left">
+                    <Ellipse Width="88" Height="88" VerticalAlignment="Top" behaviors:ImagePreview.Previewable="True">
+                        <Ellipse.Fill>
+                            <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding NickName}" FontSize="34" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding GenderSymbol}" FontSize="22" Foreground="#2196F3" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Account}" FontSize="15" Foreground="#777" Margin="0,4,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Ellipse Width="12" Height="12" Fill="#2ED573" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding StatusText}" FontSize="15" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Info Rows: Remark, Location, Birthday -->
+            <StackPanel Grid.Row="1">
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="备注" Foreground="#667085" FontSize="15" />
+                    <TextBlock Grid.Column="1" Text="{Binding Remark}" FontSize="15" TextWrapping="Wrap" />
+                </Grid>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="所在地" Foreground="#667085" FontSize="15" />
+                    <TextBlock Grid.Column="1" Text="{Binding LocationText}" FontSize="15" TextWrapping="Wrap" />
+                </Grid>
+
+                <Grid Margin="0,8,0,0" >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="生日" Foreground="#667085" FontSize="15" />
+                    <TextBlock Grid.Column="1" Text="{Binding BirthdayText}" FontSize="15" />
+                </Grid>
+            </StackPanel>
+
+            <!-- Bottom Buttons: Share + Send Message -->
+            <UniformGrid Grid.Row="2" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Bottom" Columns="2">
+                <Button Content="分享" Height="44" Background="White"
+                        Margin="0,0,12,0" Command="{Binding ShareCommand}"
+                        Width="120" Foreground="#333" BorderBrush="#DDD" BorderThickness="1">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button Content="发消息" Height="44" Background="#2196F3"
+                        Command="{Binding OpenMessagingCommand}"
+                        Width="120" Foreground="White" BorderBrush="#2196F3" BorderThickness="1">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </UniformGrid>
+        </Grid>
+    </Border>
 </UserControl>

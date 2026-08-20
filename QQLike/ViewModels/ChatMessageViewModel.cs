@@ -85,7 +85,8 @@ public partial class ChatMessageViewModel(
                         ? string.Empty
                         : (string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim().Substring(0, 1)),
                     UnreadCount = header.UnreadCount,
-                    HeadMessageId = header.HeadMessageId
+                    HeadMessageId = header.HeadMessageId,
+                    IsGroup = header.IsGroup
                 });
             }
 
@@ -121,31 +122,20 @@ public partial class ChatMessageViewModel(
             HasSelection = true;
             IsNoSelection = false;
             ChatMessages.Clear();
+            var isGroup = item.IsGroup;
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-            var messages = await sugarClient.Queryable<ChatMessage>()
-                .InnerJoin<V_HeadMessage>((c,v)=>c.HeadMessageId == v.HeadMessageId)
-                .Where((c,v)=>c.HeadMessageId == item.HeadMessageId)
-                .Where((c,v)=>c.UserId == user.UserId || c.ContactId == user.UserId)
-                .OrderByDescending((c,v)=>c.CreateTime)
-                .Select((c,v)=>new ChatMessageVO
-                {
-                    Avatar = v.Avatar,
-                    ContactId = c.ContactId,
-                    Content = c.Content,
-                    CreateTime = c.CreateTime,
-                    FileName = c.FileName,
-                    MessageType = c.MessageType,
-                    UserId = c.UserId,
-                    ContactName = v.ContactName
-                })
+            var messages = await sugarClient.Queryable<V_UserChatMessage>()
+                .Where(v=>v.UserId == user.UserId)
+                .OrderBy(v=>v.CreateTime)
                 .ToListAsync();
             foreach (var message in messages)
             {
                 var type = (ChatMessageType)message.MessageType;
+                var contactName = string.IsNullOrEmpty(message.Remark) ? message.NickName : message.Remark;
                 ChatMessages.Add(new ChatMessageItem
                 {
                     Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
-                    DisplayName = message.ContactName,
+                    DisplayName =  contactName,
                     Content = message.Content,
                     MessageType = type,
                     FileName = message.FileName,
@@ -153,7 +143,9 @@ public partial class ChatMessageViewModel(
                     MessageTime = message.CreateTime,
                     UserId = message.UserId,
                     ContactId = message.ContactId,
-                    IsSelf = user.UserId == message.UserId
+                    IsSelf = message.IsSelf,
+                    MessageTimeText = FormatMessageTime(message.CreateTime,true),
+                    ContactNameVisibility = isGroup ? Visibility.Visible : Visibility.Collapsed
                 });
             }
             
@@ -222,10 +214,14 @@ public partial class ChatMessageViewModel(
             };
             await mqProducer.Produce(nameof(ChatMessage),Constants.MQExchange,nameof(ChatMessage),JsonSerializer
                 .Serialize(messageBody));
-            ChatMessages.Add(new ChatMessageItem
+            var userContact = await sugarClient.Queryable<UserContact>()
+                .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
+                .FirstAsync();
+            var displayName = SelectedHeadMessage.IsGroup ? userContact.GroupDisplayName : user.Nickname;
+            var messageItem = new ChatMessageItem
             {
                 Avatar = $"{setting.ApiUrl}/Files/Images/{user.Avatar}",
-                DisplayName = user.Nickname,
+                DisplayName = displayName,
                 Content = message.Content,
                 MessageType = ChatMessageType.Text,
                 FileName = string.Empty,
@@ -233,8 +229,13 @@ public partial class ChatMessageViewModel(
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
                 ContactId = message.ContactId,
-                IsSelf = true
-            }); 
+                IsSelf = true,
+                MessageTimeText = FormatMessageTime(message.CreateTime, true)
+            };
+            if(!SelectedHeadMessage.IsGroup)
+                messageItem.ContactNameVisibility = Visibility.Collapsed;
+            ChatMessages.Add(messageItem); 
+           
             View.ContentWriteTo.Focus();
             worker.Commit();
         }
@@ -269,51 +270,79 @@ public partial class ChatMessageViewModel(
         try
         {
             var contactUser = await sugarClient.Queryable<User>()
-                .Where(e => e.Id == message.ContactId)
-                .Select(e => new { e.Nickname, e.Avatar })
+                .LeftJoin<UserContact>((u,uc)=>uc.UserId == u.Id)
+                .Where((u,uc) => u.Id == message.ContactId)
+                .Select((u,uc) => new { u.Nickname, u.Avatar,uc.Remark })
                 .FirstAsync();
+            var messageType = (ChatMessageType)message.MessageType;
             var item = new ChatMessageItem
             {
                 Avatar = $"{setting.ApiUrl}/Files/Images/{contactUser.Avatar}",
-                DisplayName = contactUser.Nickname,
+                DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
                 Content = message.Content,
-                MessageType = (ChatMessageType)message.MessageType,
+                MessageType = messageType,
                 FileName = message.FileName,
-                MediaUrl = message.Content,
+                MediaUrl = BuildMediaUrl(messageType, message.Content),
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
                 ContactId = message.ContactId,
-                IsSelf = false
+                IsSelf = false,
+                MessageTimeText = FormatMessageTime(message.CreateTime,true)
             };
             ChatMessages.Add(item);
-            var model = new HeadMessageModel()
+
+            var existsInDb = message.Id > 0 && await worker.Db.Queryable<ChatMessage>()
+                .Where(e => e.Id == message.Id)
+                .AnyAsync();
+
+            if (!existsInDb)
             {
-                UserId =  message.UserId,
-                ContactId = message.ContactId,
-                Content = message.Content,
-                LastMessageTime = message.CreateTime
-            };
-            var res = await apiService
-                .PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);
-            if(!res.Success)
-                MessageComponent.ShowMessage(Owner, res.Message, MessageType.Error);
-            else
-            {
+                var model = new HeadMessageModel
+                {
+                    UserId = message.UserId,
+                    ContactId = message.ContactId,
+                    Content = message.Content,
+                    LastMessageTime = message.CreateTime
+                };
+
+                var res = await apiService.PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);
+                if (!res.Success)
+                {
+                    MessageComponent.ShowMessage(Owner, res.Message, MessageType.Error);
+                    return;
+                }
+
                 message.IsRead = false;
                 message.HeadMessageId = res.Data;
                 await worker.Db.Insertable(message).ExecuteCommandAsync();
+            }
+
+            var headItem = HeadMessages.FirstOrDefault(e => e.HeadMessageId == message.HeadMessageId);
+
+            if (headItem == null)
+            {
                 HeadMessages.Add(new ChatHeadMessageItem
                 {
-                    HeadMessageId = res.Data,
+                    HeadMessageId = message.HeadMessageId,
                     ContactId = message.ContactId,
-                    DisplayName = contactUser.Nickname,
+                    DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
                     LastContent = message.Content,
                     TimeText = FormatMessageTime(message.CreateTime),
                     Avatar = $"{setting.ApiUrl}/Files/Images/{contactUser.Avatar}",
                     HasAvatar = true,
                     AvatarInitial = string.Empty,
-                    UnreadCount = 1
+                    UnreadCount = 1,
+                    IsGroup = SelectedHeadMessage.IsGroup
                 });
+            }
+            else
+            {
+                headItem.LastContent = message.Content;
+                headItem.TimeText = FormatMessageTime(message.CreateTime);
+                if (SelectedHeadMessage?.HeadMessageId != headItem.HeadMessageId)
+                {
+                    headItem.UnreadCount += 1;
+                }
             }
         }
         catch (Exception e)
@@ -325,7 +354,7 @@ public partial class ChatMessageViewModel(
     }
     
 
-    private static string FormatMessageTime(DateTime? time)
+    private static string FormatMessageTime(DateTime? time,bool isMessaging = false)
     {
         if (time == null)
             return string.Empty;
@@ -354,7 +383,7 @@ public partial class ChatMessageViewModel(
                 _ => "星期日"
             };
 
-        return value.ToString("yyyy/MM/dd");
+        return  isMessaging? value.ToString("yyyy/MM/dd HH:mm:ss") : value.ToString("yyyy/MM/dd");
     }
 
     private string BuildMediaUrl(ChatMessageType type, string content)

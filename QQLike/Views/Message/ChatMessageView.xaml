@@ -79,31 +79,67 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-
                 <!-- 左侧头像（对方消息时显示） -->
                 <Border x:Name="LeftAvatar"
-                        Grid.Column="0"
+                       
                         Width="38"
                         Height="38"
                         Margin="0,0,8,0"
-                        CornerRadius="19"
+                        VerticalAlignment="Top"
                         Background="#E9EEF4"
-                        ClipToBounds="True"
-                        Visibility="{Binding LeftAvatarVisibility}" />
+                        Visibility="{Binding LeftAvatarVisibility}">
+                    <Ellipse Width="30" Height="30">
+                        <Ellipse.Fill>
+                            <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </Border>
 
-                <!-- 气泡+时间组合容器（居中列，根据消息方向对齐） -->
-                <StackPanel x:Name="MessageBody" Grid.Column="1" MaxWidth="520"
-                            HorizontalAlignment="{Binding BubbleHorizontalAlignment}">
-                    <ContentControl Content="{Binding}"
+                <!-- 气泡+时间组合容器：容器拉伸铺满中间列，时间可稳定居中 -->
+                <Grid x:Name="MessageBody" Grid.Column="1"
+                      VerticalAlignment="Top"
+                      HorizontalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- 昵称和时间同一行（时间保持整行居中） -->
+                    <Grid Grid.Row="0" Margin="0,0,0,4"
+                          HorizontalAlignment="Stretch">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding DisplayName}"
+                                   FontSize="12"
+                                   Foreground="#8F8F8F"
+                                   HorizontalAlignment="Left"
+                                   Visibility="{Binding ContactNameVisibility}"
+                                   TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Grid.Column" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelf}" Value="True">
+                                            <Setter Property="Grid.Column" Value="2" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Text="{Binding MessageTimeText}"
+                                   FontSize="11"
+                                   Foreground="#A9A9A9"
+                                   HorizontalAlignment="Center" />
+                    </Grid>
+
+                    <ContentControl Grid.Row="1"
+                                    Content="{Binding}"
+                                    HorizontalAlignment="{Binding BubbleHorizontalAlignment}"
                                     ContentTemplateSelector="{DynamicResource ChatMessageBodyTemplateSelector}" />
-
-                    <TextBlock x:Name="MessageTime"
-                               Text="{Binding TimeText}"
-                               Margin="0,4,0,0"
-                               FontSize="11"
-                               Foreground="#A9A9A9"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
+                </Grid>
 
                 <!-- 右侧头像（自己消息时显示） -->
                 <Border x:Name="RightAvatar"
@@ -111,10 +147,14 @@
                         Width="38"
                         Height="38"
                         Margin="8,0,0,0"
-                        CornerRadius="19"
-                        Background="#E9EEF4"
-                        ClipToBounds="True"
-                        Visibility="{Binding RightAvatarVisibility}" />
+                        VerticalAlignment="Top"
+                        Visibility="{Binding RightAvatarVisibility}">
+                    <Ellipse Width="30" Height="30">
+                        <Ellipse.Fill>
+                            <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </Border>
             </Grid>
         </DataTemplate>
 
@@ -122,13 +162,15 @@
             <Border MaxWidth="460"
                     Padding="12,8"
                     CornerRadius="8"
+                    HorizontalAlignment="{Binding BubbleHorizontalAlignment}"
                     Background="{Binding BubbleBackground}"
                     BorderBrush="{Binding BubbleBorderBrush}"
-                    BorderThickness="1">
+                    VerticalAlignment="Center"
+                   >
                 <TextBlock Text="{Binding Content}"
                            FontSize="14"
                            Foreground="#1F1F1F"
-                           TextWrapping="Wrap" />
+                           TextWrapping="WrapWithOverflow" />
             </Border>
         </DataTemplate>
 
@@ -342,9 +384,9 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="1" Margin="12,5,0,5" VerticalAlignment="Center">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left">
                                 <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
-                                           FontSize="18"
+                                           FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="#1F1F1F"
                                            TextTrimming="CharacterEllipsis" />

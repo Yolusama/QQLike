@@ -19,6 +19,10 @@ public class ChatMessage
     /// </summary>
     public string ContactId {get; set;}
     /// <summary>
+    /// 群聊中发言人id
+    /// </summary>
+    public string GroupMemberId {get; set;}
+    /// <summary>
     /// 根据小写类型，文本类输出文本，文件类保存到缓存地址
     /// </summary>
     public string Content {get; set;}

@@ -19,5 +19,6 @@ public partial class ChatHeadMessageItem : ObservableObject
     [ObservableProperty] private string _avatarInitial = string.Empty;
     [ObservableProperty] private int _unreadCount;
     public string HeadMessageId { get; set; }
+    public bool IsGroup {get; set;}
 }
 

@@ -48,7 +48,7 @@ public partial class MainViewModel(
         new MDMenuItem
         {
             Key = nameof(ChatMessage), Title = "消息", SelectedIcon = PackIconKind.MessageText,
-            UnselectedIcon = PackIconKind.MessageTextOutline, Activated = true
+            UnselectedIcon = PackIconKind.MessageTextOutline
         },
         new MDMenuItem
         {

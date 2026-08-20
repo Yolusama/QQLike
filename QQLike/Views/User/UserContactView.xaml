@@ -27,7 +27,7 @@
         </Grid.ColumnDefinitions>
         <components:UserSearchHeader Grid.ColumnSpan="2" />
 
-        <Grid Grid.Column="0" Grid.Row="1" Margin="12,14,12,12">
+        <Grid Grid.Column="0" Grid.Row="1" Margin="12,14,12,12" Background="#f5f5f5">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />

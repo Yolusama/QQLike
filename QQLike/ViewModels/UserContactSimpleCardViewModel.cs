@@ -27,6 +27,14 @@ public partial class UserContactSimpleCardViewModel(ISqlSugarClient sugarClient)
     private string _statusText;
     [ObservableProperty]
     private bool _isUserView;
+    [ObservableProperty]
+    private string _genderSymbol = string.Empty;
+    [ObservableProperty]
+    private string _locationText = string.Empty;
+    [ObservableProperty]
+    private string _birthdayText = string.Empty;
+    
+    public string UserId { get; set; }
 
     [RelayCommand]
     private void OpenMessaging()

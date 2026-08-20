@@ -25,6 +25,8 @@ public partial class ChatMessageItem : ObservableObject
     private string _fileName = string.Empty;
     [ObservableProperty]
     private string _mediaUrl = string.Empty;
+    [ObservableProperty]
+    private string _messageTimeText = string.Empty;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;
@@ -42,6 +44,8 @@ public partial class ChatMessageItem : ObservableObject
     private Brush _bubbleBorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E6E6E6"));
     [ObservableProperty]
     private TextAlignment _messageTimeAlignment = TextAlignment.Left;
+    [ObservableProperty]
+    private Visibility _contactNameVisibility = Visibility.Visible;
     
     public string UserId { get; set; }
     public string ContactId { get; set; }

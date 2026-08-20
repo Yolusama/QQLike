@@ -19,6 +19,7 @@ public partial class MainView : Window
         {
             viewModel.ConnectSocketServerCommand.Execute(null);
             viewModel.StartMQConsumingCommand.Execute(null);
+            viewModel.SelectedMenuItem = viewModel.MenuItems.First();
         }
     }
 

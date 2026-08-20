@@ -4,16 +4,20 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using QQLike.Entity;
+using QQLike.Functional.Instructure;
 using QQLike.Entity.Configuration.Server;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
-using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
 
 namespace QQLike.Services;
 
-public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISocketServerService
+public class SocketServerService(
+   SysSetting setting,
+   IProjectLogger logger,
+   IFreeSql orm,
+   IRandomGenerator randomGenerator) : ISocketServerService
 {
    private readonly ConcurrentDictionary<int, Socket> _temp = new();
    private readonly ConcurrentDictionary<string,Socket> _userSockets = new ();
@@ -156,16 +160,18 @@ public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISo
                else if (model.Type == ChatMessageType.Text)
                {
                   var message = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
-                  var contactId = message.ContactId;
-                  if (!string.IsNullOrWhiteSpace(contactId) )
+                  if (message is null)
                   {
-                     var contactMessage = message.MapTo(new ChatMessage());
-                     contactMessage.Id = 0;
-                     contactMessage.ContactId = message.UserId;
-                     contactMessage.UserId = message.ContactId;
-                     contactMessage.IsRead = false;
+                     continue;
+                  }
+
+                  await PersistContactMessageAsync(message);
+
+                  var contactId = message.ContactId;
+                  if (!string.IsNullOrWhiteSpace(contactId))
+                  {
                      var transModel = model.MapTo(new ChatMessageTransModel());
-                     transModel.Data = contactMessage;
+                     transModel.Data = message;
                      var data = JsonSerializer.Serialize(transModel);
                      if(_userSockets.TryGetValue(contactId, out var contactSocket) && contactSocket.Connected)
                         await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)), SocketFlags.None, token);
@@ -225,6 +231,65 @@ public class SocketServerService(SysSetting setting,IProjectLogger logger) : ISo
       }
 
       return data.ToString();
+   }
+
+   private async Task PersistContactMessageAsync(ChatMessage senderMessage)
+   {
+      if (string.IsNullOrWhiteSpace(senderMessage.UserId) || string.IsNullOrWhiteSpace(senderMessage.ContactId))
+      {
+         return;
+      }
+
+      using var worker = orm.CreateUnitOfWork();
+      try
+      {
+         var senderId = senderMessage.UserId;
+         var recipientId = senderMessage.ContactId;
+         var createTime = senderMessage.CreateTime ?? DateTime.Now;
+
+         var recipientHead = await worker.Orm.Select<HeadMessage>()
+            .Where(e => e.UserId == recipientId && e.ContactId == senderId)
+            .FirstAsync();
+
+         if (recipientHead == null)
+         {
+            recipientHead = new HeadMessage
+            {
+               Id = randomGenerator.Guid,
+               UserId = recipientId,
+               ContactId = senderId,
+               Content = senderMessage.Content,
+               CreateTime = createTime,
+               LastMessageTime = createTime
+            };
+
+            await worker.Orm.Insert(recipientHead).ExecuteAffrowsAsync();
+         }
+         else
+         {
+            recipientHead.Content = senderMessage.Content;
+            recipientHead.LastMessageTime = createTime;
+            await worker.Orm.Update<HeadMessage>().SetSource(recipientHead).ExecuteAffrowsAsync();
+         }
+
+         var recipientMessage = senderMessage.MapTo(new ChatMessage());
+         recipientMessage.Id = 0;
+         recipientMessage.UserId = recipientId;
+         recipientMessage.ContactId = senderId;
+         recipientMessage.IsRead = false;
+         recipientMessage.CreateTime = createTime;
+         recipientMessage.HeadMessageId = recipientHead.Id;
+
+         recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
+
+         worker.Commit();
+      }
+      catch (Exception ex)
+      {
+         worker.Rollback();
+         Console.WriteLine($"离线消息持久化失败：{ex}");
+         await logger.LogAsync($"离线消息持久化失败：{ex}", "聊天服务器");
+      }
    }
 
    private void CleanupSocket(int tempKey, Socket socket, string reason)
