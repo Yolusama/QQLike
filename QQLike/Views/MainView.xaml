@@ -76,7 +76,7 @@
                 </Viewbox>
             </Grid>
         </Border>
-        <MediaElement x:Name="Player" Visibility="Collapsed"></MediaElement>
+        <MediaElement x:Name="Player" Visibility="Collapsed" LoadedBehavior="Manual" MediaFailed="Player_OnMediaFailed"></MediaElement>
         <message:ChatMessageView Grid.Column="1" Grid.Row="1" x:Name="ChatMessageView" Visibility="{Binding DataContext.MenuItems[0].Activated, 
         RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"></message:ChatMessageView>
         <user:UserContactView Grid.Column="1" Grid.Row="1" Visibility="{Binding DataContext.MenuItems[1].Activated, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolVisibilityConverter2}}"/>

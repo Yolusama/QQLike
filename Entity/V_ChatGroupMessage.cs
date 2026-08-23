@@ -81,4 +81,8 @@ public class V_ChatGroupMessage
     /// 是否为群主（1-是，0-否）
     /// </summary>
     public bool IsOwner { get; set; }
+    /// <summary>
+    /// 是否为在线消息
+    /// </summary>
+    public bool IsOnline { get; set; }
 }

@@ -105,4 +105,28 @@ public class UserService(IFreeSql orm,
         res.UserId = user.Id;
         return ResponseResult<UserVerifyInfo>.OK("获取用户验证信息成功", res);
     }
+
+    public async Task<ResponseResult<UserContactCardInfo>> GetUserContactCardInfo(string userId,string contactId)
+    {
+        var data = await orm.Select<User>()
+            .Where(e=>e.Id == contactId)
+            .ToOneAsync();
+        if(data == null)
+            return ResponseResult.Fail("用户不存在").Generic<UserContactCardInfo>();
+        var res = new UserContactCardInfo();
+        var userContact = await orm.Select<UserContact>()
+            .Where(e => e.UserId == userId && e.ContactId == contactId)
+            .Where(e=> e.DeleteMark == 0)
+            .ToOneAsync();
+        res.Account = data.Account;
+        res.Nickname = data.Nickname;
+        res.Avatar = data.Avatar;
+        res.Birthday = data.Birthday;
+        res.IsOnline = data.IsOnline;
+        res.Region = data.Region;
+        res.Gender = data.Gender;
+        res.IsFriend = userContact!=null;
+        res.Remark = userContact?.Remark;
+        return ResponseResult<UserContactCardInfo>.OK("获取用户联系人信息成功", res);
+    }
 }

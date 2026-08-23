@@ -10,4 +10,5 @@ public interface IUserService
    public Task<ResponseResult<string>> Register(UserRegisterModel user);
    public Task<ResponseResult<UserLoginVO>> Login(UserLoginModel user);
    public Task<ResponseResult<UserVerifyInfo>> GetUserVerifyInfo(string account);
+   public Task<ResponseResult<UserContactCardInfo>> GetUserContactCardInfo(string userId,string contactId);
 }

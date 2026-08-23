@@ -51,17 +51,21 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <Border Background="{Binding UserViewActivatedBackColor}" HorizontalAlignment="Stretch" CornerRadius="6" Margin="0,0,4,0">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchUserViewCommand}">
+                        <Border Background="{Binding UserViewActivatedBackColor}" HorizontalAlignment="Stretch"
+                                CornerRadius="6" Margin="0,0,4,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding SwitchUserViewCommand}">
                                 <TextBlock Text="好友" Foreground="#2196F3" FontSize="15" HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"  />
+                                           VerticalAlignment="Center" />
                             </Button>
                         </Border>
 
-                        <Border Grid.Column="1" Background="{Binding GroupViewActivatedBackColor}" CornerRadius="6" Margin="4,0,0,0">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding SwitchGroupViewCommand}">
+                        <Border Grid.Column="1" Background="{Binding GroupViewActivatedBackColor}" CornerRadius="6"
+                                Margin="4,0,0,0">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding SwitchGroupViewCommand}">
                                 <TextBlock Text="群聊" Foreground="#666" FontSize="15" HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"  />
+                                           VerticalAlignment="Center" />
                             </Button>
                         </Border>
                     </Grid>
@@ -69,169 +73,178 @@
             </StackPanel>
 
             <Grid Grid.Row="1">
-            <TreeView ItemsSource="{Binding UserContactGroups}"
-                      x:Name="UserContactTreeView">
-                <TreeView.Style>
-                    <Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSearching}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TreeView.Style>
-                <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                        <Setter Property="Padding" Value="0" />
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="TreeViewItem">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" />
-                                        </Border>
-                                        <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="20,0,0,0" Visibility="Collapsed" />
-                                    </Grid>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsExpanded" Value="True">
-                                            <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </TreeView.ItemContainerStyle>
+                <TreeView ItemsSource="{Binding UserContactGroups}"
+                          x:Name="UserContactTreeView">
+                    <TreeView.Style>
+                        <Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TreeView.Style>
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource MaterialDesignTreeViewItem}">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TreeViewItem">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Border Background="{TemplateBinding Background}"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" />
+                                            </Border>
+                                            <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="20,0,0,0"
+                                                            Visibility="Collapsed" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsExpanded" Value="True">
+                                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </TreeView.ItemContainerStyle>
 
-                <TreeView.Resources>
-                    <!-- 联系人模板 -->
-                    <DataTemplate DataType="{x:Type domain:UserContactInfoItem}">
-                        <Border CornerRadius="6" Padding="6,4" Margin="0,2">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#F0F0F5" />
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
+                    <TreeView.Resources>
+                        <!-- 联系人模板 -->
+                        <DataTemplate DataType="{x:Type domain:UserContactInfoItem}">
+                            <Border CornerRadius="6" Padding="6,4" Margin="0,2">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#F0F0F5" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding DataContext.GoUserProfileCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="0"
+                                        Height="40">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 头像 -->
+                                        <Ellipse Width="42" Height="42" Margin="4,0,12,0" VerticalAlignment="Center">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+
+                                        <!-- 昵称 + 状态 + 签名 -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding Nickname}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#1E1E1E"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                                         Margin="0,0,4,0">
+                                                    <Ellipse.Style>
+                                                        <Style TargetType="Ellipse">
+                                                            <Setter Property="Fill" Value="#BDBDBD" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                                    <Setter Property="Fill" Value="#4CAF50" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Ellipse.Style>
+                                                </Ellipse>
+                                                <TextBlock FontSize="12" Foreground="#8A8A8A"
+                                                           VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="离线" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                                                                    <Setter Property="Text" Value="在线" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text=" " FontSize="12" Foreground="#8A8A8A"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Signature}"
+                                                           FontSize="12"
+                                                           Foreground="#8A8A8A"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxWidth="140" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </Border>
+                        </DataTemplate>
+
+                        <!-- 分组模板 -->
+                        <HierarchicalDataTemplate DataType="{x:Type domain:UserContactGroupItem}"
+                                                  ItemsSource="{Binding UserContacts}">
                             <Button Style="{StaticResource MaterialDesignFlatButton}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
-                                    Command="{Binding DataContext.GoUserProfileCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Padding="0"
-                                    Height="40">
-                                <Grid>
+                                    Padding="4,2"
+                                    Command="{Binding DataContext.UserGroupExpandCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
+                                    CommandParameter="{Binding}">
+                                <Grid HorizontalAlignment="Stretch">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <!-- 头像 -->
-                                    <Ellipse Width="42" Height="42" Margin="4,0,12,0" VerticalAlignment="Center">
-                                        <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
-                                        </Ellipse.Fill>
-                                    </Ellipse>
-
-                                    <!-- 昵称 + 状态 + 签名 -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
-                                        <TextBlock Text="{Binding Nickname}"
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#1E1E1E"
-                                                   TextTrimming="CharacterEllipsis" />
-                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,4,0">
-                                                <Ellipse.Style>
-                                                    <Style TargetType="Ellipse">
-                                                        <Setter Property="Fill" Value="#BDBDBD" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsOnline}" Value="True">
-                                                                <Setter Property="Fill" Value="#4CAF50" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Ellipse.Style>
-                                            </Ellipse>
-                                            <TextBlock FontSize="12" Foreground="#8A8A8A" VerticalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="离线" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsOnline}" Value="True">
-                                                                <Setter Property="Text" Value="在线" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBlock Text=" " FontSize="12" Foreground="#8A8A8A" VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding Signature}"
-                                                       FontSize="12"
-                                                       Foreground="#8A8A8A"
-                                                       VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxWidth="140" />
-                                        </StackPanel>
-                                    </StackPanel>
+                                    <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"
+                                                             VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             RenderTransformOrigin="0.5,0.5">
+                                        <materialDesign:PackIcon.RenderTransform>
+                                            <RotateTransform Angle="{Binding ExpandIconAngle}" />
+                                        </materialDesign:PackIcon.RenderTransform>
+                                    </materialDesign:PackIcon>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="16"
+                                               VerticalAlignment="Center" Margin="0,4" />
+                                    <Border Grid.Column="2" Background="#FFEDEDED" CornerRadius="10" Padding="8,2"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding UserContactCount}" Foreground="#666" FontSize="12"
+                                                   FontWeight="SemiBold" />
+                                    </Border>
                                 </Grid>
                             </Button>
-                        </Border>
-                    </DataTemplate>
+                        </HierarchicalDataTemplate>
+                    </TreeView.Resources>
+                </TreeView>
 
-                    <!-- 分组模板 -->
-                    <HierarchicalDataTemplate DataType="{x:Type domain:UserContactGroupItem}"
-                                              ItemsSource="{Binding UserContacts}">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                Padding="4,2"
-                                Command="{Binding DataContext.UserGroupExpandCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
-                                CommandParameter="{Binding}">
-                            <Grid HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20"
-                                                     VerticalAlignment="Center" Margin="0,0,8,0"
-                                                     RenderTransformOrigin="0.5,0.5">
-                                <materialDesign:PackIcon.RenderTransform>
-                                    <RotateTransform Angle="{Binding ExpandIconAngle}" />
-                                </materialDesign:PackIcon.RenderTransform>
-                            </materialDesign:PackIcon>
-                            <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="16"
-                                       VerticalAlignment="Center" Margin="0,4" />
-                            <Border Grid.Column="2" Background="#FFEDEDED" CornerRadius="10" Padding="8,2" Margin="12,0,0,0"
-                                    VerticalAlignment="Center">
-                                <TextBlock Text="{Binding UserContactCount}" Foreground="#666" FontSize="12" FontWeight="SemiBold" />
-                            </Border>
-                            </Grid>
-                        </Button>
-                    </HierarchicalDataTemplate>
-                </TreeView.Resources>
-            </TreeView>
-            
-        </Grid>
+            </Grid>
         </Grid>
         <Grid Grid.Row="1" Grid.Column="1" Margin="0,20,0,0">
-            <user:UserProfileView 
-                Margin="12,0,0,0" HorizontalAlignment="Center" 
-                VerticalAlignment="Top"  Visibility="{Binding DataContext.IsUserProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
-            <group:GroupProfileView 
-                 Margin="12,0,0,0" HorizontalAlignment="Center" 
-                VerticalAlignment="Top" Visibility="{Binding DataContext.IsGroupProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
+            <user:UserProfileView
+                Margin="12,0,0,0" HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Visibility="{Binding DataContext.IsUserProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
+            <group:GroupProfileView
+                Margin="12,0,0,0" HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Visibility="{Binding DataContext.IsGroupProfileVisible, RelativeSource={RelativeSource AncestorType={x:Type user:UserContactView}}, Converter={StaticResource BoolVisibilityConverter2}}" />
         </Grid>
     </Grid>
 </UserControl>

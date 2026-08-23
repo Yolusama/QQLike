@@ -177,5 +177,7 @@ public partial class App : Application
         services.AddTransient<UserContactSimpleCard>();
         services.AddTransient<UserContactGroupViewModel>();
         services.AddTransient<UserContactGroupView>();
+        services.AddTransient<ImagePreviewerViewModel>();
+        services.AddTransient<ImagePreviewer>();
     }
 }

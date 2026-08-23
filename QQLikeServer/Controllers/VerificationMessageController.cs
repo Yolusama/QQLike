@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using QQLike.Entity.Attributes;
 using QQLike.Entity.Model;
 using QQLike.Entity.Result;
 using QQLike.Entity.VO;
@@ -10,6 +11,7 @@ namespace QQLike.Controllers;
 public class VerificationMessageController(IVerificationMessageService verificationMessageService) : ControllerBase
 {
     [HttpGet("{userId}")]
+    [RequestAuthorize]
     public async Task<ActionResult<ResponseResult<List<VerificationMessageVO>>>> 
         GetVerificationMessages([FromRoute] string userId,bool? isGroup)
     {
@@ -17,6 +19,7 @@ public class VerificationMessageController(IVerificationMessageService verificat
     }
     
     [HttpPost]
+    [RequestAuthorize]
     public async Task<ActionResult<ResponseResult>> AddVerificationMessage([FromBody]VerificationMessageModel model)
     {
         return await verificationMessageService.AddVerificationMessage(model);

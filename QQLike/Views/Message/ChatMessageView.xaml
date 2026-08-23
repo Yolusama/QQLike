@@ -86,7 +86,6 @@
                         Height="38"
                         Margin="0,0,8,0"
                         VerticalAlignment="Top"
-                        Background="#E9EEF4"
                         Visibility="{Binding LeftAvatarVisibility}">
                     <Ellipse Width="30" Height="30">
                         <Ellipse.Fill>
@@ -300,7 +299,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- 头像（无头像时显示首字母占位） -->
-                                <Border Width="50" Height="50" CornerRadius="25" Background="#E9EEF4"
+                                <Border Width="40" Height="40" CornerRadius="20" Background="#E9EEF4"
                                         Margin="0,0,12,0" ClipToBounds="True">
                                     <Grid>
                                         <TextBlock Text="{Binding AvatarInitial}" FontSize="20" FontWeight="SemiBold"
@@ -376,15 +375,16 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,0,1" Padding="16,10">
+                <Border Grid.Row="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,0,1" Padding="5,5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="1" Margin="12,5,0,5" VerticalAlignment="Center">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left">
+                        <StackPanel Grid.Column="1"  VerticalAlignment="Center">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left" Cursor="Hand"
+                                    x:Name="DisplayNameButton" Command="{Binding OpenUserCardPopupCommand}">
                                 <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
@@ -394,18 +394,24 @@
                         </StackPanel>
                     </Grid>
                 </Border>
+                <Popup PlacementTarget="{Binding ElementName=DisplayNameButton}" Placement="Bottom" Margin="0,20,0,0"
+                       IsOpen="{Binding IsUserCardPopupOpen}" StaysOpen="False"
+                       AllowsTransparency="True" PopupAnimation="Fade">
+                    <components:UserContactSimpleCard x:Name="UserContactSimpleCard" Visibility="{Binding Visible}">
+                    </components:UserContactSimpleCard>
+                </Popup>
 
                 <components:InfinityScrollView
                     Grid.Row="1"
                     LoadMoreCommand="{Binding ScrollToTopCommand}" Direction="Up"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
                     VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                     <ListBox ItemsSource="{Binding ChatMessages}"
                              ItemContainerStyle="{StaticResource ChatMessageItemStyle}"
                              ItemTemplate="{StaticResource ChatMessageTemplate}"
                              BorderThickness="0"
-                             Background="Transparent"
-                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                             Background="Transparent">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <VirtualizingStackPanel IsItemsHost="True" />

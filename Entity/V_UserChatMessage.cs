@@ -63,4 +63,9 @@ public class V_UserChatMessage
     /// </summary>
     [SugarColumn(ColumnDataType = "tinyint(1)")]
     public bool IsSelf { get; set; }
+    /// <summary>
+    /// 是否为在线消息
+    /// </summary>
+    [SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool IsOnline { get; set; }
 }

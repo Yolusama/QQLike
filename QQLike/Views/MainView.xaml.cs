@@ -31,4 +31,10 @@ public partial class MainView : Window
             viewModel.Dispose();
         }
     }
+
+    private void Player_OnMediaFailed(object? sender, ExceptionRoutedEventArgs e)
+    {
+        Console.WriteLine(e.ErrorException.Message);
+        MessageBox.Show(e.ErrorException.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
 }

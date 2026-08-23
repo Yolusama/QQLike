@@ -10,4 +10,5 @@ public class VerificationMessageVO
     public string Source { get; set; }
     public string VerificationMessage { get; set; }
     public string ContactId { get; set; }
+    public bool IsRead { get; set; }
 }

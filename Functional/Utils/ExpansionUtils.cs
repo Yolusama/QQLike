@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using QQLike.Entity.VO;
 
 namespace QQLike.Functional.Utils;
@@ -42,6 +43,11 @@ public static class ExpansionUtils
         // Map properties from src to instance
         var dest = Activator.CreateInstance<T2>();
         return src.MapTo(dest);
+    }
+
+    public static string ToNormalJson<T>(this T obj)
+    {
+        return JsonSerializer.Serialize(obj);
     }
    
 }

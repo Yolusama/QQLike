@@ -43,7 +43,7 @@ public class UserContactController(IUserContactService userContactService) : Con
     [RequestAuthorize]
     [HttpGet("{userId}")]
     public async Task<ActionResult<ResponseResult<List<ValueLabel<long>>>>> GetUserContactGroupSelections(
-        [FromRoute] string userId,bool isGroup)
+        [FromRoute] string userId,bool? isGroup)
     {
         return await userContactService.GetUserContactGroupSelections(userId,isGroup);
     }

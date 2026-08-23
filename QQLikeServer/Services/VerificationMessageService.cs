@@ -31,7 +31,8 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
                 Nickname = e.t3.Nickname,
                 Avatar = e.t2.Avatar,
                 Status = e.t1.Status,
-                Source = e.t1.Source
+                Source = e.t1.Source,
+                IsRead = e.t1.IsRead
             });
         return ResponseResult<List<VerificationMessageVO>>.OK(data);
     }
@@ -69,7 +70,7 @@ public class VerificationMessageService(IFreeSql orm,IRabbitMQProducer mqProduce
                 Body = entity1
             };
             await mqProducer.Produce(nameof(VerificationMessage),Constants.MQExchange,
-                nameof(VerificationMessage),JsonSerializer.Serialize(body));
+                $"${nameof(VerificationMessage)}_{entity1.UserId}",JsonSerializer.Serialize(body));
             worker.Commit();
             return ResponseResult.OK("添加成功");
         }

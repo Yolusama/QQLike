@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -17,7 +18,6 @@ using QQLike.Entity.Model;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services;
-using QQLike.Services.Interfaces;
 using QQLike.Views;
 using RabbitMQ.Client.Events;
 using SqlSugar;
@@ -36,6 +36,8 @@ public partial class MainViewModel(
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(3);
     private const int MaxReconnectAttempts = 3;
+    private const string MessageAudioPath = @"\Resource\Audio\message.mp3";
+    private const string VerificationAudioPath = @"\Resource\Audio\verification.mp3";
 
     [ObservableProperty] 
     private MDMenuItem? _selectedMenuItem;
@@ -85,19 +87,35 @@ public partial class MainViewModel(
     
     partial void OnAudioSourceChanged(string value)
     {
-        if (!string.IsNullOrEmpty(value))
+        if (string.IsNullOrWhiteSpace(value))
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                View.Player.Source = new Uri(value, UriKind.Relative);
-                View.Player.Play();
-            });
+            return;
         }
+
+        var url = $"{Directory.GetCurrentDirectory()}{value}";
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            if(View.Player.HasAudio)
+                View.Player.Stop();
+            View.Player.Source = new Uri(url, UriKind.Absolute);
+            View.Player.IsMuted = false;
+            View.Player.Position = TimeSpan.Zero;
+            View.Player.Volume = 1d;
+            View.Player.Play();
+        });
+    }
+
+    private void TriggerAudio(string path)
+    {
+        if (AudioSource == path)
+            AudioSource = string.Empty;
+        AudioSource = path;
     }
 
     [RelayCommand]
     private async Task ConnectSocketServer()
     {
+        //OnAudioSourceChanged(MessageAudioPath);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_receiveTask is null || _receiveTask.IsCompleted)
@@ -127,6 +145,7 @@ public partial class MainViewModel(
         foreach (var item in MenuItems)
             item.Activated = false;
         SelectedMenuItem.Activated = true;
+        AfterSelectingMenu(SelectedMenuItem);
     }
 
     public void ShowMenu(string key)
@@ -134,6 +153,19 @@ public partial class MainViewModel(
         var menuItem = MenuItems.FirstOrDefault(e => e.Key == key);
         if (menuItem != null)
             SelectedMenuItem = menuItem;
+    }
+    
+    private void AfterSelectingMenu(MDMenuItem menuItem)
+    {
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        if (menuItem.Key == nameof(VerificationMessage))
+        {
+            sugarClient.Updateable<VerificationMessage>()
+                .SetColumns(e => e.IsRead == true)
+                .Where(e => e.UserId == user.UserId && !e.IsRead)
+                .ExecuteCommand();
+            menuItem.Notification = string.Empty;
+        }
     }
 
     [RelayCommand]
@@ -203,7 +235,7 @@ public partial class MainViewModel(
     private async Task StartMQConsuming()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         await _mqGate.WaitAsync();
         try
         {
@@ -212,10 +244,10 @@ public partial class MainViewModel(
                 return;
             }
 
-            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, nameof(VerificationMessage),
+            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, $"{nameof(VerificationMessage)}_{user.UserId}",
                 ConsumeMessage);
-            await mqConsumer.Consume(nameof(HeadMessage), Constants.MQExchange, nameof(HeadMessage), ConsumeMessage);
-            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, nameof(ChatMessage), ConsumeMessage);
+            await mqConsumer.Consume(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{user.UserId}", ConsumeMessage);
+            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, $"{nameof(ChatMessage)}_{user.UserId}", ConsumeMessage);
             _mqStarted = true;
         }
         finally
@@ -228,38 +260,40 @@ public partial class MainViewModel(
     {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         var messageBody = JsonSerializer.Deserialize<MQMessageBody>(ea.Body.ToArray());
-        if (user.UserId != messageBody.Identifier) return;
-        if(!string.IsNullOrEmpty(AudioSource))
-            AudioSource = string.Empty;
 
         // 创建线程独立的 SqlSugar 实例，避免多线程并发共享 SqlSugarScope 连接状态
         using var db = sugarClient.CopyNew();
 
-        if (ea.RoutingKey == nameof(VerificationMessage))
+        if (ea.RoutingKey == $"{nameof(VerificationMessage)}_{user.UserId}" )
         {
             var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(VerificationMessage));
             if (menuItem is null) return;
             var unreadCount = await db.Queryable<VerificationMessage>()
                 .Where(e => !e.IsRead && e.UserId == user.UserId)
                 .CountAsync();
-            if (unreadCount == 0) return;
-            menuItem.Notification = unreadCount > 100 ? "99+" : unreadCount.ToString();
-            AudioSource = "/Resource/Audio/verification.mp3";
+            menuItem.Notification = unreadCount > 100 ? "99+" : (unreadCount == 0 ? string.Empty : unreadCount.ToString());
+            if(!messageBody.Muted)
+                TriggerAudio(VerificationAudioPath);
         }
 
-        if (ea.RoutingKey == nameof(HeadMessage))
+        if (ea.RoutingKey == $"{nameof(HeadMessage)}_{user.UserId}")   
         {
             var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(ChatMessage));
             if (menuItem is null) return;
             var unreadCount = await db.Queryable<ChatMessage>()
                 .Where(e => !e.IsRead && e.UserId == user.UserId)
                 .CountAsync();
-            if (unreadCount == 0) return;
-            menuItem.Notification = unreadCount > 100 ? "99+" : unreadCount.ToString();
-            AudioSource = "/Resource/Audio/message.mp3";
+            if(unreadCount > 100)
+                menuItem.Notification = "99+";
+            else if(unreadCount == 0)
+                menuItem.Notification = string.Empty;
+            else
+               menuItem.Notification =  unreadCount.ToString();
+            if (!messageBody.Muted)
+                TriggerAudio(MessageAudioPath);
         }
 
-        if (ea.RoutingKey == nameof(ChatMessage))
+        if (ea.RoutingKey == $"{nameof(ChatMessage)}_{user.UserId}")
         {
             var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
             var model = JsonSerializer.Deserialize<HeadMessageMQModel>(JsonSerializer.Serialize(messageBody.Body));

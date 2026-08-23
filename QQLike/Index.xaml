@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:QQLike"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:components="clr-namespace:QQLike.Components"
         mc:Ignorable="d"
         WindowStyle="None"
@@ -80,7 +79,7 @@
             <Grid Width="130" Height="130" Margin="0,0,0,16">
                 <Ellipse Stroke="#FFFFFFFF">
                     <Ellipse.Fill>
-                        <ImageBrush ImageSource="pack://application:,,,/QQLike;component/Resource/images/logo.png"
+                        <ImageBrush ImageSource="/Resource/images/logo.png"
                                     Stretch="UniformToFill" />
                     </Ellipse.Fill>
                 </Ellipse>

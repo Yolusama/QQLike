@@ -165,16 +165,27 @@ public class SocketServerService(
                      continue;
                   }
 
-                  await PersistContactMessageAsync(message);
+                  var receiptMessage = await PersistContactMessageAsync(message);
+                  if(receiptMessage == null)continue;
 
                   var contactId = message.ContactId;
                   if (!string.IsNullOrWhiteSpace(contactId))
                   {
                      var transModel = model.MapTo(new ChatMessageTransModel());
-                     transModel.Data = message;
+                     transModel.Data = receiptMessage;
                      var data = JsonSerializer.Serialize(transModel);
                      if(_userSockets.TryGetValue(contactId, out var contactSocket) && contactSocket.Connected)
-                        await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)), SocketFlags.None, token);
+                     {
+                        await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)),
+                              SocketFlags.None, token);
+                        receiptMessage.IsOnline = true;
+                     }
+                     else
+                         receiptMessage.IsOnline = false;
+                     await orm.Update<ChatMessage>()
+                        .SetSource(receiptMessage)
+                        .UpdateColumns(c=>c.IsOnline)
+                        .ExecuteAffrowsAsync(token);
                   }
                   _lastHeartbeat[socket] = DateTime.UtcNow;
                }
@@ -233,13 +244,8 @@ public class SocketServerService(
       return data.ToString();
    }
 
-   private async Task PersistContactMessageAsync(ChatMessage senderMessage)
+   private async Task<ChatMessage?> PersistContactMessageAsync(ChatMessage senderMessage)
    {
-      if (string.IsNullOrWhiteSpace(senderMessage.UserId) || string.IsNullOrWhiteSpace(senderMessage.ContactId))
-      {
-         return;
-      }
-
       using var worker = orm.CreateUnitOfWork();
       try
       {
@@ -279,16 +285,19 @@ public class SocketServerService(
          recipientMessage.IsRead = false;
          recipientMessage.CreateTime = createTime;
          recipientMessage.HeadMessageId = recipientHead.Id;
+         recipientMessage.IsSelf  = false;
 
          recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
 
          worker.Commit();
+         return recipientMessage;
       }
       catch (Exception ex)
       {
          worker.Rollback();
          Console.WriteLine($"离线消息持久化失败：{ex}");
          await logger.LogAsync($"离线消息持久化失败：{ex}", "聊天服务器");
+         return null;
       }
    }
 

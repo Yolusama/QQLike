@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using QQLike.Entity.Attributes;
 using QQLike.Entity.Model;
 using QQLike.Entity.Result;
 using QQLike.Entity.VO;
@@ -23,9 +23,17 @@ public class UserController(IUserService userService) : ControllerBase
     }
     
     [HttpGet]
+    [RequestAuthorize]
     public async Task<ActionResult<ResponseResult<UserVerifyInfo>>> GetUserVerifyInfo([FromQuery] string account)
     {
         return await userService.GetUserVerifyInfo(account);
+    }
+    
+    [HttpGet("{userId}/{contactId}")]
+    [RequestAuthorize]
+    public async Task<ActionResult<ResponseResult<UserContactCardInfo>>> GetUserContactCardInfo([FromRoute] string userId,[FromRoute] string contactId)
+    {
+        return await userService.GetUserContactCardInfo(userId,contactId);
     }
     
 }

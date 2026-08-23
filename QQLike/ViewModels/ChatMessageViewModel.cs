@@ -41,6 +41,8 @@ public partial class ChatMessageViewModel(
     private bool _isNoSelection = true;
     [ObservableProperty]
     private string _newMessageText;
+    [ObservableProperty]
+    private bool _isUserCardPopupOpen;
     
     private Socket? Client => GetSocket();
 
@@ -55,7 +57,6 @@ public partial class ChatMessageViewModel(
     private async Task LoadData()
     {
         var window = Window.GetWindow(View);
-
         try
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
@@ -68,7 +69,7 @@ public partial class ChatMessageViewModel(
                 return;
             }
             HeadMessages.Clear();
-
+            
             foreach (var header in res.Data)
             {
                 var displayName = string.IsNullOrWhiteSpace(header.Remark) ? header.ContactName : header.Remark;
@@ -89,6 +90,27 @@ public partial class ChatMessageViewModel(
                     IsGroup = header.IsGroup
                 });
             }
+            
+            var headMessageIds = res.Data.Select(h => h.HeadMessageId).ToList();
+            var offlineReceiveCount = await sugarClient.Queryable<ChatMessage>()
+                .Where(e => e.UserId == user.UserId && headMessageIds.Contains(e.HeadMessageId) && !e.IsOnline)
+                .CountAsync();
+            var messageBody = new MQMessageBody
+            {
+                Identifier = user.UserId,
+                Muted = true
+            };
+            if(offlineReceiveCount > 0)
+               await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+                    messageBody.ToNormalJson());
+            
+            var unreadCount = res.Data.Sum(h => h.UnreadCount);
+            if (unreadCount > 0)
+            {
+                messageBody.Muted = false;
+                await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+                    messageBody.ToNormalJson());
+            }
 
             if (sessionStorage.KeyExists(CachingKeys.ChatMessageCurrentHeadId))
             {
@@ -97,7 +119,7 @@ public partial class ChatMessageViewModel(
                 == currentHeadId);
                 await sugarClient.Updateable<ChatMessage>()
                     .SetColumns(e => e.IsRead == true)
-                    .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId && !e.IsRead)
+                    .Where(e => e.HeadMessageId == currentHeadId && e.UserId == user.UserId && !e.IsRead)
                     .ExecuteCommandAsync();
                 sessionStorage.Remove(CachingKeys.ChatMessageCurrentHeadId);
                 HasSelection = true;
@@ -125,7 +147,7 @@ public partial class ChatMessageViewModel(
             var isGroup = item.IsGroup;
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
             var messages = await sugarClient.Queryable<V_UserChatMessage>()
-                .Where(v=>v.UserId == user.UserId)
+                .Where(v=>v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
                 .OrderBy(v=>v.CreateTime)
                 .ToListAsync();
             foreach (var message in messages)
@@ -151,18 +173,20 @@ public partial class ChatMessageViewModel(
             
             await worker.Db.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
-                .Where(e => e.UserId == user.UserId && e.ContactId == item.ContactId && !e.IsRead)
+                .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead) 
                 .ExecuteCommandAsync();
             item.UnreadCount = 0;
+            // Commit first so MQ consumers can immediately see the latest unread count.
+            worker.Commit();
+
             var messageBody = new MQMessageBody
             {
-                Identifier = user.UserId
+                Identifier = user.UserId,
+                Muted = true
             };
-            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,nameof(HeadMessage),
-                JsonSerializer.Serialize(messageBody));
+            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+                messageBody.ToNormalJson());
             View.ContentWriteTo.Focus();
-            
-            worker.Commit();
         }
         catch (Exception e)
         {
@@ -185,7 +209,8 @@ public partial class ChatMessageViewModel(
             MessageType = ChatMessageType.Text.GetValue(),
             CreateTime = DateTime.Now,
             HeadMessageId = SelectedHeadMessage.HeadMessageId,
-            IsRead = true
+            IsRead = true,
+            IsSelf = true
         };
         using var worker = sugarClient.CreateContext();
         try
@@ -193,6 +218,7 @@ public partial class ChatMessageViewModel(
             var model = new ChatMessageTransModel();
             model.Type = ChatMessageType.Text;
             model.Message = NewMessageText;
+            message.IsOnline = true;
             var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
             message.Id = id;
             model.Data = message;
@@ -205,14 +231,15 @@ public partial class ChatMessageViewModel(
                 .ExecuteCommandAsync();
             var messageBody = new MQMessageBody();
             messageBody.Identifier = message.ContactId;
-            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,nameof(HeadMessage),JsonSerializer.Serialize(messageBody));
+            messageBody.Body = true;
+            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{messageBody.Identifier}",JsonSerializer.Serialize(messageBody));
             messageBody.Body = new HeadMessageMQModel
             {
                 HeadMessageId = SelectedHeadMessage.HeadMessageId,
                 UserId = message.ContactId,
                 ContactId = message.UserId
             };
-            await mqProducer.Produce(nameof(ChatMessage),Constants.MQExchange,nameof(ChatMessage),JsonSerializer
+            await mqProducer.Produce(nameof(ChatMessage),Constants.MQExchange,$"{nameof(ChatMessage)}_{messageBody.Identifier}",JsonSerializer
                 .Serialize(messageBody));
             var userContact = await sugarClient.Queryable<UserContact>()
                 .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
@@ -254,7 +281,7 @@ public partial class ChatMessageViewModel(
             if(item == null)
                 return;
             item.UnreadCount = await sugarClient.Queryable<ChatMessage>()    
-                .Where(e => e.HeadMessageId == model.HeadMessageId && !e.IsRead && e.UserId == model.ContactId)
+                .Where(e => e.HeadMessageId == model.HeadMessageId && !e.IsRead && e.UserId == model.UserId)
                 .CountAsync();
         }
         catch (Exception e)
@@ -272,7 +299,7 @@ public partial class ChatMessageViewModel(
             var contactUser = await sugarClient.Queryable<User>()
                 .LeftJoin<UserContact>((u,uc)=>uc.UserId == u.Id)
                 .Where((u,uc) => u.Id == message.ContactId)
-                .Select((u,uc) => new { u.Nickname, u.Avatar,uc.Remark })
+                .Select((u,uc) => new { u.Nickname, u.Avatar,uc.Remark,IsGroupContact = uc.IsGroup })
                 .FirstAsync();
             var messageType = (ChatMessageType)message.MessageType;
             var item = new ChatMessageItem
@@ -286,8 +313,9 @@ public partial class ChatMessageViewModel(
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
                 ContactId = message.ContactId,
-                IsSelf = false,
-                MessageTimeText = FormatMessageTime(message.CreateTime,true)
+                IsSelf = message.IsSelf,
+                MessageTimeText = FormatMessageTime(message.CreateTime,true),
+                ContactNameVisibility = contactUser.IsGroupContact ? Visibility.Visible : Visibility.Collapsed
             };
             ChatMessages.Add(item);
 
@@ -332,7 +360,7 @@ public partial class ChatMessageViewModel(
                     HasAvatar = true,
                     AvatarInitial = string.Empty,
                     UnreadCount = 1,
-                    IsGroup = SelectedHeadMessage.IsGroup
+                    IsGroup = contactUser.IsGroupContact
                 });
             }
             else
@@ -344,6 +372,15 @@ public partial class ChatMessageViewModel(
                     headItem.UnreadCount += 1;
                 }
             }
+
+            var msgBody = new MQMessageBody
+            {
+                Identifier = message.UserId,
+                Body = true,
+                Muted = false
+            };
+            await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{message.UserId}",
+                msgBody.ToNormalJson());
         }
         catch (Exception e)
         {
@@ -353,6 +390,15 @@ public partial class ChatMessageViewModel(
         
     }
     
+    [RelayCommand]
+    private void OpenUserCardPopup()
+    {
+        IsUserCardPopupOpen = true;
+        var cardViewModel = View.UserContactSimpleCard.GetViewModel<UserContactSimpleCardViewModel>();
+        cardViewModel.IsGroup = SelectedHeadMessage.IsGroup;
+        cardViewModel.UserId = SelectedHeadMessage.ContactId;
+        cardViewModel.Visible = Visibility.Visible;
+    }
 
     private static string FormatMessageTime(DateTime? time,bool isMessaging = false)
     {

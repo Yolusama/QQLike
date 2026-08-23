@@ -80,10 +80,13 @@ public class UserContactService(IFreeSql orm) : IUserContactService
         return ResponseResult<List<UserContactManageVO>>.OK("获取成功", data);
     }
 
-    public async Task<ResponseResult<List<ValueLabel<long>>>> GetUserContactGroupSelections(string userId,bool isGroup)
+    public async Task<ResponseResult<List<ValueLabel<long>>>> GetUserContactGroupSelections(string userId,bool? isGroup)
     {
         var contactGroup = await orm.Select<UserContactGroup>()
-            .Where(ucg => ucg.UserId == userId && ucg.IsGroup == isGroup)
+            .Where(ucg => ucg.UserId == userId )
+            .WhereIf(isGroup != null, ucg => ucg.IsGroup == isGroup.Value)
+            .OrderBy(ucg=>ucg.IsGroup)
+            .OrderByDescending(ucg=>ucg.CreateTime)
             .ToListAsync(e => new ValueLabel<long>
             {
                 Value = e.Id,

@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,10 +8,13 @@ using QQLike.Domain;
 using QQLike.Entity;
 using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
+using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
+using QQLike.Entity.Model;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
+using QQLike.Services;
 using QQLike.Views.Message;
 using SqlSugar;
 
@@ -20,6 +24,7 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
     IProjectLogger logger,
     IApiService apiService,
     ISessionStorage sessionStorage,
+    IRabbitMQProducer producer,
     SysSetting setting) : ViewModelBase<VerificationMessageView>
 {
     [ObservableProperty]
@@ -48,6 +53,8 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
     [RelayCommand]
     private async Task LoadNotices()
     {
+        var window = Window.GetWindow(View);
+        var mainViewModel = window.GetViewModel<MainViewModel>();
         try
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
@@ -55,6 +62,12 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
                ($"api/{nameof(VerificationMessage)}/GetVerificationMessages/{user.UserId}",new {IsGroup = IsGroupVerify});
            if (res.Success)
            {
+               var json = JsonSerializer.Serialize( new MQMessageBody
+               {
+                   Identifier = user.UserId,
+                   Muted = false
+               });
+               await producer.Produce(nameof(VerificationMessage),Constants.MQExchange,$"{nameof(VerificationMessage)}_{user.UserId}", json);
                Notices.Clear();
                foreach (var item in res.Data)
                {
@@ -64,12 +77,12 @@ public partial class VerificationMessageViewModel(ISqlSugarClient sugarClient,
                }
            }
            else
-               MessageComponent.ShowMessage(Window.GetWindow(View), res.Message, MessageType.Error);
+               MessageComponent.ShowMessage(window, res.Message, MessageType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            MessageComponent.ShowMessage(Window.GetWindow(View), $"出现异常：{e.Message}", MessageType.Error);
+            MessageComponent.ShowMessage(window, $"出现异常：{e.Message}", MessageType.Error);
             await logger.LogAsync($"加载验证信息出现异常:{e}", "验证消息");
         }
     }

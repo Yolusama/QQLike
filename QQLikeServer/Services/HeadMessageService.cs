@@ -34,10 +34,11 @@ public class HeadMessageService(IFreeSql orm,IRandomGenerator generator) : IHead
             }
             else
             {
-                headMessage.Content = model.Content;
-                headMessage.LastMessageTime = model.LastMessageTime;
                 await worker.Orm.Update<HeadMessage>()
-                    .SetSource(headMessage)
+                    .Set(e => e.CreateTime,headMessage.CreateTime)
+                    .SetIf(!string.IsNullOrEmpty(model.Content), e => e.Content, model.Content)
+                    .SetIf(model.LastMessageTime!=null,e => e.LastMessageTime, DateTime.Now)
+                    .Where(e => e.Id == headMessage.Id)
                     .ExecuteAffrowsAsync();
             }
             worker.Commit();

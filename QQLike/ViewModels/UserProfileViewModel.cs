@@ -161,31 +161,28 @@ public partial class UserProfileViewModel(SysSetting setting,
     [RelayCommand]
     private async Task OpenMessage()
     {
-        var window = Window.GetWindow(View);
         try
         {
             var model = new HeadMessageModel()
             {
                 UserId = sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId,
                 ContactId = _currentContactId,
-                Content = string.Empty,
-                LastMessageTime = null
             };
             var res = await apiService
                 .PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);
             if(res.Success)
             {
                 sessionStorage.Set(CachingKeys.ChatMessageCurrentHeadId, res.Data);
-                var viewModel = window.GetViewModel<MainViewModel>();
+                var viewModel = Owner.GetViewModel<MainViewModel>();
                 viewModel.ShowMenu(nameof(ChatMessage));
             }
             else 
-                MessageComponent.ShowMessage(window, res.Message, MessageType.Error);
+                MessageComponent.ShowMessage(Owner, res.Message, MessageType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            MessageComponent.ShowMessage(window, $"程序异常：{e.Message}", MessageType.Error);
+            MessageComponent.ShowMessage(Owner, $"程序异常：{e.Message}", MessageType.Error);
         }
  
     }

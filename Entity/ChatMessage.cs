@@ -42,6 +42,10 @@ public class ChatMessage
     /// 关联头信息Id
     /// </summary>
     public string HeadMessageId {get; set;}
-    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint")]
+    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint(1)")]
     public bool IsRead {get; set;}
+    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool IsSelf {get; set;}
+    [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool IsOnline { get; set; }
 }

@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Entity", "Entity\Entity.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Functional", "Functional\Functional.csproj", "{409F4EFD-BE90-4EA1-897F-28AB90389A70}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectCopyTool", "ProjectCopyTool\ProjectCopyTool.csproj", "{BBCB0180-1503-4ED6-9518-6EF8F8828CBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{409F4EFD-BE90-4EA1-897F-28AB90389A70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{409F4EFD-BE90-4EA1-897F-28AB90389A70}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{409F4EFD-BE90-4EA1-897F-28AB90389A70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBCB0180-1503-4ED6-9518-6EF8F8828CBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBCB0180-1503-4ED6-9518-6EF8F8828CBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBCB0180-1503-4ED6-9518-6EF8F8828CBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBCB0180-1503-4ED6-9518-6EF8F8828CBF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
