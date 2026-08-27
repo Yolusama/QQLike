@@ -129,4 +129,50 @@ public class UserService(IFreeSql orm,
         res.Remark = userContact?.Remark;
         return ResponseResult<UserContactCardInfo>.OK("获取用户联系人信息成功", res);
     }
+
+    public async Task<ResponseResult<List<UserContactInfo>>> GetUserContactInfo(string userId, string search, bool withGroup)
+    {
+        var res = new List<UserContactInfo>();
+        var data = await orm.Select<User,UserContact,UserContactGroup>()
+            .LeftJoin(e=>e.t1.Id == e.t2.ContactId && !e.t2.IsGroup)
+            .InnerJoin(e=>e.t2.UserContactGroupId == e.t3.Id)
+            .Where(e=>e.t2.UserId == userId )
+            .WhereIf(!string.IsNullOrEmpty(search), e=>e.t1.Nickname.Contains(search)
+                                                       || e.t1.Account.Contains(search) || e.t2.Remark.Contains(search)
+                                                       || e.t3.Name.Contains(search))
+            .ToListAsync(e=>new UserContactInfo
+            {
+                Account = e.t1.Account,
+                Avatar = e.t1.Avatar,
+                ContactId = e.t2.ContactId,
+                Nickname = e.t1.Nickname,
+                Remark = e.t2.Remark,
+                Signature = e.t1.Signature,
+                Source = e.t3.Name
+            });
+        if (withGroup)
+        {
+            var groupData = await orm.Select<ChatGroup, UserContact, UserContactGroup>()
+                .LeftJoin(e => e.t1.Id == e.t2.ContactId && e.t2.IsGroup)
+                .InnerJoin(e => e.t2.UserContactGroupId == e.t3.Id)
+                .Where(e => e.t2.UserId == userId)
+                .WhereIf(!string.IsNullOrEmpty(search), e => e.t1.Name.Contains(search)
+                                                             || e.t1.GroupNum.Contains(search))
+                .ToListAsync(e => new UserContactInfo
+                {
+                    Account = e.t1.GroupNum,
+                    Avatar = e.t1.Avatar,
+                    ContactId = e.t2.ContactId,
+                    Nickname = e.t1.Name,
+                    Remark = e.t2.Remark,
+                    Signature = e.t1.Description,
+                    Source = e.t3.Name
+                });
+            if(groupData.Count > 0)
+                res.AddRange(groupData);
+        }
+        if(data.Count > 0)
+           res.AddRange(data);
+        return ResponseResult<List<UserContactInfo>>.OK("获取用户联系人信息成功", res);
+    }
 }

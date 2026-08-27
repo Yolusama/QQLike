@@ -1,15 +1,16 @@
-﻿<UserControl x:Class="QQLike.Components.UserContactGroupView"
+﻿<Window x:Class="QQLike.Components.UserContactGroupView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:QQLike.Components"
+        WindowStartupLocation="CenterOwner"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:domain="clr-namespace:QQLike.Domain"
-        mc:Ignorable="d"
-        Height="450" Width="600"
-        >
-    <Border Background="White" CornerRadius="7"  BorderThickness="2">
+        Loaded="UserContactGroupView_OnLoaded"
+        Closed="UserContactGroupView_OnClosed"
+        Height="560" Width="720">
+    <Border Background="White" CornerRadius="7" BorderThickness="2">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.5*"></ColumnDefinition>
@@ -22,24 +23,107 @@
                     <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
                 <TextBox Style="{StaticResource OutlineTextBox}" Height="36" Padding="5" Grid.Row="0"
-                         materialDesign:HintAssist.Hint="搜索联系人" 
+                         materialDesign:HintAssist.Hint="搜索联系人"
                          materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
                          materialDesign:TextFieldAssist.HasLeadingIcon="True"
                          materialDesign:TextFieldAssist.HasClearButton="True"
                          materialDesign:TextFieldAssist.LeadingIcon="Magnify"
-                         Text="{Binding SearchText}"
-                         x:Name="SearchTextBox"
+                         Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          TextChanged="SearchTextBox_OnTextChanged"
                          Margin="10">
                     <TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}" />
+                        <KeyBinding Key="Enter" Command="{Binding SearchUsersCommand}" />
                     </TextBox.InputBindings>
                 </TextBox>
-                <TextBox Grid.Row="1" Text="选择好友创建" FontSize="15" Height="40"
-                         BorderThickness="0,0,0,1" 
-                         BorderBrush="#1000"></TextBox>
+                <TextBox Grid.Row="1"  FontSize="15" Height="40" Padding="10,0,0,0"
+                         BorderThickness="0,0,0,1"
+                         BorderBrush="#1000">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="TextAlignment" Value="Center" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCreateGroupCommand}" Value="True">
+                                    <Setter Property="Text" Value="选择好友创建" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsShareCommand}" Value="True">
+                                    <Setter Property="Text" Value="选择联系人分享" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <ListBox Grid.Row="2" ItemsSource="{Binding SearchResult}" Visibility="{Binding IsSearching,Converter={StaticResource BoolVisibilityConverter2}}"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="6" Padding="6,4" Margin="0,2" HorizontalAlignment="Stretch">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#F0F0F5" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding DataContext.ChooseUserContactCommand,RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="0"
+                                        Height="40"
+                                        ToolTip="{Binding ContactToolTipText}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <RadioButton Grid.Column="0" IsChecked="{Binding IsSelected}"
+                                                     Margin="10,0">
+                                        </RadioButton>
+                                        <!-- 头像 -->
+                                        <Ellipse Grid.Column="1" Width="42" Height="42" Margin="4,0,12,0" VerticalAlignment="Center">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+
+                                        <!-- 昵称 + 账号 -->
+                                        <Grid Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding ContactName}"
+                                                       FontSize="12"
+                                                       Foreground="#1E1E1E"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="{Binding AccountText}"
+                                                       FontSize="12"
+                                                       Foreground="#1E1E1E"
+                                                       Margin="4,0,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
+                                    </Grid>
+                                </Button>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 <TreeView Grid.Row="2" ItemsSource="{Binding UserContactGroups}"
-                          x:Name="UserContactTreeView">
+                          x:Name="UserContactTreeView" Visibility="{Binding IsNotSearching, Converter={StaticResource BoolVisibilityConverter2}}">
                     <TreeView.Style>
                         <Style TargetType="TreeView" BasedOn="{StaticResource MaterialDesignTreeView}">
                             <Setter Property="Visibility" Value="Visible" />
@@ -82,7 +166,7 @@
 
                     <TreeView.Resources>
                         <!-- 联系人模板 -->
-                        <DataTemplate DataType="{x:Type domain:UserContactInfoItem}">
+                        <DataTemplate DataType="{x:Type domain:UserContactGroupViewItem}">
                             <Border CornerRadius="6" Padding="6,4" Margin="0,2">
                                 <Border.Style>
                                     <Style TargetType="Border">
@@ -97,67 +181,44 @@
                                 <Button Style="{StaticResource MaterialDesignFlatButton}"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch"
-                                        Command="{Binding DataContext.GoUserProfileCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Command="{Binding DataContext.ChooseUserContactCommand,RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
                                         Padding="0"
-                                        Height="40">
+                                        Height="40"
+                                        ToolTip="{Binding ContactToolTipText}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
+                                        <RadioButton Grid.Column="0" IsChecked="{Binding IsSelected}"
+                                                     Margin="10,0">
+                                        </RadioButton>
                                         <!-- 头像 -->
-                                        <Ellipse Width="42" Height="42" Margin="4,0,12,0" VerticalAlignment="Center">
+                                        <Ellipse Grid.Column="1" Width="42" Height="42" Margin="4,0,12,0" VerticalAlignment="Center">
                                             <Ellipse.Fill>
                                                 <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
                                             </Ellipse.Fill>
                                         </Ellipse>
 
-                                        <!-- 昵称 + 状态 + 签名 -->
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
-                                            <TextBlock Text="{Binding Nickname}"
+                                        <!-- 昵称 + 账号 -->
+                                        <Grid Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding ContactName}"
                                                        FontSize="12"
-                                                       FontWeight="SemiBold"
                                                        Foreground="#1E1E1E"
                                                        TextTrimming="CharacterEllipsis" />
-                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                                                         Margin="0,0,4,0">
-                                                    <Ellipse.Style>
-                                                        <Style TargetType="Ellipse">
-                                                            <Setter Property="Fill" Value="#BDBDBD" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
-                                                                    <Setter Property="Fill" Value="#4CAF50" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Ellipse.Style>
-                                                </Ellipse>
-                                                <TextBlock FontSize="12" Foreground="#8A8A8A"
-                                                           VerticalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="离线" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsOnline}" Value="True">
-                                                                    <Setter Property="Text" Value="在线" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Text=" " FontSize="12" Foreground="#8A8A8A"
-                                                           VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding Signature}"
-                                                           FontSize="12"
-                                                           Foreground="#8A8A8A"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           MaxWidth="140" />
-                                            </StackPanel>
-                                        </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding AccountText}"
+                                                       FontSize="12"
+                                                       Foreground="#1E1E1E"
+                                                       Margin="4,0,0,0"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
                                     </Grid>
                                 </Button>
                             </Border>
@@ -170,6 +231,7 @@
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
                                     Padding="4,2"
+                                    Height="36"
                                     Command="{Binding DataContext.UserGroupExpandCommand, RelativeSource={RelativeSource AncestorType=TreeView}}"
                                     CommandParameter="{Binding}">
                                 <Grid HorizontalAlignment="Stretch">
@@ -198,9 +260,106 @@
                         </HierarchicalDataTemplate>
                     </TreeView.Resources>
                 </TreeView>
-
             </Grid>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="{Binding ActionText}" Padding="5" Margin="10,10"></TextBlock>
+                <ListBox Grid.Row="1" ItemsSource="{Binding SelectedUserContacts}" 
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="True"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
+                         SelectionMode="Single">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                     <ListBox.ItemTemplate>
+                         <DataTemplate>
+                            <Border CornerRadius="6" Padding="4,2" Margin="0,1">
+                                 <Border.Style>
+                                     <Style TargetType="Border">
+                                         <Setter Property="Background" Value="Transparent" />
+                                         <Style.Triggers>
+                                             <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="Transparent" />
+                                             </Trigger>
+                                         </Style.Triggers>
+                                     </Style>
+                                 </Border.Style>
+                                 <Grid>
+                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                     </Grid.ColumnDefinitions>
 
-        </Grid>
-    </Border>
-</UserControl>
+                                     <!-- 头像 -->
+                                     <Ellipse Width="36" Height="36" Margin="2,0,8,0" VerticalAlignment="Center">
+                                         <Ellipse.Fill>
+                                             <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                         </Ellipse.Fill>
+                                     </Ellipse>
+
+                                     <!-- 昵称 + 账号 -->
+                                     <Grid Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0" HorizontalAlignment="Stretch">
+                                         <TextBlock Text="{Binding ContactName}"
+                                                    FontSize="12"
+                                                    Foreground="#1E1E1E"
+                                                    TextTrimming="CharacterEllipsis" />
+
+                                     </Grid>
+                                     <Button Grid.Column="2" Style="{StaticResource MaterialDesignFlatButton}"
+                                             Command="{Binding DataContext.RemoveSelectedUserCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                             CommandParameter="{Binding}"
+                                             Padding="2"
+                                             MinWidth="0"
+                                             Background="Transparent">
+                                         <materialDesign:PackIcon Kind="CloseOutline" Height="20" Width="20" Padding="5"
+                                                                  Foreground="#D9D9D9" />
+                                     </Button>
+
+                                 </Grid>
+                             </Border>
+                         </DataTemplate>
+                     </ListBox.ItemTemplate>
+                 </ListBox>
+                 <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Orientation="Horizontal"
+                            HorizontalAlignment="Right" Margin="0,10,0,10">
+                     <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            materialDesign:ButtonAssist.CornerRadius="6" Foreground="#fff" Background="#09f"
+                            BorderThickness="1"
+                            IsEnabled="{Binding IsConfirmEnabled}"
+                            Command="{Binding ConfirmCommand}"
+                            Content="确定">
+                     </Button>
+                     <Button Style="{StaticResource MaterialDesignFlatButton}" Margin="10,0"
+                            Command="{Binding CloseCommand}"
+                            materialDesign:ButtonAssist.CornerRadius="6" Foreground="#000" Background="#fff"
+                            Content="取消" BorderBrush="#000" BorderThickness="1">
+                     </Button>
+                 </StackPanel>
+             </Grid>
+         </Grid>
+     </Border>
+</Window>

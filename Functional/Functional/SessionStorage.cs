@@ -1,11 +1,12 @@
-﻿using System.Collections.Frozen;
+﻿using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using QQLike.Functional.Instructure;
 
 namespace QQLike.Functional;
 
 public class SessionStorage : ISessionStorage
 {
-    private readonly Dictionary<string,object> _storage = new ();
+    private readonly ConcurrentDictionary<string,object> _storage = new ();
     private FrozenDictionary<string, object> FrozenStorage => _storage.ToFrozenDictionary();
     public T Get<T>(string key)
     {
@@ -19,7 +20,7 @@ public class SessionStorage : ISessionStorage
         if(FrozenStorage.ContainsKey(key))
             _storage[key] = value;
         else
-            _storage.Add(key, value);
+            _storage.TryAdd(key, value);
     }
 
     public bool KeyExists(string key)
@@ -29,6 +30,6 @@ public class SessionStorage : ISessionStorage
 
     public bool Remove(string key)
     {
-        return _storage.Remove(key);
+        return _storage.TryRemove(key, out _);
     }
 }

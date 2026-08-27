@@ -7,6 +7,7 @@ using QQLike.Domain;
 using QQLike.Entity;
 using QQLike.Entity.Configuration;
 using QQLike.Functional.Instructure;
+using QQLike.Services;
 using SqlSugar;
 using QQLike.Services.Interfaces;
 
@@ -146,6 +147,9 @@ public partial class UserSearchHeaderViewModel(ISqlSugarClient sugarClient, SysS
     private void ShowGroupCreator()
     {
         IsAdding = false;
-        // TODO: 实现创建群聊窗口
+        var window = windowFactory.GetWindow<UserContactGroupView>(Owner);
+        var viewModel = window.GetViewModel<UserContactGroupViewModel>();
+        viewModel.IsCreateGroupCommand = true;
+        window.Show();
     }
 }

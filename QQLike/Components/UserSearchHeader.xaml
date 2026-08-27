@@ -5,8 +5,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d"
-             d:DesignHeight="300" d:DesignWidth="400">
-    <Grid Background="#f5f5f5">
+             d:DesignHeight="300" d:DesignWidth="400"
+             Background="#F5F5F5">
+    <Grid Background="{Binding Background, RelativeSource={RelativeSource AncestorType=UserControl}}">
         <Grid x:Name="HeaderLayoutRoot" Margin="6" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -69,13 +70,15 @@
                         MouseEnter="AddPopup_MouseEnter"
                         MouseLeave="AddPopup_MouseLeave">
                     <StackPanel Margin="0,8,0,0" Orientation="Vertical">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000" Command="{Binding OpenComprehensiveSearchCommand}">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000" 
+                                Command="{Binding OpenComprehensiveSearchCommand}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                 <materialDesign:PackIcon Kind="AccountOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
                                 <Label Content="加好友/群" VerticalAlignment="Center" FontSize="12"></Label>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000" Command="{Binding ShowGroupCreatorCommand}">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="#000"
+                                Command="{Binding ShowGroupCreatorCommand}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                                 <materialDesign:PackIcon Kind="AccountGroupOutline" VerticalAlignment="Center"></materialDesign:PackIcon>
                                 <Label Content="创建群聊" VerticalAlignment="Center" FontSize="12"></Label>

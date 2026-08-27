@@ -36,4 +36,11 @@ public class UserController(IUserService userService) : ControllerBase
         return await userService.GetUserContactCardInfo(userId,contactId);
     }
     
+    [HttpGet("{userId}")]
+    [RequestAuthorize]
+    public async Task<ActionResult<ResponseResult<List<UserContactInfo>>>> GetUserContactInfo([FromRoute] string userId,
+        [FromQuery] string search,bool withGroup = false)
+    {
+        return await userService.GetUserContactInfo(userId,search,withGroup);
+    }
 }

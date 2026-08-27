@@ -9,7 +9,7 @@
              xmlns:templates="clr-namespace:QQLike.Views.Templates"
              mc:Ignorable="d"
              IsVisibleChanged="ChatMessageView_OnIsVisibleChanged"
-             d:DesignHeight="720" d:DesignWidth="1120">
+             d:DesignHeight="720" d:DesignWidth="1200">
     <UserControl.Resources>
         <Style x:Key="ConversationListBoxStyle" TargetType="ListBox" BasedOn="{StaticResource MaterialDesignListBox}">
             <Setter Property="BorderThickness" Value="0" />
@@ -81,7 +81,7 @@
                 </Grid.ColumnDefinitions>
                 <!-- 左侧头像（对方消息时显示） -->
                 <Border x:Name="LeftAvatar"
-                       
+
                         Width="38"
                         Height="38"
                         Margin="0,0,8,0"
@@ -164,8 +164,7 @@
                     HorizontalAlignment="{Binding BubbleHorizontalAlignment}"
                     Background="{Binding BubbleBackground}"
                     BorderBrush="{Binding BubbleBorderBrush}"
-                    VerticalAlignment="Center"
-                   >
+                    VerticalAlignment="Center">
                 <TextBlock Text="{Binding Content}"
                            FontSize="14"
                            Foreground="#1F1F1F"
@@ -272,92 +271,102 @@
 
     <Grid Background="#F6F7FB">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="320" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="White" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0">
-            <ListBox ItemsSource="{Binding HeadMessages}"
-                     SelectedItem="{Binding SelectedHeadMessage, Mode=TwoWay}"
-                     ItemContainerStyle="{StaticResource ConversationItemStyle}"
-                     Style="{StaticResource ConversationListBoxStyle}"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.CanContentScroll="True">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Button
-                            Command="{Binding DataContext.CheckMessagesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding }"
-                            Style="{StaticResource TextButtonStyle}"
-                            HorizontalContentAlignment="Stretch"
-                            HorizontalAlignment="Stretch">
-                            <Grid Margin="10,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="#F5F5F5" BorderBrush="#E8E8E8" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <components:UserSearchHeader Grid.Row="0"></components:UserSearchHeader>
+                <ListBox Grid.Row="1" ItemsSource="{Binding HeadMessages}"
+                         SelectedItem="{Binding SelectedHeadMessage, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource ConversationItemStyle}"
+                         Style="{StaticResource ConversationListBoxStyle}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="True"
+                        >
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button
+                                Command="{Binding DataContext.CheckMessagesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding }"
+                                Style="{StaticResource TextButtonStyle}"
+                                HorizontalContentAlignment="Stretch"
+                                HorizontalAlignment="Stretch">
+                                <Grid Margin="10,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                <!-- 头像（无头像时显示首字母占位） -->
-                                <Border Width="40" Height="40" CornerRadius="20" Background="#E9EEF4"
-                                        Margin="0,0,12,0" ClipToBounds="True">
-                                    <Grid>
-                                        <TextBlock Text="{Binding AvatarInitial}" FontSize="20" FontWeight="SemiBold"
-                                                   Foreground="#7D7D7D"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
-                                    </Grid>
-                                </Border>
+                                    <!-- 头像（无头像时显示首字母占位） -->
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="#E9EEF4"
+                                            Margin="0,0,12,0" ClipToBounds="True">
+                                        <Grid>
+                                            <TextBlock Text="{Binding AvatarInitial}" FontSize="20"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#7D7D7D"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                                        </Grid>
+                                    </Border>
 
-                                <!-- 文本区：名字/时间 + 内容/未读 -->
-                                <Grid Grid.Column="1" VerticalAlignment="Center">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
+                                    <!-- 文本区：名字/时间 + 内容/未读 -->
+                                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
 
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"
-                                                   Foreground="#1F1F1F" TextTrimming="CharacterEllipsis"
-                                                   VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="#A5A5A5"
-                                                   FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
-                                    </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="#1F1F1F" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="#A5A5A5"
+                                                       FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                        </Grid>
 
-                                    <Grid Grid.Row="1" Margin="0,6,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding LastContent}" FontSize="12" Foreground="#8F8F8F"
-                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                        <Border Grid.Column="1" Background="#F44336" CornerRadius="10" Padding="5,1"
-                                                MinWidth="20" Margin="8,0,0,0" VerticalAlignment="Center">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding UnreadCount}" Value="0">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock
-                                                Text="{Binding UnreadCount, Converter={StaticResource UnreadCountToTextConverter}}"
-                                                Foreground="White" FontSize="11" TextAlignment="Center" />
-                                        </Border>
+                                        <Grid Grid.Row="1" Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding LastContent}" FontSize="12" Foreground="#8F8F8F"
+                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            <Border Grid.Column="1" Background="#F44336" CornerRadius="10"
+                                                    Padding="5,1"
+                                                    MinWidth="20" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding UnreadCount}" Value="0">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock
+                                                    Text="{Binding UnreadCount, Converter={StaticResource UnreadCountToTextConverter}}"
+                                                    Foreground="White" FontSize="11" TextAlignment="Center" />
+                                            </Border>
+                                        </Grid>
                                     </Grid>
                                 </Grid>
-                            </Grid>
-                        </Button>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
         </Border>
 
         <Grid Grid.Column="1" Background="#FAFAFA">
@@ -382,8 +391,9 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="1"  VerticalAlignment="Center">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left" Cursor="Hand"
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left"
+                                    Cursor="Hand"
                                     x:Name="DisplayNameButton" Command="{Binding OpenUserCardPopupCommand}">
                                 <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
                                            FontSize="16"

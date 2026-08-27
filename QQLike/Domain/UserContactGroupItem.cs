@@ -9,10 +9,16 @@ namespace QQLike.Domain;
 /// </summary>
 public partial class UserContactGroupItem : ObservableObject
 {
-    [ObservableProperty] private long _contactGroupId;
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private ObservableCollection<UserContactInfoItem> _userContacts = [];
-    [ObservableProperty] private double _expandIconAngle;
-    [ObservableProperty] private bool _isExpanded;
-    [ObservableProperty] private long _userContactCount;
+    [ObservableProperty] 
+    private long _contactGroupId;
+    [ObservableProperty]
+    private string _name = string.Empty;
+    [ObservableProperty]
+    private ObservableCollection<UserContactInfoItem> _userContacts = [];
+    [ObservableProperty]
+    private double _expandIconAngle;
+    [ObservableProperty] 
+    private bool _isExpanded;
+    [ObservableProperty]
+    private long _userContactCount;
 }

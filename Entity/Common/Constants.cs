@@ -11,4 +11,5 @@ public static class Constants
         PropertyNameCaseInsensitive = true
     };
     public const string MQExchange = "QQLike";
+    public const string CreateChatGroupQueue =  "CreateChatGroup";
 }

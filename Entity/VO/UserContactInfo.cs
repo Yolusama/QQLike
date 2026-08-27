@@ -11,4 +11,5 @@ public class UserContactInfo
     public string GroupName { get; set; }
     public string UserContactGroupName { get; set; }
     public bool IsOnline { get; set; }
+    public string Source { get; set; }
 }

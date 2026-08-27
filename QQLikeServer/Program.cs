@@ -16,6 +16,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<JwtAuthorizeFilter>();
+    options.Filters.Add<GlobalExceptionHandler>();
 });
 
 var setting = builder.Configuration.GetSection(nameof(SysSetting)).Get<SysSetting>();
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IVerificationMessageService, VerificationMessageServi
 builder.Services.AddScoped<IHeadMessageService, HeadMessageService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
+builder.Services.AddScoped<GlobalExceptionHandler>();
 
 builder.Services.AddScoped<ISocketServerService, SocketServerService>();
 builder.Services.AddHostedService<SocketServerHostedService>();
