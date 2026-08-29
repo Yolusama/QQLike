@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:QQLike.Views.User"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:components="clr-namespace:QQLike.Components"
+        xmlns:domain="clr-namespace:QQLike.Domain"
         Loaded="OnLoaded"
         Closed="OnClosed"
         mc:Ignorable="d"
@@ -214,9 +215,9 @@
 
                         <!-- 好友列表 -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Friends}" x:Name="FriendsItemsControl">
+                            <ItemsControl ItemsSource="{Binding Friends}"  x:Name="Control">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate DataType="{x:Type domain:UserContactManageItem}">
                                         <Border BorderBrush="#eeeeee" BorderThickness="0,0,0,10">
                                             <Grid Height="56">
                                                 <Grid.ColumnDefinitions>
@@ -261,16 +262,15 @@
                                                            TextTrimming="CharacterEllipsis" />
 
                                                 <!-- 分组下拉 -->
-                                                <ComboBox Grid.Column="3" Text="{Binding GroupName}"
-                                                          Width="140" Height="32" FontSize="13"
-                                                          VerticalAlignment="Center"
-                                                          materialDesign:HintAssist.Hint="选择分组"
-                                                          SelectedValue="{Binding UserContactGroupId, Mode=TwoWay}"
-                                                          DisplayMemberPath="Label"
+                                                <ComboBox Grid.Column="3"
+                                                          SelectedItem="{Binding SelectedGroup, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                           SelectedValuePath="Value"
-                                                          SelectionChanged="ComboBox_SelectionChanged"
+                                                          DisplayMemberPath="Label"
                                                           ItemsSource="{Binding DataContext.Groups, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                          Style="{StaticResource MaterialDesignOutlinedComboBox}">
+                                                          IsSynchronizedWithCurrentItem="False"
+                                                          Width="140" Height="32" FontSize="13" 
+                                                          VerticalAlignment="Center"
+                                                          Style="{StaticResource MaterialDesignComboBox}">
                                                 </ComboBox>
                                             </Grid>
                                         </Border>

@@ -67,14 +67,14 @@ public class UserContactService(IFreeSql orm) : IUserContactService
     public async Task<ResponseResult<List<UserContactManageVO>>> GetUserManageFriends(string userId,long userContactGroupId = 0)
     {
         var data = await orm.Select<User, UserContact, UserContactGroup>()
-            .LeftJoin(e => e.t1.Id == e.t2.UserId && !e.t2.IsGroup)
+            .LeftJoin(e => e.t1.Id == e.t2.ContactId && !e.t2.IsGroup)
             .LeftJoin(e => e.t2.UserContactGroupId == e.t3.Id)
-            .WhereIf(userContactGroupId != 0, e => e.t3.Id == userContactGroupId)
+            .WhereIf(userContactGroupId != 0, e => e.t2.UserContactGroupId == userContactGroupId)
             .Where(e => e.t2.UserId == userId)
             .ToListAsync(e => new UserContactManageVO
             {
                 Avatar = e.t1.Avatar, Nickname = e.t1.Nickname, Remark = e.t2.Remark,
-                UserId = e.t1.Id, UserContactGroupId = e.t3.Id
+                UserId = e.t1.Id, UserContactGroupId = e.t2.UserContactGroupId,GroupName = e.t3.Name
             });
 
         return ResponseResult<List<UserContactManageVO>>.OK("获取成功", data);

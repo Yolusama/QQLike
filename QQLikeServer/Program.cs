@@ -58,6 +58,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserContactService, UserContactService>();
 builder.Services.AddScoped<IVerificationMessageService, VerificationMessageService>();
 builder.Services.AddScoped<IHeadMessageService, HeadMessageService>();
+builder.Services.AddScoped<IChatGroupService, ChatGroupService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 builder.Services.AddScoped<GlobalExceptionHandler>();

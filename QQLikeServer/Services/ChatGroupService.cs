@@ -3,6 +3,7 @@ using QQLike.Entity.Common;
 using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
 using QQLike.Entity.Result;
+using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services.Interfaces;
@@ -20,10 +21,11 @@ public class ChatGroupService(
         using var worker = orm.CreateUnitOfWork();
         try
         {
+            var groupName = string.IsNullOrEmpty(dto.GroupName) ? $"{dto.GroupCreatorName}的群聊" : $"{dto.GroupCreatorName},{dto.GroupName}";
             var chatGroup = new ChatGroup
             {
                 OwnerId = dto.CreatorId,
-                Name = dto.GroupName,
+                Name = groupName,
                 GroupNum = generator.GenerateByNumbers(10),
                 Id = generator.Guid,
                 CreateTime = DateTime.Now,
@@ -50,17 +52,47 @@ public class ChatGroupService(
                 }
                 if(userContacts.Count > 0)
                     await worker.Orm.Insert(userContacts).ExecuteAffrowsAsync();
+                var onlineStatusOptions = await orm.Select<User>()
+                    .Where(e => dto.ChosenUserIds.Contains(e.Id))
+                    .ToListAsync(e=>new {e.Id,e.IsOnline});
+                List<HeadMessage> headMessages = [];
                 foreach (var userContact in userContacts)
                 {
-                    var messageBody = new MQMessageBody
+                    var userStatus = onlineStatusOptions.FirstOrDefault(e => e.Id == userContact.UserId);
+                    if(userStatus == null) continue;
+                    var currentHeadMessageId = generator.Guid;
+                    if (userStatus.IsOnline!=null && userStatus.IsOnline.Value)
                     {
-                        Identifier = userContact.UserId,
-                        Body = chatGroup,
-                        Muted = true
-                    };
-                    await mqProducer.Produce(Constants.CreateChatGroupQueue, Constants.MQExchange,
-                        $"{Constants.CreateChatGroupQueue}_{userContact.UserId}", messageBody.ToNormalJson());
+                        var messageBody = new MQMessageBody
+                        {
+                            Identifier = userContact.UserId,
+                            Body = new GroupCreatedHeadMessage
+                            {
+                                UserId = userContact.UserId,
+                                GroupId = chatGroup.Id,
+                                GroupName = chatGroup.Name,
+                                GroupAvatar = chatGroup.Avatar,
+                                CreateTime = chatGroup.CreateTime,
+                                HeadMessageId = currentHeadMessageId,
+                                IsOwner = userContact.UserId == chatGroup.OwnerId
+                            },
+                            Muted = true
+                        };
+                        await mqProducer.Produce(Constants.CreateChatGroupQueue, Constants.MQExchange,
+                            $"{Constants.CreateChatGroupQueue}_{userContact.UserId}", messageBody.ToNormalJson());
+                    }
+                    var headMessage = new HeadMessage();
+                    headMessage.Id = currentHeadMessageId;
+                    headMessage.UserId = userContact.UserId;
+                    headMessage.ContactId = chatGroup.Id;
+                    headMessage.Content = string.Empty;
+                    headMessage.CreateTime = DateTime.Now;
+                    headMessage.LastMessageTime = DateTime.Now;
+                    headMessages.Add(headMessage);
                 }
+                
+                if(headMessages.Count > 0)
+                    await worker.Orm.Insert(headMessages).ExecuteAffrowsAsync();
             }
             
             worker.Commit();

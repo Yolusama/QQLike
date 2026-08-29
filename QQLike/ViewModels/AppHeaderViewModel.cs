@@ -8,6 +8,7 @@ using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
+using QQLike.Views;
 
 
 namespace QQLike.ViewModels;
@@ -71,6 +72,13 @@ public partial class AppHeaderViewModel : ViewModelBase<AppHeader>
     private void Exit()
     {
         var window = Window.GetWindow(View);
+        if (window.GetType() == typeof(MainView))
+        {
+            foreach (Window win in Application.Current.Windows)
+               win.Close();
+            return;
+        }
+
         window.Close();
         var index = windowFactory.GetWindow<Index>();
         index.Close();

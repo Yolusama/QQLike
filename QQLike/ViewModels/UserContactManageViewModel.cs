@@ -14,6 +14,7 @@ using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Views.User;
 using SqlSugar;
+using System.Collections.Generic;
 
 namespace QQLike.ViewModels;
 
@@ -25,14 +26,22 @@ public partial class UserContactManageViewModel(
     ISessionStorage sessionStorage)
     : ViewModelBase<UserContactManageView>
 {
-    [ObservableProperty] private string _searchText;
-    [ObservableProperty] private string _newGroupName;
-    [ObservableProperty] private bool _isGroupDialogOpen;
-    [ObservableProperty] private bool _isGroup;
-    [ObservableProperty] private ObservableCollection<UserContactGroupingItem> _groupingData = [];
-    [ObservableProperty] private ObservableCollection<UserContactManageItem> _friends = [];
-    [ObservableProperty] private long _friendsCount;
-    [ObservableProperty] private ObservableCollection<ValueLabel<long>> _groups = [];
+    [ObservableProperty] 
+    private string _searchText;
+    [ObservableProperty]
+    private string _newGroupName;
+    [ObservableProperty]
+    private bool _isGroupDialogOpen;
+    [ObservableProperty]
+    private bool _isGroup;
+    [ObservableProperty] 
+    private ObservableCollection<UserContactGroupingItem> _groupingData = [];
+    [ObservableProperty]
+    private ObservableCollection<UserContactManageItem> _friends = [];
+    [ObservableProperty] 
+    private long _friendsCount;
+    [ObservableProperty] 
+    private ObservableCollection<ValueLabel<long>> _groups = [];
     
     private long _currentContactGroupId;
 
@@ -53,11 +62,14 @@ public partial class UserContactManageViewModel(
         try
         {
              var res = await apiService
-                 .GetAsync<List<ValueLabel<long>>>($"api/UserContact/GetUserContactGroupSelections/{user.UserId}", null);
+                 .GetAsync<List<ValueLabel<long>>>(
+                     $"api/UserContact/GetUserContactGroupSelections/{user.UserId}",
+                     new { IsGroup = false });
              if(res.Success)
              {
                  Groups.Clear();
                  res.Data.ForEach(group => Groups.Add(group));
+                 SyncFriendSelectedGroups();
              }
              else
                  MessageComponent.ShowMessage(View, $"获取分组失败：{res.Message}", MessageType.Error);
@@ -117,6 +129,7 @@ public partial class UserContactManageViewModel(
             {
                 MessageComponent.ShowMessage(View, $"添加分组成功", MessageType.Success);
                 CancelAddGroup();
+                await GetUserContactGroup();
                 await GetGrouping();
             }
             else
@@ -147,11 +160,20 @@ public partial class UserContactManageViewModel(
                 ($"api/UserContact/GetUserManageFriends/{sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId}/{_currentContactGroupId}", null);
             if (res.Success)
             {
+                bool loaded = false;
+                var tempList = new ObservableCollection<UserContactManageItem>();
                 foreach (var item in res.Data)
                 {
                     item.Avatar = $"{setting.ApiUrl}/Files/Images/{item.Avatar}";
-                    Friends.Add(item.MapTo<UserContactManageVO, UserContactManageItem>());
+                    var friend = item.MapTo<UserContactManageVO, UserContactManageItem>();
+                    friend.SelectedGroup = new ValueLabel<long>
+                    {
+                        Label = friend.GroupName,
+                        Value = friend.UserContactGroupId
+                    };
+                    tempList.Add(friend);
                 }
+                Friends = tempList;
             }
             else
                 MessageComponent.ShowMessage(View, $"获取好友失败：{res.Message}", MessageType.Error);
@@ -182,22 +204,48 @@ public partial class UserContactManageViewModel(
     [RelayCommand]
     private async Task ChangeGroup(UserContactManageItem? item)
     {
-        if(item == null)return;
+        if (item == null) return;
+        await TryChangeGroupAsync(item);
+    }
+
+    private async Task TryChangeGroupAsync(UserContactManageItem item)
+    {
+
         using var worker = sugarClient.CreateContext();
         try
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-            await worker.Db.Updateable<UserContact>()
-                .SetColumns(u => u.UserContactGroupId == item.UserContactGroupId)
+            var changedRows = await worker.Db.Updateable<UserContact>()
+                .SetColumns(u => new UserContact { UserContactGroupId = item.UserContactGroupId })
                 .Where(u => u.ContactId == item.UserId && !u.IsGroup && u.UserId == user.UserId)
                 .ExecuteCommandAsync();
+
+            if (changedRows <= 0)
+            {
+                MessageComponent.ShowMessage(View, "分组未更新，请重试", MessageType.Warning);
+                return;
+            }
+
             worker.Commit();
-            await LoadData();
+            await GetGrouping();
+            await LoadFriends();
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(View, $"更改分组异常：{e.Message}", MessageType.Error);
+        }
+        finally
+        {
+            //_updatingContactIds.Remove(item.UserId);
+        }
+    }
+
+    private void SyncFriendSelectedGroups()
+    {
+        foreach (var friend in Friends)
+        {
+            friend.SelectedGroup = Groups.FirstOrDefault(g => g.Value == friend.UserContactGroupId);
         }
     }
 }

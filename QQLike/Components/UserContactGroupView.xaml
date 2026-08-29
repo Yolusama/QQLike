@@ -35,12 +35,13 @@
                         <KeyBinding Key="Enter" Command="{Binding SearchUsersCommand}" />
                     </TextBox.InputBindings>
                 </TextBox>
-                <TextBox Grid.Row="1"  FontSize="15" Height="40" Padding="10,0,0,0"
+                <TextBox Grid.Row="1"  FontSize="15" Height="32" Padding="10,0,0,0"
                          BorderThickness="0,0,0,1"
                          BorderBrush="#1000">
                     <TextBox.Style>
                         <Style TargetType="TextBox">
-                            <Setter Property="TextAlignment" Value="Center" />
+                            <Setter Property="TextAlignment" Value="Left" />
+                            <Setter Property="VerticalContentAlignment" Value="Center" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsCreateGroupCommand}" Value="True">
                                     <Setter Property="Text" Value="选择好友创建" />
@@ -54,6 +55,7 @@
                 </TextBox>
                 <ListBox Grid.Row="2" ItemsSource="{Binding SearchResult}" Visibility="{Binding IsSearching,Converter={StaticResource BoolVisibilityConverter2}}"
                          HorizontalContentAlignment="Stretch"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -261,14 +263,19 @@
                     </TreeView.Resources>
                 </TreeView>
             </Grid>
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="1" Visibility="{Binding IsCreateGroupCommand,Converter={StaticResource BoolVisibilityConverter2}}">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="*"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0" Text="{Binding ActionText}" Padding="5" Margin="10,10"></TextBlock>
-                <ListBox Grid.Row="1" ItemsSource="{Binding SelectedUserContacts}" 
+                <ComboBox Grid.Row="1" SelectedItem="{Binding SelectedGroup}" ItemsSource="{Binding UserChatGroups}"
+                         DisplayMemberPath="Label" SelectedValuePath="Value" Style="{StaticResource MaterialDesignComboBox}" Height="30"
+                        BorderBrush="Transparent"  Width="300" HorizontalAlignment="Left" Margin="12,0,0,0"
+                         materialDesign:HintAssist.Hint="选择分组"> </ComboBox>
+                <ListBox Grid.Row="2" ItemsSource="{Binding SelectedUserContacts}" 
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.CanContentScroll="True"
@@ -344,14 +351,22 @@
                          </DataTemplate>
                      </ListBox.ItemTemplate>
                  </ListBox>
-                 <StackPanel Grid.Row="2" VerticalAlignment="Bottom" Orientation="Horizontal"
+                 <StackPanel Grid.Row="3" VerticalAlignment="Bottom" Orientation="Horizontal"
                             HorizontalAlignment="Right" Margin="0,10,0,10">
-                     <Button Style="{StaticResource MaterialDesignFlatButton}"
-                            materialDesign:ButtonAssist.CornerRadius="6" Foreground="#fff" Background="#09f"
-                            BorderThickness="1"
+                     <Button 
+                            materialDesign:ButtonAssist.CornerRadius="6" Foreground="#000" Background="#09f"
                             IsEnabled="{Binding IsConfirmEnabled}"
                             Command="{Binding ConfirmCommand}"
                             Content="确定">
+                         <Button.Style>
+                             <Style BasedOn="{StaticResource MaterialDesignOutlinedButton}" TargetType="Button">
+                                 <Style.Triggers>
+                                      <Trigger Property="IsMouseOver" Value="True">
+                                          <Setter Property="Foreground" Value="#000"></Setter>
+                                      </Trigger>
+                                 </Style.Triggers>
+                             </Style>
+                         </Button.Style>
                      </Button>
                      <Button Style="{StaticResource MaterialDesignFlatButton}" Margin="10,0"
                             Command="{Binding CloseCommand}"

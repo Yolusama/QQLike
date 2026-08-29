@@ -7,6 +7,7 @@
              xmlns:components="clr-namespace:QQLike.Components"
              xmlns:views="clr-namespace:QQLike.Views.Message"
              xmlns:templates="clr-namespace:QQLike.Views.Templates"
+             xmlns:behaviors="clr-namespace:QQLike.Behaviors"
              mc:Ignorable="d"
              IsVisibleChanged="ChatMessageView_OnIsVisibleChanged"
              d:DesignHeight="720" d:DesignWidth="1200">
@@ -288,8 +289,7 @@
                          Style="{StaticResource ConversationListBoxStyle}"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.CanContentScroll="True"
-                        >
+                         ScrollViewer.CanContentScroll="True">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Button
@@ -391,17 +391,31 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left"
+                        <Grid Grid.Column="1" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="0.7*" />
+                                <ColumnDefinition Width="0.3*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Style="{StaticResource MaterialDesignFlatButton}"
+                                    HorizontalAlignment="Left"
                                     Cursor="Hand"
                                     x:Name="DisplayNameButton" Command="{Binding OpenUserCardPopupCommand}">
                                 <TextBlock Text="{Binding SelectedHeadMessage.DisplayName}"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Foreground="#1F1F1F"
+                                           TextWrapping="NoWrap"
                                            TextTrimming="CharacterEllipsis" />
                             </Button>
-                        </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <Button Style="{StaticResource MaterialDesignFlatButton}" Padding="5"
+                                        HorizontalAlignment="Left"
+                                        Cursor="Hand"
+                                        Command="{Binding OpenMoreOptionsCommand}">
+                                    <materialDesign:PackIcon Kind="MoreHoriz" Height="20" Width="20"></materialDesign:PackIcon>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
                 <Popup PlacementTarget="{Binding ElementName=DisplayNameButton}" Placement="Bottom" Margin="0,20,0,0"
@@ -410,6 +424,199 @@
                     <components:UserContactSimpleCard x:Name="UserContactSimpleCard" Visibility="{Binding Visible}">
                     </components:UserContactSimpleCard>
                 </Popup>
+                <materialDesign:DrawerHost Grid.Row="1"
+                                           IsRightDrawerOpen="{Binding IsOpenUserContactOpen}"
+                                           RightDrawerCornerRadius="7"
+                                           Background="#f2f2f2">
+                    <materialDesign:DrawerHost.RightDrawerContent>
+                        <StackPanel>
+                            <Grid Visibility="{Binding IsUser}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="屏蔽此人"></TextBlock>
+                                        <ToggleButton IsChecked="{Binding}"></ToggleButton>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="消息免打扰"></TextBlock>
+                                        <ToggleButton IsChecked="{Binding}"></ToggleButton>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button Grid.Row="1" Style="{StaticResource MaterialDesignFlatButton}"
+                                        BorderBrush="#FFF" BorderThickness="1" Background="#fff">
+                                    <TextBlock TextAlignment="Left" Text="删除聊天记录"></TextBlock>
+                                </Button>
+                                <Button Grid.Row="2" Style="{StaticResource MaterialDesignFlatButton}"
+                                        Background="#fff"
+                                        BorderBrush="#FFF" BorderThickness="1" Content="删除好友" Foreground="Red">
+                                </Button>
+                            </Grid>
+                            <Grid Visibility="{Binding IsGroup}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="*"></RowDefinition>
+                                </Grid.RowDefinitions>
+
+                                <!-- 群聊成员 -->
+                                <Border Grid.Row="0" Background="White" CornerRadius="8" Margin="10,10,10,5"
+                                        Padding="12">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="群聊成员" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="#1F1F1F" VerticalAlignment="Center" />
+                                            <Button Grid.Column="1" Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Foreground="#A5A5A5" FontSize="12"
+                                                    Content="{Binding GroupCountText, StringFormat='查看{0}名群成员 >'}" />
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding GroupMembers}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource MaterialDesignFlatButton}">
+                                                        <StackPanel Width="60" Margin="4" HorizontalAlignment="Center">
+                                                            <Ellipse Width="40" Height="40" ClipToBounds="True">
+                                                                <Ellipse.Fill>
+                                                                    <ImageBrush ImageSource="{Binding Avatar}"
+                                                                            Stretch="UniformToFill" />
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
+                                                            <TextBlock Text="{Binding DisplayName}" FontSize="11"
+                                                                       Foreground="#555" TextAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="0,4,0,0" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <!-- 邀请按钮 -->
+                                        <Button Style="{StaticResource MaterialDesignFlatButton}">
+                                            <StackPanel Width="60" Margin="4" HorizontalAlignment="Center">
+                                                <Border Width="40" Height="40" CornerRadius="20" Background="#F0F0F0">
+                                                    <materialDesign:PackIcon Kind="Plus" Width="24" Height="24"
+                                                                             Foreground="#757575"
+                                                                             HorizontalAlignment="Center"
+                                                                             VerticalAlignment="Center" />
+                                                </Border>
+                                                <TextBlock Text="邀请" FontSize="11" Foreground="#555"
+                                                           TextAlignment="Center" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 群公告 -->
+                                <Border Grid.Row="1" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="群描述" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="#1F1F1F" Margin="0,0,0,6" />
+                                            <TextBlock Text="{Binding GroupDescription}" FontSize="13"
+                                                       Foreground="#555" TextWrapping="Wrap"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <materialDesign:PackIcon Grid.Column="1" Kind="ChevronRight" Width="20"
+                                                                 Height="20"
+                                                                 Foreground="#C0C0C0" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- 我的本群昵称 -->
+                                <Border Grid.Row="2" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="我的本群昵称" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="#1F1F1F" Margin="0,0,0,8" />
+                                        <TextBox Text="{Binding GroupDisplayName}" FontSize="14"
+                                                 Foreground="#1F1F1F" BorderThickness="0"
+                                                 Background="Transparent" Padding="0" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 群聊备注 -->
+                                <Border Grid.Row="3" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="群聊备注" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="#1F1F1F" Margin="0,0,0,8" />
+                                        <TextBox Text="{Binding GroupRemark}" FontSize="14"
+                                                 Foreground="#A5A5A5" BorderThickness="0"
+                                                 Background="#fff" Padding="0">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsFocused" Value="True">
+                                                            <Setter Property="BorderBrush" Value="#222"></Setter>
+                                                            <Setter Property="BorderThickness" Value="1"></Setter>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
+                                    </StackPanel>
+                                </Border>
+
+
+                                <!-- 消息免打扰 -->
+                                <Border Grid.Row="4" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="消息免打扰" FontSize="14"
+                                                   Foreground="#1F1F1F" VerticalAlignment="Center" />
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding IsMuted}"
+                                                      Style="{StaticResource MaterialDesignSwitchToggleButton}" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- 删除聊天记录 -->
+                                <Border Grid.Row="5" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                            HorizontalContentAlignment="Left" Padding="0">
+                                        <TextBlock Text="删除聊天记录" FontSize="14" Foreground="#1F1F1F" />
+                                    </Button>
+                                </Border>
+
+                                <!-- 退出群聊 -->
+                                <Border Grid.Row="6" Background="White" CornerRadius="8" Margin="10,5,10,10"
+                                        Padding="12">
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                            HorizontalContentAlignment="Center" Padding="0">
+                                        <TextBlock Text="退出群聊" FontSize="14" Foreground="#F44336"
+                                                   HorizontalAlignment="Center" />
+                                    </Button>
+                                </Border>
+                            </Grid>
+
+                            <Grid Visibility="{Binding IsOwner}">
+
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:DrawerHost.RightDrawerContent>
+                </materialDesign:DrawerHost>
 
                 <components:InfinityScrollView
                     Grid.Row="1"
@@ -494,8 +701,8 @@
                                  Padding="4" />
 
                         <!-- Send Button Row -->
-                        <Grid Grid.Row="2" HorizontalAlignment="Right" Margin="0,6,0,0">
-                            <Border Background="#2196F3" CornerRadius="6" Padding="16,6">
+                        <Grid Grid.Row="2" HorizontalAlignment="Right" Margin="0,6,0,0" Height="30">
+                            <Border Background="#2196F3" CornerRadius="6" Width="60">
                                 <Button Background="Transparent"
                                         BorderThickness="0"
                                         Foreground="White"
@@ -503,6 +710,7 @@
                                         Content="发送"
                                         ToolTip="发送消息 (Enter)"
                                         Command="{Binding SendMessageCommand}"
+                                        IsEnabled="{Binding CanSendMessage}"
                                         Padding="8,2" />
                             </Border>
                         </Grid>

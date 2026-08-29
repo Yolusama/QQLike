@@ -43,14 +43,28 @@ public partial class ChatMessageViewModel(
     private string _newMessageText;
     [ObservableProperty]
     private bool _isUserCardPopupOpen;
-    
+    [ObservableProperty] 
+    private bool _canSendMessage; 
+    [ObservableProperty]
+    private bool _isUserContactOpen;
+
+    private string _fileName = string.Empty;
+    private Socket? _client = null;
+
     private Socket? Client => GetSocket();
 
     private Socket? GetSocket()
     {
+        if(_client != null) return _client;
         var window = Window.GetWindow(View);
         var viewModel = window.GetViewModel<MainViewModel>();
+        _client = viewModel.Client;
         return viewModel.Client;
+    }
+    
+    partial void OnNewMessageTextChanged(string value)
+    {
+        CanSendMessage = value.Length > 0;
     }
 
     [RelayCommand]
@@ -87,7 +101,9 @@ public partial class ChatMessageViewModel(
                         : (string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim().Substring(0, 1)),
                     UnreadCount = header.UnreadCount,
                     HeadMessageId = header.HeadMessageId,
-                    IsGroup = header.IsGroup
+                    IsGroup = header.IsGroup,
+                    IsOwner = header.IsOwner,
+                    MessageReceiveMuted = header.MessageReceiveMuted
                 });
             }
             
@@ -199,24 +215,30 @@ public partial class ChatMessageViewModel(
     [RelayCommand]
     private async Task SendMessage()
     {
-        if(string.IsNullOrEmpty(NewMessageText.TrimStart())) return;
+        await HandMessageSending(ChatMessageType.Text);
+    }
+    
+    private async Task HandMessageSending(ChatMessageType type)
+    {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         var message = new ChatMessage
         {
             UserId = user.UserId,
             ContactId = SelectedHeadMessage.ContactId,
             Content = NewMessageText,
-            MessageType = ChatMessageType.Text.GetValue(),
+            MessageType = type.GetValue(),
             CreateTime = DateTime.Now,
             HeadMessageId = SelectedHeadMessage.HeadMessageId,
             IsRead = true,
             IsSelf = true
         };
+        if(SelectedHeadMessage.IsGroup)
+            message.GroupMemberId = user.UserId;
         using var worker = sugarClient.CreateContext();
         try
         {
             var model = new ChatMessageTransModel();
-            model.Type = ChatMessageType.Text;
+            model.Type = type;
             model.Message = NewMessageText;
             message.IsOnline = true;
             var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
@@ -251,7 +273,7 @@ public partial class ChatMessageViewModel(
                 DisplayName = displayName,
                 Content = message.Content,
                 MessageType = ChatMessageType.Text,
-                FileName = string.Empty,
+                FileName = _fileName,
                 MediaUrl = string.Empty,
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
@@ -349,7 +371,7 @@ public partial class ChatMessageViewModel(
 
             if (headItem == null)
             {
-                HeadMessages.Add(new ChatHeadMessageItem
+                var newHeadMessageItem = new ChatHeadMessageItem
                 {
                     HeadMessageId = message.HeadMessageId,
                     ContactId = message.ContactId,
@@ -361,7 +383,10 @@ public partial class ChatMessageViewModel(
                     AvatarInitial = string.Empty,
                     UnreadCount = 1,
                     IsGroup = contactUser.IsGroupContact
-                });
+                };
+                HeadMessages.Add(newHeadMessageItem);
+                headItem =  newHeadMessageItem;
+                
             }
             else
             {
@@ -377,7 +402,7 @@ public partial class ChatMessageViewModel(
             {
                 Identifier = message.UserId,
                 Body = true,
-                Muted = false
+                Muted = headItem.MessageReceiveMuted
             };
             await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{message.UserId}",
                 msgBody.ToNormalJson());
@@ -388,6 +413,21 @@ public partial class ChatMessageViewModel(
             MessageComponent.ShowMessage(Owner, $"出现异常：{e.Message}", MessageType.Error);
         }
         
+    }
+
+    public void LoadHeadMessageAfterCreatingGroup(GroupCreatedHeadMessage headMessage)
+    {
+        var headMessageItem = new ChatHeadMessageItem();
+        headMessageItem.HeadMessageId = headMessage.HeadMessageId;
+        headMessageItem.ContactId = headMessage.GroupId;
+        headMessageItem.UnreadCount = 0;
+        headMessageItem.IsGroup = true;
+        headMessageItem.Avatar =  $"{setting.ApiUrl}/Files/Images/{headMessage.GroupAvatar}";
+        headMessageItem.DisplayName = headMessage.GroupName;
+        headMessageItem.LastContent = string.Empty;
+        headMessageItem.TimeText = FormatMessageTime(headMessage.CreateTime);
+        headMessageItem.IsOwner = headMessageItem.IsOwner;
+        HeadMessages.Insert(0, headMessageItem);
     }
     
     [RelayCommand]

@@ -50,4 +50,11 @@ public class V_HeadMessage
     /// 群显示名称
     /// </summary>
     public string GroupDisplayName { get; set; }
+    [SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool IsOwner { get; set; }
+    /// <summary>
+    /// 消息是否免打扰
+    /// </summary>
+    [SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool MessageReceiveMuted { get; set; }
 }

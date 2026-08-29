@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
@@ -38,5 +39,15 @@ public static class ExpansionService
     public static T GetViewModel<T>(this FrameworkElement element)
     {
         return (T)element.DataContext;
+    }
+    
+    public static void UIDispatch(this ObservableObject viewModelBase,Func<Task> func)
+    {
+        App.Current.Dispatcher.InvokeAsync(async () => await func());
+    }
+    
+    public static void UIDispatch(this ObservableObject viewModelBase,Action func)
+    {
+        App.Current.Dispatcher.Invoke(func);
     }
 }

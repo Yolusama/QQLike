@@ -8,5 +8,6 @@ public enum ChatMessageType
     Image,
     Video,
     Audio,
-    File
+    File,
+    Notification
 }

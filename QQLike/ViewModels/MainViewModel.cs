@@ -39,13 +39,10 @@ public partial class MainViewModel(
     private const string MessageAudioPath = @"\Resource\Audio\message.mp3";
     private const string VerificationAudioPath = @"\Resource\Audio\verification.mp3";
 
-    [ObservableProperty] 
-    private MDMenuItem? _selectedMenuItem;
-    [ObservableProperty] 
-    private string _audioSource;
+    [ObservableProperty] private MDMenuItem? _selectedMenuItem;
+    [ObservableProperty] private string _audioSource;
 
-    [ObservableProperty]
-    private ObservableCollection<MDMenuItem> _menuItems =
+    [ObservableProperty] private ObservableCollection<MDMenuItem> _menuItems =
     [
         new MDMenuItem
         {
@@ -84,7 +81,7 @@ public partial class MainViewModel(
     private bool _isShutdownDialogShown;
 
     public Socket Client => _client;
-    
+
     partial void OnAudioSourceChanged(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -95,7 +92,7 @@ public partial class MainViewModel(
         var url = $"{Directory.GetCurrentDirectory()}{value}";
         Application.Current.Dispatcher.Invoke(() =>
         {
-            if(View.Player.HasAudio)
+            if (View.Player.HasAudio)
                 View.Player.Stop();
             View.Player.Source = new Uri(url, UriKind.Absolute);
             View.Player.IsMuted = false;
@@ -154,7 +151,7 @@ public partial class MainViewModel(
         if (menuItem != null)
             SelectedMenuItem = menuItem;
     }
-    
+
     private void AfterSelectingMenu(MDMenuItem menuItem)
     {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
@@ -244,10 +241,16 @@ public partial class MainViewModel(
                 return;
             }
 
-            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange, $"{nameof(VerificationMessage)}_{user.UserId}",
+            await mqConsumer.Consume(nameof(VerificationMessage), Constants.MQExchange,
+                $"{nameof(VerificationMessage)}_{user.UserId}",
                 ConsumeMessage);
-            await mqConsumer.Consume(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{user.UserId}", ConsumeMessage);
-            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, $"{nameof(ChatMessage)}_{user.UserId}", ConsumeMessage);
+            await mqConsumer.Consume(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{user.UserId}",
+                ConsumeMessage);
+            await mqConsumer.Consume(nameof(ChatMessage), Constants.MQExchange, $"{nameof(ChatMessage)}_{user.UserId}",
+                ConsumeMessage);
+            await mqConsumer.Consume(Constants.CreateChatGroupQueue, Constants.MQExchange,
+                $"{Constants.CreateChatGroupQueue}_{user.UserId}",
+                ConsumeMessage);
             _mqStarted = true;
         }
         finally
@@ -259,45 +262,68 @@ public partial class MainViewModel(
     private async Task ConsumeMessage(object data, BasicDeliverEventArgs ea)
     {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-        var messageBody = JsonSerializer.Deserialize<MQMessageBody>(ea.Body.ToArray());
-
         // 创建线程独立的 SqlSugar 实例，避免多线程并发共享 SqlSugarScope 连接状态
         using var db = sugarClient.CopyNew();
-
-        if (ea.RoutingKey == $"{nameof(VerificationMessage)}_{user.UserId}" )
+        try
         {
-            var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(VerificationMessage));
-            if (menuItem is null) return;
-            var unreadCount = await db.Queryable<VerificationMessage>()
-                .Where(e => !e.IsRead && e.UserId == user.UserId)
-                .CountAsync();
-            menuItem.Notification = unreadCount > 100 ? "99+" : (unreadCount == 0 ? string.Empty : unreadCount.ToString());
-            if(!messageBody.Muted)
-                TriggerAudio(VerificationAudioPath);
+            var messageBody = JsonSerializer.Deserialize<MQMessageBody>(ea.Body.ToArray());
+
+            if (ea.RoutingKey == $"{nameof(VerificationMessage)}_{user.UserId}")
+            {
+                var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(VerificationMessage));
+                if (menuItem is null) return;
+                var unreadCount = await db.Queryable<VerificationMessage>()
+                    .Where(e => !e.IsRead && e.UserId == user.UserId)
+                    .CountAsync();
+                menuItem.Notification =
+                    unreadCount > 100 ? "99+" : (unreadCount == 0 ? string.Empty : unreadCount.ToString());
+                if (!messageBody.Muted)
+                    TriggerAudio(VerificationAudioPath);
+            }
+
+            if (ea.RoutingKey == $"{nameof(HeadMessage)}_{user.UserId}")
+            {
+                var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(ChatMessage));
+                if (menuItem is null) return;
+                var unreadCount = await db.Queryable<ChatMessage>()
+                    .Where(e => !e.IsRead && e.UserId == user.UserId)
+                    .CountAsync();
+                if (unreadCount > 100)
+                    menuItem.Notification = "99+";
+                else if (unreadCount == 0)
+                    menuItem.Notification = string.Empty;
+                else
+                    menuItem.Notification = unreadCount.ToString();
+                if (!messageBody.Muted)
+                    TriggerAudio(MessageAudioPath);
+            }
+
+            if (ea.RoutingKey == $"{nameof(ChatMessage)}_{user.UserId}")
+            {
+                this.UIDispatch(() =>
+                {
+                    var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
+                    var model = JsonSerializer.Deserialize<HeadMessageMQModel>(JsonSerializer.Serialize(messageBody.Body));
+                    return chatViewModel.UpdateHeadMessage(model);
+                });
+            }
+
+            if (ea.RoutingKey == $"{Constants.CreateChatGroupQueue}_{user.UserId}")
+            {
+                this.UIDispatch(() =>
+                {
+                    var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
+                    var model = JsonSerializer.Deserialize<GroupCreatedHeadMessage>(
+                        JsonSerializer.Serialize(messageBody.Body));
+                    chatViewModel.LoadHeadMessageAfterCreatingGroup(model);
+                });
+               
+            }
         }
-
-        if (ea.RoutingKey == $"{nameof(HeadMessage)}_{user.UserId}")   
+        catch (Exception e)
         {
-            var menuItem = MenuItems.FirstOrDefault(e => e.Key == nameof(ChatMessage));
-            if (menuItem is null) return;
-            var unreadCount = await db.Queryable<ChatMessage>()
-                .Where(e => !e.IsRead && e.UserId == user.UserId)
-                .CountAsync();
-            if(unreadCount > 100)
-                menuItem.Notification = "99+";
-            else if(unreadCount == 0)
-                menuItem.Notification = string.Empty;
-            else
-               menuItem.Notification =  unreadCount.ToString();
-            if (!messageBody.Muted)
-                TriggerAudio(MessageAudioPath);
-        }
-
-        if (ea.RoutingKey == $"{nameof(ChatMessage)}_{user.UserId}")
-        {
-            var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
-            var model = JsonSerializer.Deserialize<HeadMessageMQModel>(JsonSerializer.Serialize(messageBody.Body));
-            await chatViewModel.UpdateHeadMessage(model);
+            NotificationComponent.ShowNotification(View, $"消息消费异常：{e.Message}");
+            Console.WriteLine(e);
         }
     }
 

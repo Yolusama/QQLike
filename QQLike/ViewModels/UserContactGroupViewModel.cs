@@ -45,10 +45,11 @@ public partial class UserContactGroupViewModel(
     private bool _isNotSearching;
     [ObservableProperty]
     private bool _isConfirmEnabled;
-    [ObservableProperty] 
-    private long _chatGroupId;
     [ObservableProperty]
     private ObservableCollection<ValueLabel<long>> _userChatGroups = [];
+    [ObservableProperty] 
+    private ValueLabel<long> _selectedGroup;
+    
 
     private CancellationTokenSource? _searchCts;
 
@@ -191,10 +192,12 @@ public partial class UserContactGroupViewModel(
         try
         {
             var res = await apiService
-                .GetAsync<List<ValueLabel<long>>>($"api/UserContact/GetUserContactGroupSelections/{user.UserId}", null);
+                .GetAsync<List<ValueLabel<long>>>($"api/UserContact/GetUserContactGroupSelections/{user.UserId}", new {IsGroup = true});
             if(res.Success)
             {
+                if (res.Data.Count == 0) return;
                 UserChatGroups.Clear();
+                SelectedGroup = res.Data.First();
                 res.Data.ForEach(group => UserChatGroups.Add(group));
             }
             else
@@ -230,13 +233,15 @@ public partial class UserContactGroupViewModel(
     {
         try
         {
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
             if (IsCreateGroupCommand)
             {
                 var dto = new CreateChatGroupDTO();
-                dto.CreatorId = sessionStorage.Get<UserLoginVO>(CachingKeys.User).UserId;
+                dto.CreatorId = user.UserId;
                 dto.GroupName = string.Join(',',SelectedUserContacts.Select(u => u.Nickname));
                 dto.ChosenUserIds =SelectedUserContacts.Select(u => u.ContactId).ToList();
-                dto.UserContactGroupId = ChatGroupId;
+                dto.UserContactGroupId = SelectedGroup.Value;
+                dto.GroupCreatorName = user.Nickname;
                 var res = await apiService.PostAsync<string>(
                     $"api/{nameof(ChatGroup)}/CreateChatGroup", dto);
                 if(res.Success)
@@ -260,7 +265,7 @@ public partial class UserContactGroupViewModel(
     {
         if (item == null) return;
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-        var key = $"{nameof(UserContactGroupViewModel)}_{user.UserId}_{item.ContactGroupId}";
+        var key = $"{nameof(UserContactGroup)}_{user.UserId}_{item.ContactGroupId}";
         if (await redis.ExistsAsync(key))
         {
             item.UserContacts.Clear();

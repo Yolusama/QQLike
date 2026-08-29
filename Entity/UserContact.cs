@@ -60,4 +60,10 @@ public class UserContact
     /// 群中昵称
     /// </summary>
     public string GroupDisplayName { get; set; }
+    /// <summary>
+    /// 消息免打扰
+    /// </summary>
+    [Column(DbType = "tinyint(1)")]
+    [SugarColumn(ColumnDataType = "tinyint(1)")]
+    public bool MessageReceiveMuted { get; set; }
 }

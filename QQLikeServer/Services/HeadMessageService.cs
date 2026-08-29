@@ -60,8 +60,6 @@ public class HeadMessageService(IFreeSql orm,IRandomGenerator generator) : IHead
             .OrderByDescending(v=>v.LastMessageTime)
             .ToListAsync();
         
-        
-
         return ResponseResult<List<V_HeadMessage>>.OK(res);
     }
 }
