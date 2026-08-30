@@ -48,4 +48,9 @@ public class ChatMessage
     public bool IsSelf {get; set;}
     [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint(1)")]
     public bool IsOnline { get; set; }
+    /// <summary>
+    /// 文件消息时携带
+    /// </summary>
+    [Column(IsIgnore = true),SugarColumn(IsIgnore = true)]
+    public byte[] FileBytes { get; set; }
 }

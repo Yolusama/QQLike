@@ -439,11 +439,11 @@
                                 <StackPanel Grid.Row="0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="屏蔽此人"></TextBlock>
-                                        <ToggleButton IsChecked="{Binding}"></ToggleButton>
+                                        <ToggleButton IsChecked="{Binding SelectedHeadMessage.IsBlocked, Mode=TwoWay}"></ToggleButton>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="消息免打扰"></TextBlock>
-                                        <ToggleButton IsChecked="{Binding}"></ToggleButton>
+                                        <ToggleButton IsChecked="{Binding SelectedHeadMessage.MessageReceiveMuted, Mode=TwoWay}"></ToggleButton>
                                     </StackPanel>
                                 </StackPanel>
                                 <Button Grid.Row="1" Style="{StaticResource MaterialDesignFlatButton}"
@@ -654,12 +654,14 @@
 
                             <StackPanel Orientation="Horizontal" Grid.Column="0">
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
+                                        Command="{Binding OpenScreenShotComponentCommand}"
                                         Style="{StaticResource MaterialDesignFlatButton}"
                                         Foreground="#757575" ToolTip="截图">
                                     <materialDesign:PackIcon Kind="ContentCut" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
+                                        Command="{Binding OpenFileDialogCommand}"
                                         Foreground="#757575" ToolTip="打开文件">
                                     <materialDesign:PackIcon Kind="FolderOutline" Width="20" Height="20" />
                                 </Button>
@@ -689,7 +691,7 @@
 
                         <!-- Text Input Area -->
                         <TextBox Grid.Row="1"
-                                 Text="{Binding NewMessageText}"
+                                 Text="{Binding NewMessageText,UpdateSourceTrigger=PropertyChanged}"
                                  MinHeight="100"
                                  VerticalContentAlignment="Top"
                                  AcceptsReturn="True"

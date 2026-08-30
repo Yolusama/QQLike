@@ -1,10 +1,12 @@
 ﻿using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using QQLike.Components;
 using QQLike.Domain;
 using QQLike.Entity;
@@ -25,6 +27,7 @@ namespace QQLike.ViewModels;
 public partial class ChatMessageViewModel(
     ISqlSugarClient sugarClient,
     ISessionStorage sessionStorage,
+    IUserChatSourceHandler sourceHandler,
     IApiService apiService,
     IRabbitMQProducer mqProducer,
     SysSetting setting) : ViewModelBase<ChatMessageView>
@@ -47,8 +50,7 @@ public partial class ChatMessageViewModel(
     private bool _canSendMessage; 
     [ObservableProperty]
     private bool _isUserContactOpen;
-
-    private string _fileName = string.Empty;
+    
     private Socket? _client = null;
 
     private Socket? Client => GetSocket();
@@ -95,10 +97,6 @@ public partial class ChatMessageViewModel(
                     LastContent = header.Content ?? string.Empty,
                     TimeText = FormatMessageTime(header.LastMessageTime),
                     Avatar = hasAvatar ? $"{setting.ApiUrl}/Files/Images/{header.Avatar}" : string.Empty,
-                    HasAvatar = hasAvatar,
-                    AvatarInitial = hasAvatar
-                        ? string.Empty
-                        : (string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim().Substring(0, 1)),
                     UnreadCount = header.UnreadCount,
                     HeadMessageId = header.HeadMessageId,
                     IsGroup = header.IsGroup,
@@ -152,7 +150,6 @@ public partial class ChatMessageViewModel(
     [RelayCommand]
     private async Task CheckMessages(ChatHeadMessageItem? item)
     {
-        using var worker = sugarClient.CreateContext();
         try
         {
             if(item == null)return;
@@ -162,38 +159,69 @@ public partial class ChatMessageViewModel(
             ChatMessages.Clear();
             var isGroup = item.IsGroup;
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-            var messages = await sugarClient.Queryable<V_UserChatMessage>()
-                .Where(v=>v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
-                .OrderBy(v=>v.CreateTime)
-                .ToListAsync();
-            foreach (var message in messages)
+            if (!isGroup)
             {
-                var type = (ChatMessageType)message.MessageType;
-                var contactName = string.IsNullOrEmpty(message.Remark) ? message.NickName : message.Remark;
-                ChatMessages.Add(new ChatMessageItem
+                var messages = await sugarClient.Queryable<V_UserChatMessage>()
+                    .Where(v => v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
+                    .OrderBy(v => v.CreateTime)
+                    .ToListAsync();
+
+                foreach (var message in messages)
                 {
-                    Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
-                    DisplayName =  contactName,
-                    Content = message.Content,
-                    MessageType = type,
-                    FileName = message.FileName,
-                    MediaUrl = BuildMediaUrl(type, message.Content),
-                    MessageTime = message.CreateTime,
-                    UserId = message.UserId,
-                    ContactId = message.ContactId,
-                    IsSelf = message.IsSelf,
-                    MessageTimeText = FormatMessageTime(message.CreateTime,true),
-                    ContactNameVisibility = isGroup ? Visibility.Visible : Visibility.Collapsed
-                });
+                    var type = (ChatMessageType)message.MessageType;
+                    var contactName = string.IsNullOrEmpty(message.Remark) ? message.NickName : message.Remark;
+                    ChatMessages.Add(new ChatMessageItem
+                    {
+                        Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
+                        DisplayName = contactName,
+                        Content = message.Content,
+                        MessageType = type,
+                        FileName = message.FileName,
+                        MessageTime = message.CreateTime,
+                        UserId = message.UserId,
+                        ContactId = message.ContactId,
+                        IsSelf = message.IsSelf,
+                        MessageTimeText = FormatMessageTime(message.CreateTime, true),
+                        ContactNameVisibility = Visibility.Collapsed
+                    });
+                }
             }
-            
-            await worker.Db.Updateable<ChatMessage>()
+            else
+            {
+                var messages = await sugarClient.Queryable<V_ChatGroupMessage>()
+                    .Where(v => v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
+                    .OrderBy(v => v.CreateTime)
+                    .ToListAsync();
+
+                foreach (var message in messages)
+                {
+                    var type = (ChatMessageType)message.MessageType;
+                    var contactName = string.IsNullOrEmpty(message.GroupDisplayName) ?
+                        message.NickName : message.GroupDisplayName;
+                    ChatMessages.Add(new ChatMessageItem
+                    {
+                        Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
+                        DisplayName = contactName,
+                        Content = message.Content,
+                        MessageType = type,
+                        FileName = message.FileName,
+                        MessageTime = message.CreateTime,
+                        UserId = message.UserId,
+                        ContactId = message.ContactId,
+                        GroupMemberId = message.GroupMemberId,
+                        IsSelf = message.IsSelf,
+                        IsOwner = message.IsOwner,
+                        MessageTimeText = FormatMessageTime(message.CreateTime, true),
+                        ContactNameVisibility = Visibility.Visible
+                    });
+                }
+            }
+
+            await sugarClient.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
                 .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead) 
                 .ExecuteCommandAsync();
             item.UnreadCount = 0;
-            // Commit first so MQ consumers can immediately see the latest unread count.
-            worker.Commit();
 
             var messageBody = new MQMessageBody
             {
@@ -218,9 +246,10 @@ public partial class ChatMessageViewModel(
         await HandMessageSending(ChatMessageType.Text);
     }
     
-    private async Task HandMessageSending(ChatMessageType type)
+    private async Task HandMessageSending(ChatMessageType type,FileTypeMessageDTO? fileTypeMessageDto = null)
     {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        var model = new ChatMessageTransModel();
         var message = new ChatMessage
         {
             UserId = user.UserId,
@@ -234,12 +263,23 @@ public partial class ChatMessageViewModel(
         };
         if(SelectedHeadMessage.IsGroup)
             message.GroupMemberId = user.UserId;
+        if (type != ChatMessageType.Text && fileTypeMessageDto != null)
+        {
+            message.Content = fileTypeMessageDto.TempMessage;
+            message.FileBytes = fileTypeMessageDto.FileBytes;
+            message.FileName = fileTypeMessageDto.FileName;
+            model.Message = fileTypeMessageDto.TempMessage;
+        }
+        else 
+            model.Message = NewMessageText;
+        model.Type = type;
+
         using var worker = sugarClient.CreateContext();
         try
         {
-            var model = new ChatMessageTransModel();
-            model.Type = type;
-            model.Message = NewMessageText;
+         
+            
+            
             message.IsOnline = true;
             var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
             message.Id = id;
@@ -259,22 +299,23 @@ public partial class ChatMessageViewModel(
             {
                 HeadMessageId = SelectedHeadMessage.HeadMessageId,
                 UserId = message.ContactId,
-                ContactId = message.UserId
+                ContactId = message.UserId,
+                Content = message.Content,
+                LastMessageTime = message.CreateTime
             };
             await mqProducer.Produce(nameof(ChatMessage),Constants.MQExchange,$"{nameof(ChatMessage)}_{messageBody.Identifier}",JsonSerializer
                 .Serialize(messageBody));
             var userContact = await sugarClient.Queryable<UserContact>()
                 .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
                 .FirstAsync();
-            var displayName = SelectedHeadMessage.IsGroup ? userContact.GroupDisplayName : user.Nickname;
+            var displayName = SelectedHeadMessage.IsGroup ? 
+                (string.IsNullOrEmpty(userContact.GroupDisplayName) ? user.Nickname : userContact.GroupDisplayName) : user.Nickname;
             var messageItem = new ChatMessageItem
             {
-                Avatar = $"{setting.ApiUrl}/Files/Images/{user.Avatar}",
+                Avatar = sourceHandler.ImageUrl(user.Avatar),
                 DisplayName = displayName,
                 Content = message.Content,
                 MessageType = ChatMessageType.Text,
-                FileName = _fileName,
-                MediaUrl = string.Empty,
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
                 ContactId = message.ContactId,
@@ -284,6 +325,8 @@ public partial class ChatMessageViewModel(
             if(!SelectedHeadMessage.IsGroup)
                 messageItem.ContactNameVisibility = Visibility.Collapsed;
             ChatMessages.Add(messageItem); 
+            SelectedHeadMessage.LastContent = message.Content;
+            SelectedHeadMessage.TimeText = FormatMessageTime(message.CreateTime);
            
             View.ContentWriteTo.Focus();
             worker.Commit();
@@ -305,6 +348,8 @@ public partial class ChatMessageViewModel(
             item.UnreadCount = await sugarClient.Queryable<ChatMessage>()    
                 .Where(e => e.HeadMessageId == model.HeadMessageId && !e.IsRead && e.UserId == model.UserId)
                 .CountAsync();
+            item.LastContent = model.Content;
+            item.TimeText = FormatMessageTime(model.LastMessageTime);
         }
         catch (Exception e)
         {
@@ -315,58 +360,8 @@ public partial class ChatMessageViewModel(
 
     public async Task WriteMessage(ChatMessage message)
     {
-        using var worker =  sugarClient.CreateContext();
         try
         {
-            var contactUser = await sugarClient.Queryable<User>()
-                .LeftJoin<UserContact>((u,uc)=>uc.UserId == u.Id)
-                .Where((u,uc) => u.Id == message.ContactId)
-                .Select((u,uc) => new { u.Nickname, u.Avatar,uc.Remark,IsGroupContact = uc.IsGroup })
-                .FirstAsync();
-            var messageType = (ChatMessageType)message.MessageType;
-            var item = new ChatMessageItem
-            {
-                Avatar = $"{setting.ApiUrl}/Files/Images/{contactUser.Avatar}",
-                DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
-                Content = message.Content,
-                MessageType = messageType,
-                FileName = message.FileName,
-                MediaUrl = BuildMediaUrl(messageType, message.Content),
-                MessageTime = message.CreateTime,
-                UserId = message.UserId,
-                ContactId = message.ContactId,
-                IsSelf = message.IsSelf,
-                MessageTimeText = FormatMessageTime(message.CreateTime,true),
-                ContactNameVisibility = contactUser.IsGroupContact ? Visibility.Visible : Visibility.Collapsed
-            };
-            ChatMessages.Add(item);
-
-            var existsInDb = message.Id > 0 && await worker.Db.Queryable<ChatMessage>()
-                .Where(e => e.Id == message.Id)
-                .AnyAsync();
-
-            if (!existsInDb)
-            {
-                var model = new HeadMessageModel
-                {
-                    UserId = message.UserId,
-                    ContactId = message.ContactId,
-                    Content = message.Content,
-                    LastMessageTime = message.CreateTime
-                };
-
-                var res = await apiService.PutAsync<string>($"api/{nameof(HeadMessage)}/Create", model);
-                if (!res.Success)
-                {
-                    MessageComponent.ShowMessage(Owner, res.Message, MessageType.Error);
-                    return;
-                }
-
-                message.IsRead = false;
-                message.HeadMessageId = res.Data;
-                await worker.Db.Insertable(message).ExecuteCommandAsync();
-            }
-
             var headItem = HeadMessages.FirstOrDefault(e => e.HeadMessageId == message.HeadMessageId);
 
             if (headItem == null)
@@ -375,29 +370,94 @@ public partial class ChatMessageViewModel(
                 {
                     HeadMessageId = message.HeadMessageId,
                     ContactId = message.ContactId,
-                    DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
+                    DisplayName = headItem.DisplayName,
                     LastContent = message.Content,
                     TimeText = FormatMessageTime(message.CreateTime),
-                    Avatar = $"{setting.ApiUrl}/Files/Images/{contactUser.Avatar}",
-                    HasAvatar = true,
-                    AvatarInitial = string.Empty,
+                    Avatar = sourceHandler.ImageUrl(headItem.Avatar),
                     UnreadCount = 1,
-                    IsGroup = contactUser.IsGroupContact
+                    IsGroup = headItem.IsGroup
                 };
-                HeadMessages.Add(newHeadMessageItem);
+                HeadMessages.Insert(0,newHeadMessageItem);
                 headItem =  newHeadMessageItem;
-                
             }
             else
             {
                 headItem.LastContent = message.Content;
                 headItem.TimeText = FormatMessageTime(message.CreateTime);
                 if (SelectedHeadMessage?.HeadMessageId != headItem.HeadMessageId)
-                {
                     headItem.UnreadCount += 1;
-                }
             }
 
+            var isCurrentHeadSelected = SelectedHeadMessage?.HeadMessageId == headItem.HeadMessageId;
+            if(!isCurrentHeadSelected) return;
+            if (!headItem.IsGroup)
+            {
+                var contactUser = await sugarClient.Queryable<User>()
+                    .LeftJoin<UserContact>((u, uc) => uc.UserId == u.Id)
+                    .Where((u, uc) => u.Id == message.ContactId)
+                    .Select((u, uc) => new { u.Nickname, u.Avatar, uc.Remark })
+                    .FirstAsync();
+
+                var messageType = (ChatMessageType)message.MessageType;
+                var item = new ChatMessageItem
+                {
+                    Avatar = sourceHandler.ImageUrl(contactUser.Avatar),
+                    DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
+                    Content = message.Content,
+                    MessageType = messageType,
+                    MessageTime = message.CreateTime,
+                    UserId = message.UserId,
+                    ContactId = message.ContactId,
+                    IsSelf = message.IsSelf,
+                    FileName = message.FileName,
+                    MessageTimeText = FormatMessageTime(message.CreateTime, true),
+                    ContactNameVisibility =  Visibility.Collapsed
+                };
+                ChatMessages.Add(item);
+            }
+            else
+            {
+                var chatGroupContact = await sugarClient.Queryable<ChatGroup>()
+                    .LeftJoin<UserContact>((c, uc) => c.Id == uc.ContactId && uc.IsGroup)
+                    .InnerJoin<User>((c,uc,u) => uc.UserId == u.Id)
+                    .Where((c,uc,u) => uc.UserId == message.GroupMemberId)
+                    .Where((c,uc,u) => c.Id == message.ContactId)
+                    .Select((c,uc,u)=> new {GroupName = c.Name,uc.GroupDisplayName,uc.Remark,u.Avatar,UserName = u.Nickname})
+                    .FirstAsync();
+                
+                var messageType = (ChatMessageType)message.MessageType;
+                var item = new ChatMessageItem
+                {
+                    Avatar = sourceHandler.ImageUrl(chatGroupContact.Avatar),
+                    DisplayName = string.IsNullOrEmpty(chatGroupContact.GroupDisplayName) ? chatGroupContact.UserName : chatGroupContact.GroupDisplayName,
+                    Content = message.Content,
+                    MessageType = messageType,
+                    FileName = message.FileName,
+                    MessageTime = message.CreateTime,
+                    UserId = message.GroupMemberId,
+                    ContactId = message.ContactId,
+                    IsSelf = message.IsSelf,
+                    MessageTimeText = FormatMessageTime(message.CreateTime, true),
+                    ContactNameVisibility =  Visibility.Visible
+                };
+                ChatMessages.Add(item);
+            }
+            message.IsRead = true;
+            await sugarClient.Updateable<ChatMessage>()
+                .SetColumns(e => e.IsRead == true)
+                .Where(e => e.Id == message.Id)
+                .ExecuteCommandAsync();
+
+            if (message.MessageType != ChatMessageType.Text.GetValue() && message.MessageType 
+                != ChatMessageType.Notification.GetValue())
+            {
+               await sourceHandler.Receive(new FileTypeMessageModel
+                {
+                    FileName = message.FileName,
+                    FileBytes = message.FileBytes,
+                });
+            }
+            
             var msgBody = new MQMessageBody
             {
                 Identifier = message.UserId,
@@ -422,7 +482,7 @@ public partial class ChatMessageViewModel(
         headMessageItem.ContactId = headMessage.GroupId;
         headMessageItem.UnreadCount = 0;
         headMessageItem.IsGroup = true;
-        headMessageItem.Avatar =  $"{setting.ApiUrl}/Files/Images/{headMessage.GroupAvatar}";
+        headMessageItem.Avatar =  sourceHandler.ImageUrl(headMessage.GroupAvatar);
         headMessageItem.DisplayName = headMessage.GroupName;
         headMessageItem.LastContent = string.Empty;
         headMessageItem.TimeText = FormatMessageTime(headMessage.CreateTime);
@@ -438,6 +498,31 @@ public partial class ChatMessageViewModel(
         cardViewModel.IsGroup = SelectedHeadMessage.IsGroup;
         cardViewModel.UserId = SelectedHeadMessage.ContactId;
         cardViewModel.Visible = Visibility.Visible;
+    }
+
+    [RelayCommand]
+    private async Task OpenFileDialog()
+    {
+        var dialog = new OpenFileDialog();
+        dialog.Multiselect = true;
+        dialog.Title = "选择文件发送";
+        var result = dialog.ShowDialog();
+        if (result != null && result.Value)
+        {
+            var fileNames =  dialog.FileNames;
+            foreach (var fileName in fileNames)
+            {
+                var fileInfo = new FileInfo(fileName);
+                var dto = new FileTypeMessageDTO
+                {
+                    FileName = fileInfo.FullName,
+                    FileExtension = fileInfo.Extension,
+                    FileBytes = await fileInfo.ReadBytes(),
+                    TempMessage = fileInfo.Name
+                };
+                await HandMessageSending(ChatMessageType.File,dto);
+            }
+        }
     }
 
     private static string FormatMessageTime(DateTime? time,bool isMessaging = false)
@@ -470,16 +555,5 @@ public partial class ChatMessageViewModel(
             };
 
         return  isMessaging? value.ToString("yyyy/MM/dd HH:mm:ss") : value.ToString("yyyy/MM/dd");
-    }
-
-    private string BuildMediaUrl(ChatMessageType type, string content)
-    {
-        if (type is ChatMessageType.Head or ChatMessageType.Heartbeat or ChatMessageType.Text)
-            return string.Empty;
-
-        if (string.IsNullOrWhiteSpace(content))
-            return string.Empty;
-
-        return $"{setting.ApiUrl}/Files/{content.TrimStart('/')}";
     }
 }

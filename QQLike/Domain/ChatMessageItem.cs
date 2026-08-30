@@ -24,9 +24,11 @@ public partial class ChatMessageItem : ObservableObject
     [ObservableProperty]
     private string _fileName = string.Empty;
     [ObservableProperty]
-    private string _mediaUrl = string.Empty;
-    [ObservableProperty]
     private string _messageTimeText = string.Empty;
+    [ObservableProperty]
+    private string _groupMemberId = string.Empty;
+    [ObservableProperty]
+    private bool _isOwner = false;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;

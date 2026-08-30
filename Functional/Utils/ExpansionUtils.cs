@@ -49,5 +49,17 @@ public static class ExpansionUtils
     {
         return JsonSerializer.Serialize(obj);
     }
+
+    public static async Task<byte[]> ReadBytes(this FileInfo fileInfo)
+    {
+        const int bufferSize = 10240;
+        var buffer = new byte[bufferSize];
+        var bytes = new List<byte>();
+        using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
+        int bytesRead;
+        while ((bytesRead =await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            bytes.AddRange(buffer.Take(bytesRead));
+        return bytes.ToArray();
+    }
    
 }

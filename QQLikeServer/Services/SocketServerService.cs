@@ -158,7 +158,7 @@ public class SocketServerService(
                         Console.WriteLine($"收到心跳消息，来自{socket.RemoteEndPoint}");
                         await logger.LogAsync($"收到心跳消息，来自{socket.RemoteEndPoint}", "聊天服务器");
                     }
-                    else if (model.Type == ChatMessageType.Text)
+                    else
                     {
                         var message = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
                         if (message is null)
@@ -167,7 +167,7 @@ public class SocketServerService(
                         }
 
                         var isGroup = await orm.Select<UserContact>()
-                            .Where(e => e.UserId == message.ContactId && e.ContactId == message.UserId)
+                            .Where(e => e.UserId == message.UserId && e.ContactId == message.ContactId)
                             .ToOneAsync(e => e.IsGroup, token);
                         if (!isGroup)
                         {
@@ -312,6 +312,7 @@ public class SocketServerService(
             recipientMessage.CreateTime = createTime;
             recipientMessage.HeadMessageId = recipientHead.Id;
             recipientMessage.IsSelf = false;
+            recipientMessage.FileBytes = senderMessage.FileBytes;
 
             recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
 
@@ -337,7 +338,7 @@ public class SocketServerService(
             var createTime = senderMessage.CreateTime ?? DateTime.Now;
 
             var userIds = await orm.Select<UserContact>()
-                .Where(e => e.ContactId == groupId && e.IsGroup)
+                .Where(e => e.ContactId == groupId && e.IsGroup && e.UserId != senderId)
                 .ToListAsync(e => e.UserId);
             var recipientMessages = new List<ChatMessage>();
 

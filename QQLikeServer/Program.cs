@@ -53,6 +53,7 @@ builder.Services.AddScoped<IProjectLogger, ProjectLogger>(_ => new ProjectLogger
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRandomGenerator, RandomGenerator>();
+builder.Services.AddScoped<IUserChatSourceHandler, UserChatSourceHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserContactService, UserContactService>();

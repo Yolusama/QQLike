@@ -103,6 +103,7 @@ public partial class App : Application
         services.AddSingleton<ISessionStorage, SessionStorage>();
         services.AddScoped<IApiService, ApiService>();
         services.AddScoped<IUserControlFactory, UserControlFactory>();
+        services.AddScoped<IUserChatSourceHandler, UserChatSourceHandler>();
         AddRabbitMQ(services, config);
         AddOcrEngine(services);
     }
