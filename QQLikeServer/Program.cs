@@ -1,4 +1,6 @@
 using FreeSql;
+using Hangfire;
+using Hangfire.MemoryStorage;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;
 using QQLike.Functional.Instructure;
@@ -17,6 +19,24 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<JwtAuthorizeFilter>();
     options.Filters.Add<GlobalExceptionHandler>();
+});
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+          .UseRecommendedSerializerSettings()
+          .UseMemoryStorage();
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(
+        policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 var setting = builder.Configuration.GetSection(nameof(SysSetting)).Get<SysSetting>();
@@ -60,6 +80,7 @@ builder.Services.AddScoped<IUserContactService, UserContactService>();
 builder.Services.AddScoped<IVerificationMessageService, VerificationMessageService>();
 builder.Services.AddScoped<IHeadMessageService, HeadMessageService>();
 builder.Services.AddScoped<IChatGroupService, ChatGroupService>();
+builder.Services.AddScoped<IChatMessageService, ChatMessageService>();
 
 builder.Services.AddScoped<JwtAuthorizeFilter>();
 builder.Services.AddScoped<GlobalExceptionHandler>();
@@ -96,6 +117,8 @@ builder.Services.AddRedis(setting.RedisConnectionString);
     });*/
 //builder.Services.AddAuthorization();
 
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -104,6 +127,12 @@ var app = builder.Build();
     app.UseSwagger();
     app.UseSwaggerUI();
 }*/
+
+app.RunHangfireJobs();
+
+app.UseHangfireDashboard("/jobs");
+
+app.UseCors();
 
 app.HandleStaticFiles(fileConfig);
 

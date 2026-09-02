@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
@@ -31,6 +32,15 @@ public static class ExpansionService
         var videos = new DirectoryInfo(Path.Combine(root.FullName, config.VideoPath));
         if (!videos.Exists)
             videos.Create();
+        var audios = new DirectoryInfo(Path.Combine(root.FullName, config.AudioPath));
+        if (!audios.Exists)
+            audios.Create();
+        var commons =  new DirectoryInfo(Path.Combine(root.FullName, config.CommonPath));
+        if (!commons.Exists)
+            commons.Create();
+        var temps =  new DirectoryInfo(Path.Combine(root.FullName, config.TempPath));
+        if (!temps.Exists)
+            temps.Create();
 
         app.UseStaticFiles(new StaticFileOptions
         {
@@ -58,6 +68,12 @@ public static class ExpansionService
         var jwtService = controller.HttpContext.RequestServices.GetRequiredService<IJwtService>();
         var userTokenInfo = jwtService.Parse<UserTokenInfo>(token);
         return userTokenInfo;
+    }
+
+    public static void RunHangfireJobs(this IApplicationBuilder app)
+    {
+        RecurringJob.AddOrUpdate<ISyncJob>(a=>a.RemoveStoredFile(),Cron.Minutely(),
+            TimeZoneInfo.Local);
     }
 
     /*private static IServiceScope? _socketServerScope;

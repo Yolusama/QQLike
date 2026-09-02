@@ -10,4 +10,5 @@ public class SysSetting
     public string ApiUrl { get; set; }
     public string SocketUrl { get; set; }
     public int SocketServerPort  { get; set; }
+    public string FileStorePath { get; set; }
 }

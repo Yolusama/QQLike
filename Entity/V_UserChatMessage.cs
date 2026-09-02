@@ -68,4 +68,9 @@ public class V_UserChatMessage
     /// </summary>
     [SugarColumn(ColumnDataType = "tinyint(1)")]
     public bool IsOnline { get; set; }
+    
+    /// <summary>
+    /// 本地保存地址
+    /// </summary>
+    public string?  LocalSourceName { get; set; }
 }

@@ -29,6 +29,8 @@ public partial class ChatMessageItem : ObservableObject
     private string _groupMemberId = string.Empty;
     [ObservableProperty]
     private bool _isOwner = false;
+    [ObservableProperty]
+    private string _localSourcePath = string.Empty;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;

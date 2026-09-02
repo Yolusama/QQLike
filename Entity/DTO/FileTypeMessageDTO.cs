@@ -6,4 +6,5 @@ public class FileTypeMessageDTO
     public string FileExtension { get; set; }
     public byte[] FileBytes { get; set; }
     public string TempMessage { get; set; }
+    public string OriginalFileName { get; set; }
 }

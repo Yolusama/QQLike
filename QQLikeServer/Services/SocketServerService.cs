@@ -17,6 +17,7 @@ public class SocketServerService(
     SysSetting setting,
     IProjectLogger logger,
     IFreeSql orm,
+    IUserChatSourceHandler sourceHandler,
     IRandomGenerator randomGenerator) : ISocketServerService
 {
     private readonly ConcurrentDictionary<int, Socket> _temp = new();
@@ -218,6 +219,17 @@ public class SocketServerService(
                                     .ExecuteAffrowsAsync(token);
                             }
                         }
+
+                        if (message.MessageType != ChatMessageType.Text.GetValue()
+                            && message.MessageType != ChatMessageType.Notification.GetValue())
+                        {
+                         await sourceHandler.Store(new FileTypeMessageModel
+                            {
+                                FileName = message.FileName,
+                                FileBytes = message.FileBytes,
+                                Type = (ChatMessageType)message.MessageType
+                            }, token);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
@@ -392,7 +404,7 @@ public class SocketServerService(
             worker.Rollback();
             Console.WriteLine($"离线消息持久化失败：{ex}");
             await logger.LogAsync($"离线消息持久化失败：{ex}", "聊天服务器");
-            return null;
+            return [];
         }
     }
 

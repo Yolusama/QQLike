@@ -35,9 +35,17 @@ public class ChatMessage
     /// </summary>
     public DateTime? CreateTime {get; set;}
     /// <summary>
-    /// 保存为文件时保存缓存地址
+    /// 文件名
     /// </summary>
     public string? FileName { get; set; }
+    /// <summary>
+    /// 本地保存地址
+    /// </summary>
+    public string?  LocalSourceName { get; set; }
+    /// <summary>
+    /// 上传时原文件名
+    /// </summary>
+    public string?  OriginalFileName { get; set; }
     /// <summary>
     /// 关联头信息Id
     /// </summary>

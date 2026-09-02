@@ -104,6 +104,7 @@ public partial class App : Application
         services.AddScoped<IApiService, ApiService>();
         services.AddScoped<IUserControlFactory, UserControlFactory>();
         services.AddScoped<IUserChatSourceHandler, UserChatSourceHandler>();
+        services.AddScoped<IScreenShotsHandler, ScreenShotsHandler>();
         AddRabbitMQ(services, config);
         AddOcrEngine(services);
     }

@@ -28,6 +28,7 @@ public partial class ChatMessageViewModel(
     ISqlSugarClient sugarClient,
     ISessionStorage sessionStorage,
     IUserChatSourceHandler sourceHandler,
+    IRandomGenerator generator,
     IApiService apiService,
     IRabbitMQProducer mqProducer,
     SysSetting setting) : ViewModelBase<ChatMessageView>
@@ -267,7 +268,8 @@ public partial class ChatMessageViewModel(
         {
             message.Content = fileTypeMessageDto.TempMessage;
             message.FileBytes = fileTypeMessageDto.FileBytes;
-            message.FileName = fileTypeMessageDto.FileName;
+            message.FileName = fileTypeMessageDto.FileName + fileTypeMessageDto.FileExtension;
+            message.OriginalFileName = fileTypeMessageDto.OriginalFileName;
             model.Message = fileTypeMessageDto.TempMessage;
         }
         else 
@@ -277,9 +279,6 @@ public partial class ChatMessageViewModel(
         using var worker = sugarClient.CreateContext();
         try
         {
-         
-            
-            
             message.IsOnline = true;
             var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
             message.Id = id;
@@ -360,6 +359,7 @@ public partial class ChatMessageViewModel(
 
     public async Task WriteMessage(ChatMessage message)
     {
+        using var cancelTokenSource = new CancellationTokenSource();
         try
         {
             var headItem = HeadMessages.FirstOrDefault(e => e.HeadMessageId == message.HeadMessageId);
@@ -396,7 +396,7 @@ public partial class ChatMessageViewModel(
                     .LeftJoin<UserContact>((u, uc) => uc.UserId == u.Id)
                     .Where((u, uc) => u.Id == message.ContactId)
                     .Select((u, uc) => new { u.Nickname, u.Avatar, uc.Remark })
-                    .FirstAsync();
+                    .FirstAsync(cancelTokenSource.Token);
 
                 var messageType = (ChatMessageType)message.MessageType;
                 var item = new ChatMessageItem
@@ -410,6 +410,7 @@ public partial class ChatMessageViewModel(
                     ContactId = message.ContactId,
                     IsSelf = message.IsSelf,
                     FileName = message.FileName,
+                    LocalSourcePath = message.LocalSourceName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
                     ContactNameVisibility =  Visibility.Collapsed
                 };
@@ -423,7 +424,7 @@ public partial class ChatMessageViewModel(
                     .Where((c,uc,u) => uc.UserId == message.GroupMemberId)
                     .Where((c,uc,u) => c.Id == message.ContactId)
                     .Select((c,uc,u)=> new {GroupName = c.Name,uc.GroupDisplayName,uc.Remark,u.Avatar,UserName = u.Nickname})
-                    .FirstAsync();
+                    .FirstAsync(cancelTokenSource.Token);
                 
                 var messageType = (ChatMessageType)message.MessageType;
                 var item = new ChatMessageItem
@@ -433,6 +434,7 @@ public partial class ChatMessageViewModel(
                     Content = message.Content,
                     MessageType = messageType,
                     FileName = message.FileName,
+                    LocalSourcePath = message.LocalSourceName,
                     MessageTime = message.CreateTime,
                     UserId = message.GroupMemberId,
                     ContactId = message.ContactId,
@@ -443,20 +445,29 @@ public partial class ChatMessageViewModel(
                 ChatMessages.Add(item);
             }
             message.IsRead = true;
-            await sugarClient.Updateable<ChatMessage>()
-                .SetColumns(e => e.IsRead == true)
-                .Where(e => e.Id == message.Id)
-                .ExecuteCommandAsync();
 
+            var fileReceived = false;
+            var localName = string.Empty;
             if (message.MessageType != ChatMessageType.Text.GetValue() && message.MessageType 
                 != ChatMessageType.Notification.GetValue())
             {
-               await sourceHandler.Receive(new FileTypeMessageModel
+                //接收文件，生成随机名称作为本地储存
+                var extension = Path.GetExtension(message.FileName) ?? string.Empty;
+                var localPath = await sourceHandler.Receive(new FileTypeMessageModel
                 {
-                    FileName = message.FileName,
+                    FileName = generator.Guid + extension,
                     FileBytes = message.FileBytes,
-                });
+                    Type = (ChatMessageType)message.MessageType
+                },cancelTokenSource.Token);
+                fileReceived = true;
+                localName = localPath;
             }
+            
+            await sugarClient.Updateable<ChatMessage>()
+                .SetColumns(e => e.IsRead == true)
+                .SetColumnsIF(fileReceived, e => e.LocalSourceName == localName)
+                .Where(e => e.Id == message.Id)
+                .ExecuteCommandAsync(cancelTokenSource.Token);
             
             var msgBody = new MQMessageBody
             {
@@ -469,6 +480,7 @@ public partial class ChatMessageViewModel(
         }
         catch (Exception e)
         {
+            await cancelTokenSource.CancelAsync();
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"出现异常：{e.Message}", MessageType.Error);
         }
@@ -515,12 +527,16 @@ public partial class ChatMessageViewModel(
                 var fileInfo = new FileInfo(fileName);
                 var dto = new FileTypeMessageDTO
                 {
-                    FileName = fileInfo.FullName,
+                    FileName = generator.Guid,
+                    OriginalFileName = fileName,
                     FileExtension = fileInfo.Extension,
                     FileBytes = await fileInfo.ReadBytes(),
                     TempMessage = fileInfo.Name
                 };
-                await HandMessageSending(ChatMessageType.File,dto);
+                var type = EnumHelper.ToChatMessageType(fileInfo.Extension);
+                if (type != ChatMessageType.File)
+                    dto.TempMessage = type.FileTypeContent();
+                await HandMessageSending(type, dto);
             }
         }
     }
