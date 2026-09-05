@@ -178,7 +178,8 @@
                     Background="{Binding BubbleBackground}"
                     BorderBrush="{Binding BubbleBorderBrush}"
                     BorderThickness="1">
-                <Image Source="{Binding MediaUrl}"
+                <Image Source="{Binding LocalSourceName}"
+                       behaviors:ImagePreview.Previewable="True"
                        Stretch="Uniform"
                        MaxWidth="260"
                        MaxHeight="320" />
@@ -206,7 +207,7 @@
                     <MediaElement Grid.Column="1"
                                   x:Name="AudioMedia"
                                   Width="0" Height="0"
-                                  Source="{Binding MediaUrl}"
+                                  Source="{Binding LocalSourceName}"
                                   LoadedBehavior="Manual"
                                   UnloadedBehavior="Stop"
                                   Volume="1" />
@@ -222,7 +223,7 @@
                 <Grid>
                     <MediaElement x:Name="VideoMedia"
                                   Width="360" Height="240"
-                                  Source="{Binding MediaUrl}"
+                                  Source="{Binding LocalSourceName}"
                                   LoadedBehavior="Manual"
                                   UnloadedBehavior="Stop"
                                   Stretch="Uniform" />

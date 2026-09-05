@@ -8,7 +8,8 @@ using QQLike.Functional.Instructure;
 
 namespace QQLike.Functional;
 
-public class UserChatSourceHandler(ISessionStorage sessionStorage,
+public class UserChatSourceHandler(
+    ISessionStorage sessionStorage,
     IRandomGenerator generator,
     FileConfig fileConfig,
     SysSetting setting) : IUserChatSourceHandler
@@ -40,17 +41,6 @@ public class UserChatSourceHandler(ISessionStorage sessionStorage,
         return toStoreName;
     }
 
-    public async Task Store(FileTypeMessageModel model,CancellationToken token)
-    {
-        var root = new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), fileConfig.FileRootPath));
-        var rootPath = Path.Combine(root.FullName, FileRootPath(model.Type));
-        var toStore = Path.Combine(rootPath, model.FileName);
-        await using var newFileStream = new FileStream(toStore,
-            FileMode.Create, FileAccess.ReadWrite);
-        await newFileStream.WriteAsync(model.FileBytes,token);
-        await newFileStream.FlushAsync(token);
-    }
-
     public string ImageUrl(string sourceName)
     {
         return $"{setting.ApiUrl}/Files/{fileConfig.ImagePath}/{sourceName}";
@@ -69,6 +59,18 @@ public class UserChatSourceHandler(ISessionStorage sessionStorage,
     public string CommonUrl(string sourceName)
     {
         return $"{setting.ApiUrl}/Files/{fileConfig.CommonPath}/{sourceName}";
+    }
+
+    public string GetUrl(string sourceName, ChatMessageType type)
+    {
+        return type switch
+        {
+            ChatMessageType.Image => ImageUrl(sourceName),
+            ChatMessageType.Video => VideoUrl(sourceName),
+            ChatMessageType.Audio => AudioUrl(sourceName),
+            ChatMessageType.File => CommonUrl(sourceName),
+            _ => throw new Exception("非指向文件传输的消息类型")
+        };
     }
 
     public string FileRootPath(ChatMessageType type)

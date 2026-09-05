@@ -6,9 +6,8 @@ using SysSetting = QQLike.Entity.Configuration.Server.SysSetting;
 
 namespace QQLike.Services;
 
-public class SyncJob(IUserChatSourceHandler sourceHandler,
+public class SyncJob(
     IFreeSql orm,
-    SysSetting setting,
     IProjectLogger logger,
     FileConfig fileConfig) : ISyncJob
 {

@@ -1,5 +1,6 @@
 using FreeSql;
 using Hangfire;
+using Hangfire.AspNetCore;
 using Hangfire.MemoryStorage;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;
@@ -27,6 +28,8 @@ builder.Services.AddHangfire(config =>
           .UseRecommendedSerializerSettings()
           .UseMemoryStorage();
 });
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddCors(options =>
 {
@@ -69,11 +72,14 @@ var rabbitMQConfig = builder.Configuration.GetSection(nameof(RabbitMQConfig)).Ge
 builder.Services.AddSingleton(rabbitMQConfig);
 builder.Services.AddRabbitMQ(rabbitMQConfig);
 
+builder.Services.AddSingleton<IJobRunner, JobRunner>();
+builder.Services.AddScoped<ISyncJob, SyncJob>();
+
 builder.Services.AddScoped<IProjectLogger, ProjectLogger>(_ => new ProjectLogger(setting.LogPath));
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IRandomGenerator, RandomGenerator>();
-builder.Services.AddScoped<IUserChatSourceHandler, UserChatSourceHandler>();
+builder.Services.AddScoped<ISourceHandler,SourceHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserContactService, UserContactService>();
@@ -117,8 +123,6 @@ builder.Services.AddRedis(setting.RedisConnectionString);
     });*/
 //builder.Services.AddAuthorization();
 
-builder.Services.AddHangfireServer();
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -128,9 +132,9 @@ var app = builder.Build();
     app.UseSwaggerUI();
 }*/
 
-app.RunHangfireJobs();
-
 app.UseHangfireDashboard("/jobs");
+
+app.RunHangfireJobs();
 
 app.UseCors();
 

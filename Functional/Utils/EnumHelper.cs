@@ -63,10 +63,10 @@ public static class EnumHelper
     {
         return type switch
         {
-            ChatMessageType.Image => "图片",
-            ChatMessageType.Video => "视频",
-            ChatMessageType.Audio => "音频",
-            _ => "文件"
+            ChatMessageType.Image => "[图片]",
+            ChatMessageType.Video => "[视频]",
+            ChatMessageType.Audio => "[音频]",
+            _ => "[文件]"
         };
     }
 
@@ -85,5 +85,16 @@ public static class EnumHelper
             return ChatMessageType.Audio;
         }
         return ChatMessageType.File;
+    }
+
+    public static string DefaultSourceName(ChatMessageType type)
+    {
+        return type switch
+        {
+            ChatMessageType.Image => "default-image.png",
+            ChatMessageType.Video => "default-video-icon.png",
+            ChatMessageType.Audio => "default-audio-icon.png",
+            _ => "default-file.png"
+        };
     }
 }

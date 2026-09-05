@@ -17,7 +17,7 @@ public class SocketServerService(
     SysSetting setting,
     IProjectLogger logger,
     IFreeSql orm,
-    IUserChatSourceHandler sourceHandler,
+    ISourceHandler sourceHandler,
     IRandomGenerator randomGenerator) : ISocketServerService
 {
     private readonly ConcurrentDictionary<int, Socket> _temp = new();
@@ -223,12 +223,20 @@ public class SocketServerService(
                         if (message.MessageType != ChatMessageType.Text.GetValue()
                             && message.MessageType != ChatMessageType.Notification.GetValue())
                         {
-                         await sourceHandler.Store(new FileTypeMessageModel
+                         var fileName = await sourceHandler.Store(new FileTypeMessageModel
                             {
                                 FileName = message.FileName,
                                 FileBytes = message.FileBytes,
                                 Type = (ChatMessageType)message.MessageType
                             }, token);
+                            var transmission = new FileTransmission();
+                            transmission.FileName = fileName;
+                            transmission.MessageId = message.Id;
+                            transmission.HeadMessageId = message.HeadMessageId;
+                            transmission.IsValid = true;
+                            transmission.CreateTime  = DateTime.Now;
+                            await orm.Insert(transmission)
+                                .ExecuteAffrowsAsync(token);
                         }
                     }
                 }

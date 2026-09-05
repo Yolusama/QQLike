@@ -18,6 +18,7 @@ public class ApiService(
     ISessionStorage sessionStorage,
     SysSetting setting) : IApiService
 {
+    public IHttpService HttpService => httpService;
     private async Task<ResponseResult<TR>> Request<TR>(string apiUrl, object? model, HttpMethod method,
         Dictionary<string, string>? headers = null)
     {
@@ -61,7 +62,7 @@ public class ApiService(
             return res;
         }
     }
-
+    
     public Task<ResponseResult<TR>> PostAsync<TR>(string apiUrl, object? model,
         Dictionary<string, string>? headers = null)
     {

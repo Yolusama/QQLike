@@ -5,7 +5,7 @@ public class V_ChatGroupMessage
     /// <summary>
     /// 消息ID
     /// </summary>
-    public string MessageId { get; set; }
+    public long MessageId { get; set; }
 
     /// <summary>
     /// 头像
@@ -28,7 +28,7 @@ public class V_ChatGroupMessage
     public DateTime? CreateTime { get; set; }
 
     /// <summary>
-    /// 文件名（针对文件消息）
+    /// 服务器缓存文件名（针对文件消息）
     /// </summary>
     public string FileName { get; set; }
 

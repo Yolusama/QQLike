@@ -31,6 +31,8 @@ public partial class ChatMessageItem : ObservableObject
     private bool _isOwner = false;
     [ObservableProperty]
     private string _localSourcePath = string.Empty;
+    [ObservableProperty]
+    private string _source;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;

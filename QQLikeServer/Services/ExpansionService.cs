@@ -1,5 +1,4 @@
-﻿using Hangfire;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.VO;
@@ -72,8 +71,8 @@ public static class ExpansionService
 
     public static void RunHangfireJobs(this IApplicationBuilder app)
     {
-        RecurringJob.AddOrUpdate<ISyncJob>(a=>a.RemoveStoredFile(),Cron.Minutely(),
-            TimeZoneInfo.Local);
+        var jobRunner = app.ApplicationServices.GetRequiredService<IJobRunner>();
+        jobRunner.Run();
     }
 
     /*private static IServiceScope? _socketServerScope;

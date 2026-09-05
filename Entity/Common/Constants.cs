@@ -12,4 +12,5 @@ public static class Constants
     };
     public const string MQExchange = "QQLike";
     public const string CreateChatGroupQueue =  "CreateChatGroup";
+    public const string FileResponseHeader = "application/octet-stream";
 }
