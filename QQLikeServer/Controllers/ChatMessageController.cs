@@ -12,10 +12,9 @@ public class ChatMessageController(IChatMessageService chatMessageService) : Con
     [RequestAuthorize]
     [HttpGet]
     public async Task<ActionResult> GetMessageFileSource([FromQuery]string fileName,
-        [FromQuery]long messageId,
-        [FromQuery]int type)
+        [FromQuery]long messageId, [FromQuery]int type)
     {
-        var bytes = await chatMessageService.GetMessageFileSource(fileName, messageId, (ChatMessageType)type);
+        var bytes = await chatMessageService.GetMessageFileSource(fileName,  (ChatMessageType)type);
         return File(bytes, Constants.FileResponseHeader, fileName);
     }
 }

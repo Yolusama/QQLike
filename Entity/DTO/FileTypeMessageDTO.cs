@@ -7,4 +7,5 @@ public class FileTypeMessageDTO
     public byte[] FileBytes { get; set; }
     public string TempMessage { get; set; }
     public string OriginalFileName { get; set; }
+    public string LocalFilePath { get; set; }
 }

@@ -9,8 +9,7 @@ public class SourceHandler(FileConfig fileConfig) : ISourceHandler
 {
     public async Task<string> Store(FileTypeMessageModel model,CancellationToken token)
     {
-        var root = new DirectoryInfo(Path.Combine(Directory.GetCurrentDirectory(), fileConfig.FileRootPath));
-        var rootPath = Path.Combine(root.FullName, FileRootPath(model.Type));
+        var rootPath = Path.Combine(fileConfig.FileRootPath, FileRootPath(model.Type));
         var toStore = Path.Combine(rootPath, model.FileName);
         await using var newFileStream = new FileStream(toStore,
             FileMode.Create, FileAccess.ReadWrite);

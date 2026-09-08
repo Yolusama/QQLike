@@ -1,5 +1,6 @@
 ﻿using QQLike.Entity;
 using QQLike.Entity.Configuration;
+using QQLike.Entity.DTO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
 using SysSetting = QQLike.Entity.Configuration.Server.SysSetting;
@@ -13,7 +14,6 @@ public class SyncJob(
 {
     public async Task RemoveStoredFile()
     {
-        using var worker = orm.CreateDbContext();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         try
@@ -46,33 +46,51 @@ public class SyncJob(
 
     private Task Handle(IEnumerable<FileInfo> files,CancellationToken token,bool removeTemp = false)
     {
-        var toRemove = new List<(long,string)>();
+        var toRemove = new List<FileClearDTO>();
         var task = new Task(() =>
         {
-            foreach (var file in files)
+            using var worker = orm.CreateUnitOfWork();
+            try
             {
-                var fileName = file.Name;
-                var transmission = orm.Select<FileTransmission>()
-                    .Where(e => e.FileName == fileName && e.IsValid)
-                    .First(e=>new {e.Id,e.CreateTime});
-                var now = DateTime.Now;
-                var validTime = removeTemp ? transmission.CreateTime.Value.AddDays(fileConfig.TempFileExpireDays) 
-                    : transmission.CreateTime.Value.AddDays(fileConfig.FileExpireDays);
-                if(validTime >= now.AddSeconds(-now.Second))
+                foreach (var file in files)
                 {
-                    file.Delete();
-                    toRemove.Add((transmission.Id,file.FullName));
-                }
+                    var fileName = file.Name;
+                    var transmission = orm.Select<FileTransmission>()
+                        .Where(e => e.FileName == fileName && e.IsValid && !e.IsReceiveSide)
+                        .First(e=>new {e.Id,e.CreateTime});
+                    if(transmission == null) continue;
+                    var now = DateTime.Now;
+                    var validTime = removeTemp ? transmission.CreateTime.Value.AddDays(fileConfig.TempFileExpireDays) 
+                        : transmission.CreateTime.Value.AddDays(fileConfig.FileExpireDays);
+                    if(validTime <= now.AddSeconds(-now.Second))
+                    {
+                        file.Delete();
+                        toRemove.Add(new FileClearDTO
+                        {
+                            TransmissionId = transmission.Id,
+                            File = file,
+                            RootDirectory = file.Directory
+                        });
+                    }
                
+                }
+                if(toRemove.Count > 0)
+                {
+                    var toRemoveIds = toRemove.Select(e => e.TransmissionId).ToList();
+                    worker.Orm.Update<FileTransmission>()
+                        .Set(e => e.IsValid, false)
+                        .Where(e => toRemoveIds.Contains(e.Id))
+                        .ExecuteAffrows();
+                    logger.Log($"清理文件完成，共清理{toRemove.Count}个文件,文件：\r\n{string.Join("\r\n", toRemove.Select(f=>f.File.Name))}","聊天缓存文件清理");
+                }
+                
+                worker.Commit();
             }
-            if(toRemove.Count > 0)
+            catch (Exception e)
             {
-                var toRemoveIds = toRemove.Select(e => e.Item1).ToList();
-                orm.Update<FileTransmission>()
-                    .Set(e => e.IsValid, false)
-                    .Where(e => toRemoveIds.Contains(e.Id))
-                    .ExecuteAffrows();
-                logger.Log($"清理文件完成，共清理{toRemove.Count}个文件,文件：\r\n{string.Join("\r\n", toRemove.Select(e => e.Item2))}","聊天缓存文件清理");
+                Console.WriteLine(e);
+                worker.Rollback();
+                logger.Log($"清理文件时发生异常: {e}","聊天缓存文件清理");
             }
         },token);
         task.Start();

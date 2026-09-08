@@ -16,10 +16,6 @@ public class FileTransmission
     /// </summary>
     public string FileName { get; set; }
     /// <summary>
-    /// 断点续传临时文件名
-    /// </summary>
-    public string TempFileName  { get; set; }
-    /// <summary>
     /// 消息ID
     /// </summary>
     public long MessageId { get; set; }
@@ -38,5 +34,11 @@ public class FileTransmission
     /// <summary>
     /// 是否有效
     /// </summary>
+    [Column(DbType = "TINYINT(1)"),SugarColumn(ColumnDataType = "TINYINT(1)")]
     public bool IsValid { get; set; }
+    /// <summary>
+    /// 是否为接收否
+    /// </summary>
+    [Column(DbType = "TINYINT(1)"),SugarColumn(ColumnDataType = "TINYINT(1)")]
+    public bool IsReceiveSide { get; set; }
 }

@@ -17,11 +17,11 @@ public class ChatMessageService(IFreeSql orm,
         return null;
     }
 
-    public async Task<byte[]> GetMessageFileSource(string sourceName,long messageId, ChatMessageType type)
+    public async Task<byte[]> GetMessageFileSource(string sourceName,ChatMessageType type)
     {
         var isValid = await orm.Select<FileTransmission>()
-            .Where(f => f.MessageId == messageId)
-            .FirstAsync(f => f.IsValid);
+            .Where(f => f.FileName == sourceName && !f.IsReceiveSide && f.IsValid)
+            .AnyAsync();
         if (!isValid)
             throw new Exception("文件已失效！");
         var fileName = Path.Combine(fileConfig.FileRootPath,

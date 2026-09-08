@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -34,6 +35,8 @@ public partial class ChatMessageViewModel(
     IRabbitMQProducer mqProducer,
     SysSetting setting) : ViewModelBase<ChatMessageView>
 {
+    private static readonly TimeSpan SocketSendTimeout = TimeSpan.FromSeconds(8);
+
     [ObservableProperty]
     private ObservableCollection<ChatHeadMessageItem> _headMessages = [];
     [ObservableProperty]
@@ -53,7 +56,10 @@ public partial class ChatMessageViewModel(
     [ObservableProperty]
     private bool _isUserContactOpen;
     
+    public string DefaultFileIcon => sourceHandler.ImageUrl("default-file-icon.png");
+    
     private Socket? _client = null;
+    private readonly SemaphoreSlim _sendGate = new(1, 1);
 
     private Socket? Client => GetSocket();
 
@@ -152,6 +158,7 @@ public partial class ChatMessageViewModel(
     [RelayCommand]
     private async Task CheckMessages(ChatHeadMessageItem? item)
     {
+        using var cts = new CancellationTokenSource();
         try
         {
             if(item == null)return;
@@ -166,7 +173,7 @@ public partial class ChatMessageViewModel(
                 var messages = await sugarClient.Queryable<V_UserChatMessage>()
                     .Where(v => v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
                     .OrderBy(v => v.CreateTime)
-                    .ToListAsync();
+                    .ToListAsync(cts.Token);
 
                 foreach (var message in messages)
                 {
@@ -174,7 +181,8 @@ public partial class ChatMessageViewModel(
                     var contactName = string.IsNullOrEmpty(message.Remark) ? message.NickName : message.Remark;
                     var newMessageItem = new ChatMessageItem
                     {
-                        Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
+                        MessageId = message.MessageId,
+                        Avatar = sourceHandler.ImageUrl(message.Avatar),
                         DisplayName = contactName,
                         Content = message.Content,
                         MessageType = type,
@@ -183,24 +191,38 @@ public partial class ChatMessageViewModel(
                         UserId = message.UserId,
                         ContactId = message.ContactId,
                         IsSelf = message.IsSelf,
-                        LocalSourcePath = message.LocalSourceName,
+                        LocalSourcePath = message.LocalSourcePath,
+                        DisplayFileName = message.OriginalFileName,
                         MessageTimeText = FormatMessageTime(message.CreateTime, true),
                         ContactNameVisibility = Visibility.Collapsed
                     };
-                    if (type == ChatMessageType.Image)
+                    if (type != ChatMessageType.Text && type != ChatMessageType.Notification)
                     {
-                        if(string.IsNullOrEmpty(message.LocalSourceName) || !File.Exists(message.LocalSourceName))
+                        if (type == ChatMessageType.Image)
                         {
-                            var newFileName = await GetRemoteFileSource(message.FileName, type, message.MessageId);
-                            message.LocalSourceName = newFileName;
-                            newMessageItem.LocalSourcePath = newFileName;
-                            await sugarClient.Updateable<ChatMessage>()
-                                .SetColumns(e => e.LocalSourceName == newFileName)
-                                .Where(e => e.Id == message.MessageId)
-                                .ExecuteCommandAsync();
+                            if (string.IsNullOrEmpty(message.LocalSourcePath) || !File.Exists(message.LocalSourcePath))
+                            {
+                                var fileBytes = await GetRemoteFileSource(message.FileName, type);
+                                var chatMessage = message.MapTo(new ChatMessage());
+                                chatMessage.FileBytes = fileBytes;
+                                var newFileName = await DownloadAction(chatMessage, cts.Token);
+                                message.LocalSourcePath = newFileName;
+                                newMessageItem.LocalSourcePath = newFileName;
+                            }
+                        }
+
+                        if (message.IsSelf)
+                        {
+                            newMessageItem.SourceDownloaded = true;
+                            newMessageItem.SourceUnload = false;
+                        }
+                        else
+                        {
+                            newMessageItem.SourceDownloaded = File.Exists(message.LocalSourcePath);
+                            newMessageItem.SourceUnload = !newMessageItem.SourceDownloaded;
                         }
                     }
-                    
+
                     ChatMessages.Add(newMessageItem);
                 }
             }
@@ -209,7 +231,7 @@ public partial class ChatMessageViewModel(
                 var messages = await sugarClient.Queryable<V_ChatGroupMessage>()
                     .Where(v => v.UserId == user.UserId && v.HeadMessageId == item.HeadMessageId)
                     .OrderBy(v => v.CreateTime)
-                    .ToListAsync();
+                    .ToListAsync(cts.Token);
 
                 foreach (var message in messages)
                 {
@@ -218,7 +240,8 @@ public partial class ChatMessageViewModel(
                         message.NickName : message.GroupDisplayName;
                     var newMessageItem = new ChatMessageItem
                     {
-                        Avatar = $"{setting.ApiUrl}/Files/Images/{message.Avatar}",
+                        MessageId = message.MessageId,
+                        Avatar = sourceHandler.ImageUrl(message.Avatar),
                         DisplayName = contactName,
                         Content = message.Content,
                         MessageType = type,
@@ -229,24 +252,37 @@ public partial class ChatMessageViewModel(
                         GroupMemberId = message.GroupMemberId,
                         IsSelf = message.IsSelf,
                         IsOwner = message.IsOwner,
-                        LocalSourcePath = message.LocalSourceName,
+                        LocalSourcePath = message.LocalSourcePath,
+                        DisplayFileName = message.OriginalFileName,
                         MessageTimeText = FormatMessageTime(message.CreateTime, true),
                         ContactNameVisibility = Visibility.Visible
                     };
-                    if (type == ChatMessageType.Image)
+                    if (type != ChatMessageType.Text && type != ChatMessageType.Notification)
                     {
-                        if(string.IsNullOrEmpty(message.LocalSourceName) || !File.Exists(message.LocalSourceName))
+                        if (type == ChatMessageType.Image)
                         {
-                            var newFileName = await GetRemoteFileSource(message.FileName, type, message.MessageId);
-                            message.LocalSourceName = newFileName;
-                            newMessageItem.LocalSourcePath = newFileName;
-                            await sugarClient.Updateable<ChatMessage>()
-                                .SetColumns(e => e.LocalSourceName == newFileName)
-                                .Where(e => e.Id == message.MessageId)
-                                .ExecuteCommandAsync();
+                            if (string.IsNullOrEmpty(message.LocalSourcePath) || !File.Exists(message.LocalSourcePath))
+                            {
+                                var fileBytes = await GetRemoteFileSource(message.FileName, type);
+                                var chatMessage = message.MapTo(new ChatMessage());
+                                chatMessage.FileBytes = fileBytes;
+                                var newFileName = await DownloadAction(chatMessage, cts.Token);
+                                message.LocalSourcePath = newFileName;
+                                newMessageItem.LocalSourcePath = newFileName;
+                            }
+                        }
+
+                        if (message.IsSelf)
+                        {
+                            newMessageItem.SourceDownloaded = true;
+                            newMessageItem.SourceUnload = false;
+                        }
+                        else
+                        {
+                            newMessageItem.SourceDownloaded = File.Exists(message.LocalSourcePath);
+                            newMessageItem.SourceUnload = !newMessageItem.SourceDownloaded;
                         }
                     }
-                    
                     ChatMessages.Add(newMessageItem);
                 }
             }
@@ -254,7 +290,7 @@ public partial class ChatMessageViewModel(
             await sugarClient.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
                 .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead) 
-                .ExecuteCommandAsync();
+                .ExecuteCommandAsync(cts.Token);
             item.UnreadCount = 0;
 
             var messageBody = new MQMessageBody
@@ -270,6 +306,7 @@ public partial class ChatMessageViewModel(
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"加载消息记录失败：{e.Message}", MessageType.Error);
+            await cts.CancelAsync();
         }
         
     }
@@ -283,6 +320,21 @@ public partial class ChatMessageViewModel(
     
     private async Task HandMessageSending(ChatMessageType type,FileTypeMessageDTO? fileTypeMessageDto = null)
     {
+        if (SelectedHeadMessage == null)
+        {
+            return;
+        }
+
+        var socket = Client;
+        if (socket is null || !socket.Connected)
+        {
+            MessageComponent.ShowMessage(Owner, "连接未就绪，请稍后重试", MessageType.Warning);
+            return;
+        }
+
+        await _sendGate.WaitAsync();
+        try
+        {
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         var model = new ChatMessageTransModel();
         var message = new ChatMessage
@@ -304,6 +356,7 @@ public partial class ChatMessageViewModel(
             message.FileBytes = fileTypeMessageDto.FileBytes;
             message.FileName = fileTypeMessageDto.FileName + fileTypeMessageDto.FileExtension;
             message.OriginalFileName = fileTypeMessageDto.OriginalFileName;
+            message.LocalSourcePath = fileTypeMessageDto.LocalFilePath;
             model.Message = fileTypeMessageDto.TempMessage;
         }
         else 
@@ -318,7 +371,8 @@ public partial class ChatMessageViewModel(
             message.Id = id;
             model.Data = message;
             var json = JsonSerializer.Serialize(model);
-            await Client.SendAsync(Encoding.UTF8.GetBytes(json), SocketFlags.None);
+            using var sendCts = new CancellationTokenSource(SocketSendTimeout);
+            await socket.SendWith(Encoding.UTF8.GetBytes(json), sendCts.Token);
             NewMessageText = string.Empty;
             await sugarClient.Updateable<HeadMessage>()
                 .SetColumns(e => new HeadMessage { Content = message.Content,LastMessageTime = message.CreateTime })
@@ -345,10 +399,11 @@ public partial class ChatMessageViewModel(
                 (string.IsNullOrEmpty(userContact.GroupDisplayName) ? user.Nickname : userContact.GroupDisplayName) : user.Nickname;
             var messageItem = new ChatMessageItem
             {
+                MessageId = message.Id,
                 Avatar = sourceHandler.ImageUrl(user.Avatar),
                 DisplayName = displayName,
                 Content = message.Content,
-                MessageType = ChatMessageType.Text,
+                MessageType = type,
                 MessageTime = message.CreateTime,
                 UserId = message.UserId,
                 ContactId = message.ContactId,
@@ -360,9 +415,11 @@ public partial class ChatMessageViewModel(
             if(messageItem.MessageType != ChatMessageType.Text)
             {
                 messageItem.FileName = message.FileName;
-                messageItem.LocalSourcePath = message.LocalSourceName;
-                messageItem.Source = sourceHandler.GetUrl(message.FileName, messageItem.MessageType);
-                message.Content =  fileTypeMessageDto.TempMessage;
+                messageItem.LocalSourcePath = message.LocalSourcePath;
+                message.Content = fileTypeMessageDto?.TempMessage ?? message.Content;
+                messageItem.DisplayFileName = message.OriginalFileName;
+                messageItem.SourceDownloaded = true;
+                messageItem.SourceUnload = false;
             }
             ChatMessages.Add(messageItem); 
             SelectedHeadMessage.LastContent = message.Content;
@@ -375,6 +432,11 @@ public partial class ChatMessageViewModel(
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"发送消息失败：{e.Message}", MessageType.Error);
+        }
+        }
+        finally
+        {
+            _sendGate.Release();
         }
     }
     
@@ -442,6 +504,7 @@ public partial class ChatMessageViewModel(
                 var messageType = (ChatMessageType)message.MessageType;
                 var item = new ChatMessageItem
                 {
+                    MessageId = message.Id,
                     Avatar = sourceHandler.ImageUrl(contactUser.Avatar),
                     DisplayName = string.IsNullOrEmpty(contactUser.Remark) ? contactUser.Nickname : contactUser.Remark,
                     Content = message.Content,
@@ -451,10 +514,16 @@ public partial class ChatMessageViewModel(
                     ContactId = message.ContactId,
                     IsSelf = message.IsSelf,
                     FileName = message.FileName,
-                    LocalSourcePath = message.LocalSourceName,
+                    LocalSourcePath = message.LocalSourcePath,
+                    DisplayFileName = message.OriginalFileName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
                     ContactNameVisibility =  Visibility.Collapsed
                 };
+                if (messageType == ChatMessageType.Image)
+                {
+                    item.SourceDownloaded = true;
+                    item.SourceUnload = false;
+                }
                 ChatMessages.Add(item);
             }
             else
@@ -470,50 +539,35 @@ public partial class ChatMessageViewModel(
                 var messageType = (ChatMessageType)message.MessageType;
                 var item = new ChatMessageItem
                 {
+                    MessageId = message.Id,
                     Avatar = sourceHandler.ImageUrl(chatGroupContact.Avatar),
                     DisplayName = string.IsNullOrEmpty(chatGroupContact.GroupDisplayName) ? chatGroupContact.UserName : chatGroupContact.GroupDisplayName,
                     Content = message.Content,
                     MessageType = messageType,
                     FileName = message.FileName,
-                    LocalSourcePath = message.LocalSourceName,
+                    LocalSourcePath = message.LocalSourcePath,
                     MessageTime = message.CreateTime,
                     UserId = message.GroupMemberId,
                     ContactId = message.ContactId,
                     IsSelf = message.IsSelf,
+                    DisplayFileName = message.OriginalFileName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
                     ContactNameVisibility =  Visibility.Visible
                 };
+                if (messageType == ChatMessageType.Image)
+                {
+                    item.SourceDownloaded = true;
+                    item.SourceUnload = false;
+                }
                 ChatMessages.Add(item);
             }
             message.IsRead = true;
-
-            var fileReceived = false;
-            var localName = string.Empty;
-            if (message.MessageType != ChatMessageType.Text.GetValue() && message.MessageType 
-                != ChatMessageType.Notification.GetValue())
-            {
-                //接收文件，生成随机名称作为本地储存
-                var extension = Path.GetExtension(message.FileName) ?? string.Empty;
-                var localPath = await sourceHandler.Receive(new FileTypeMessageModel
-                {
-                    FileName = generator.Guid + extension,
-                    FileBytes = message.FileBytes,
-                    Type = (ChatMessageType)message.MessageType
-                },cancelTokenSource.Token);
-                fileReceived = true;
-                localName = localPath;
-                var fileTransmission = new FileTransmission();
-                fileTransmission.IsValid = true;
-                fileTransmission.FileName = message.FileName;
-                fileTransmission.MessageId = message.Id;
-                fileTransmission.HeadMessageId = message.HeadMessageId;
-                fileTransmission.CreateTime = DateTime.Now;
-                await sugarClient.Insertable(fileTransmission).ExecuteCommandAsync(cancelTokenSource.Token);
-            }
+            
+            if (message.MessageType == ChatMessageType.Image.GetValue())
+               await DownloadAction(message, cancelTokenSource.Token);
             
             await sugarClient.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
-                .SetColumnsIF(fileReceived, e => e.LocalSourceName == localName)
                 .Where(e => e.Id == message.Id)
                 .ExecuteCommandAsync(cancelTokenSource.Token);
             
@@ -576,8 +630,9 @@ public partial class ChatMessageViewModel(
                 var dto = new FileTypeMessageDTO
                 {
                     FileName = generator.Guid,
-                    OriginalFileName = fileName,
+                    OriginalFileName = fileInfo.Name,
                     FileExtension = fileInfo.Extension,
+                    LocalFilePath = fileInfo.FullName,
                     FileBytes = await fileInfo.ReadBytes()
                 };
                 var type = EnumHelper.ToChatMessageType(fileInfo.Extension);
@@ -587,31 +642,103 @@ public partial class ChatMessageViewModel(
         }
     }
 
-    private async Task<string> GetRemoteFileSource(string fileName,ChatMessageType type,long messageId)
+    [RelayCommand]
+    private async Task Download(ChatMessageItem? item)
     {
-        using var cts = new  CancellationTokenSource();
+        if(item == null)return;
+        using var cts = new CancellationTokenSource();
         try
         {
-            var urlBuilder = new UriBuilder("api/ChatMessage/GetFileSource");
+            var message = await sugarClient.Queryable<ChatMessage>()
+                .FirstAsync(m => m.Id == item.MessageId,cts.Token);
+            var bytes =await GetRemoteFileSource(message.FileName, (ChatMessageType)message.MessageType);
+            message.FileBytes = bytes;
+            var localPath = await DownloadAction(message,cts.Token);
+            MessageComponent.ShowMessage(Owner,"文件已保存",MessageType.Success);
+            item.LocalSourcePath = localPath;
+            item.SourceDownloaded = true;
+            item.SourceUnload = false;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(Owner,$"程序出现异常：{e.Message}", MessageType.Error);
+            await  cts.CancelAsync();
+        }
+        //接收文件，生成随机名称作为本地储存
+  
+        
+    }
+
+    [RelayCommand]
+    private void OpenInFileBrowser(ChatMessageItem? item)
+    {
+        if (item == null || string.IsNullOrWhiteSpace(item.LocalSourcePath) || !File.Exists(item.LocalSourcePath))
+        {
+            MessageComponent.ShowMessage(Owner,"文件已移动或者已被删除", MessageType.Error);
+            return;
+        }
+
+        try
+        {
+            var path = item.LocalSourcePath.Replace('/', '\\');
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(Owner, $"打开文件位置失败：{e.Message}", MessageType.Error);
+        }
+    }
+
+    private async Task<string> DownloadAction(ChatMessage? message,CancellationToken token)
+    {
+        var extension = Path.GetExtension(message.FileName) ?? string.Empty;
+        var localPath = await sourceHandler.Receive(new FileTypeMessageModel
+        {
+            FileName = generator.Guid + extension,
+            FileBytes = message.FileBytes,
+            Type = (ChatMessageType)message.MessageType
+        },token);
+        var fileTransmission = new FileTransmission();
+        fileTransmission.IsReceiveSide = true;
+        fileTransmission.FileName = message.FileName;
+        fileTransmission.MessageId = message.Id;
+        fileTransmission.HeadMessageId = message.HeadMessageId;
+        fileTransmission.CreateTime = DateTime.Now;
+        await sugarClient.Insertable(fileTransmission).ExecuteCommandAsync(token);
+        await sugarClient.Updateable<ChatMessage>()
+            .SetColumns(e => e.LocalSourcePath == localPath)
+            .Where(e => e.Id == message.Id)
+            .ExecuteCommandAsync(token);
+        return localPath;
+    }
+
+    private async Task<byte[]> GetRemoteFileSource(string fileName,ChatMessageType type)
+    {
+        using var cts = new  CancellationTokenSource();
+        var headers = new Dictionary<string, string>();
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        headers.Add("Authorization", $"Bearer {user.Token}");
+        try
+        {
+            var urlBuilder = new UriBuilder($"{setting.ApiUrl}/api/ChatMessage/GetMessageFileSource");
             var query = HttpUtility.ParseQueryString(urlBuilder.Query);
             query[nameof(type)] = ((int)type).ToString();
-            query[nameof(messageId)] = messageId.ToString();
             query[nameof(fileName)] = fileName;
-            var byteArr = await apiService.HttpService.GetFileResult(urlBuilder.ToString());
-            var newFileName = await sourceHandler.Receive(new  FileTypeMessageModel
-            {
-                FileName = fileName,
-                FileBytes = byteArr,
-                Type = type
-            },cts.Token);
-            return newFileName;
+            urlBuilder.Query = query.ToString();
+            var byteArr = await apiService.HttpService.GetFileResult(urlBuilder.ToString(),null,headers);
+            return byteArr;
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"获取远程文件源失败：{e.Message}", MessageType.Error);
             await cts.CancelAsync();
-            return string.Empty;
+            return [];
         }
     }
 

@@ -90,5 +90,10 @@ public class V_ChatGroupMessage
     /// <summary>
     /// 本地保存地址
     /// </summary>
-    public string?  LocalSourceName { get; set; }
+    public string?  LocalSourcePath { get; set; }
+    
+    /// <summary>
+    /// 文件上传时的原名
+    /// </summary>
+    public string?  OriginalFileName { get; set; }
 }

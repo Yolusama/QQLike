@@ -31,8 +31,12 @@ public partial class ChatMessageItem : ObservableObject
     private bool _isOwner = false;
     [ObservableProperty]
     private string _localSourcePath = string.Empty;
+    [ObservableProperty] 
+    private string _displayFileName;
     [ObservableProperty]
-    private string _source;
+    private bool _sourceUnload = true;
+    [ObservableProperty]
+    private bool _sourceDownloaded;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;
@@ -55,6 +59,7 @@ public partial class ChatMessageItem : ObservableObject
     
     public string UserId { get; set; }
     public string ContactId { get; set; }
+    public long MessageId { get; set; }
 
     partial void OnIsSelfChanged(bool value)
     {

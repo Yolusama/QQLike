@@ -41,7 +41,7 @@ public class ChatMessage
     /// <summary>
     /// 本地保存地址
     /// </summary>
-    public string?  LocalSourceName { get; set; }
+    public string?  LocalSourcePath { get; set; }
     /// <summary>
     /// 上传时原文件名
     /// </summary>

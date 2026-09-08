@@ -10,7 +10,6 @@ namespace QQLike.Functional;
 
 public class UserChatSourceHandler(
     ISessionStorage sessionStorage,
-    IRandomGenerator generator,
     FileConfig fileConfig,
     SysSetting setting) : IUserChatSourceHandler
 {
@@ -24,6 +23,9 @@ public class UserChatSourceHandler(
             if(!string.IsNullOrEmpty(_baseDirectory))
                 return _baseDirectory;
             var path = Path.Combine(setting.FileStorePath, user.Account);
+            var directory = new DirectoryInfo(path);
+            if(!directory.Exists)
+                directory.Create();
             _baseDirectory = path;
             return path;
         }
@@ -33,6 +35,9 @@ public class UserChatSourceHandler(
     public async Task<string> Receive(FileTypeMessageModel model,CancellationToken token)
     {
         var filePath = Path.Combine(UserBaseDirectory, FileRootPath(model.Type));
+        var directory = new DirectoryInfo(filePath);
+        if(!directory.Exists)
+            directory.Create();
         var toStoreName = Path.Combine(filePath, model.FileName);
         await using var newFileStream = new FileStream(toStoreName,
             FileMode.Create, FileAccess.ReadWrite,FileShare.ReadWrite);

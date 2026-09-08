@@ -1,12 +1,16 @@
-﻿using System.Security.Cryptography;
+﻿using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using QQLike.Entity.VO;
 
 namespace QQLike.Functional.Utils;
 
 public static class ExpansionUtils
 {
+    private static readonly ConcurrentDictionary<Socket, SemaphoreSlim> SocketSendLocks = new();
+
     public static string ToSha256Str(this string str)
     {
         using var sha256 = SHA256.Create();
@@ -14,13 +18,13 @@ public static class ExpansionUtils
         var hashBytes = sha256.ComputeHash(bytes);
         return BitConverter.ToString(hashBytes).Replace("-", "");
     }
-    
+
     public static int GetValue(this Enum enumParam)
     {
         var obj = (object)enumParam;
         return (int)obj;
     }
-    
+
     public static T2 MapTo<T1, T2>(this T1 src, T2 dest)
     {
         // Map properties from src to instance
@@ -35,6 +39,7 @@ public static class ExpansionUtils
                 destProperty.SetValue(dest, value);
             }
         }
+
         return dest;
     }
 
@@ -55,11 +60,45 @@ public static class ExpansionUtils
         const int bufferSize = 10240;
         var buffer = new byte[bufferSize];
         var bytes = new List<byte>();
-        using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
+        using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         int bytesRead;
-        while ((bytesRead =await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
             bytes.AddRange(buffer.Take(bytesRead));
         return bytes.ToArray();
     }
-   
+
+    /// <summary>
+    /// 先发送数据长度报文头再发送整体数据
+    /// </summary>
+    /// <param name="socket"></param>
+    /// <param name="bytes"></param>
+    public static async Task SendWith(this Socket socket, byte[] bytes, CancellationToken token = default)
+    {
+        var sendLock = SocketSendLocks.GetOrAdd(socket, _ => new SemaphoreSlim(1, 1));
+        await sendLock.WaitAsync(token);
+        try
+        {
+            var lengthBytes = BitConverter.GetBytes(bytes.Length);
+            await SendAllAsync(socket, lengthBytes, token);
+            await SendAllAsync(socket, bytes, token);
+        }
+        finally
+        {
+            sendLock.Release();
+        }
+    }
+
+    private static async Task SendAllAsync(Socket socket, byte[] buffer, CancellationToken token)
+    {
+        var offset = 0;
+        while (offset < buffer.Length)
+        {
+            var sent = await socket.SendAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset),
+                SocketFlags.None, token);
+            if (sent <= 0)
+                throw new SocketException((int)SocketError.ConnectionReset);
+
+            offset += sent;
+        }
+    }
 }

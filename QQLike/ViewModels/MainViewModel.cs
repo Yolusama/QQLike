@@ -17,6 +17,7 @@ using QQLike.Entity.Enum;
 using QQLike.Entity.Model;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
+using QQLike.Functional.Utils;
 using QQLike.Services;
 using QQLike.Views;
 using RabbitMQ.Client.Events;
@@ -35,14 +36,17 @@ public partial class MainViewModel(
     private static readonly TimeSpan ReceiveDelay = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(90);
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(3);
+    private const int MaxMessageSize = 10 * 1024 * 1024;
     private const int MaxReconnectAttempts = 3;
     private const string MessageAudioPath = @"\Resource\Audio\message.mp3";
     private const string VerificationAudioPath = @"\Resource\Audio\verification.mp3";
 
-    [ObservableProperty] private MDMenuItem? _selectedMenuItem;
-    [ObservableProperty] private string _audioSource;
-
-    [ObservableProperty] private ObservableCollection<MDMenuItem> _menuItems =
+    [ObservableProperty]
+    private MDMenuItem? _selectedMenuItem;
+    [ObservableProperty]
+    private string _audioSource;
+    [ObservableProperty] 
+    private ObservableCollection<MDMenuItem> _menuItems =
     [
         new MDMenuItem
         {
@@ -69,7 +73,6 @@ public partial class MainViewModel(
     private readonly SemaphoreSlim _socketGate = new(1, 1);
     private readonly SemaphoreSlim _mqGate = new(1, 1);
     private readonly SemaphoreSlim _reconnectGate = new(1, 1);
-    private readonly byte[] _receiveBuffer = new byte[4 * 1024];
 
     private Socket? _client;
     private Task? _receiveTask;
@@ -117,12 +120,12 @@ public partial class MainViewModel(
 
         if (_receiveTask is null || _receiveTask.IsCompleted)
         {
-            _receiveTask = Receive(_cts.Token);
+            _receiveTask = Task.Run(() => Receive(_cts.Token), _cts.Token);
         }
 
         if (_heartbeatTask is null || _heartbeatTask.IsCompleted)
         {
-            _heartbeatTask = HeartbeatLoop(_cts.Token);
+            _heartbeatTask = Task.Run(() => HeartbeatLoop(_cts.Token), _cts.Token);
         }
 
         try
@@ -175,36 +178,38 @@ public partial class MainViewModel(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var receiveBytes = new List<byte>();
             try
             {
                 var client = _client;
                 if (client is null || !client.Connected)
                 {
-                    await StartReconnectFlow(cancellationToken);
-                    await Task.Delay(ReceiveDelay, cancellationToken);
+                    await StartReconnectFlow(cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(ReceiveDelay, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
-                int bytes;
-                while (client.Available > 0)
+                var model = await ReadFrameAsync(client, cancellationToken).ConfigureAwait(false);
+                if (model is null)
                 {
-                    bytes = await client.ReceiveAsync(_receiveBuffer, SocketFlags.None, cancellationToken);
-                    receiveBytes.AddRange(_receiveBuffer.Take(bytes));
-                }
-
-                if (receiveBytes.Count == 0)
-                {
-                    await Task.Delay(ReceiveDelay, cancellationToken);
+                    await StartReconnectFlow(cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(ReceiveDelay, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
-                var model = JsonSerializer.Deserialize<ChatMessageTransModel>(receiveBytes.ToArray());
                 if (model.Type != ChatMessageType.Head && model.Type != ChatMessageType.Heartbeat)
                 {
-                    var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
-                    await chatViewModel.WriteMessage(
-                        JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data)));
+                    var chatMessage = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
+                    if (chatMessage is null)
+                    {
+                        continue;
+                    }
+
+                    var uiTask = Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        var chatViewModel = View.ChatMessageView.GetViewModel<ChatMessageViewModel>();
+                        return chatViewModel.WriteMessage(chatMessage);
+                    });
+                    await (await uiTask.Task.ConfigureAwait(false)).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -217,15 +222,56 @@ public partial class MainViewModel(
             }
             catch (SocketException)
             {
-                await StartReconnectFlow(cancellationToken);
-                await Task.Delay(ReceiveDelay, cancellationToken);
+                await StartReconnectFlow(cancellationToken).ConfigureAwait(false);
+                await Task.Delay(ReceiveDelay, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                await Task.Delay(ReceiveDelay, cancellationToken);
+                await Task.Delay(ReceiveDelay, cancellationToken).ConfigureAwait(false);
             }
         }
+    }
+
+    private static async Task<ChatMessageTransModel?> ReadFrameAsync(Socket socket, CancellationToken token)
+    {
+        var lengthBuffer = new byte[sizeof(int)];
+        if (!await ReceiveExactAsync(socket, lengthBuffer, token).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        var totalLength = BitConverter.ToInt32(lengthBuffer, 0);
+        if (totalLength <= 0 || totalLength > MaxMessageSize)
+        {
+            throw new InvalidDataException($"非法消息长度：{totalLength}");
+        }
+
+        var payload = new byte[totalLength];
+        if (!await ReceiveExactAsync(socket, payload, token).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<ChatMessageTransModel>(payload);
+    }
+
+    private static async Task<bool> ReceiveExactAsync(Socket socket, byte[] buffer, CancellationToken token)
+    {
+        var offset = 0;
+        while (offset < buffer.Length)
+        {
+            var read = await socket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset), SocketFlags.None, token)
+                .ConfigureAwait(false);
+            if (read == 0)
+            {
+                return false;
+            }
+
+            offset += read;
+        }
+
+        return true;
     }
 
     [RelayCommand]
@@ -275,10 +321,12 @@ public partial class MainViewModel(
                 var unreadCount = await db.Queryable<VerificationMessage>()
                     .Where(e => !e.IsRead && e.UserId == user.UserId)
                     .CountAsync();
-                menuItem.Notification =
-                    unreadCount > 100 ? "99+" : (unreadCount == 0 ? string.Empty : unreadCount.ToString());
-                if (!messageBody.Muted)
-                    TriggerAudio(VerificationAudioPath);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    menuItem.Notification = unreadCount > 100 ? "99+" : (unreadCount == 0 ? string.Empty : unreadCount.ToString());
+                    if (!messageBody.Muted)
+                        TriggerAudio(VerificationAudioPath);
+                });
             }
 
             if (ea.RoutingKey == $"{nameof(HeadMessage)}_{user.UserId}")
@@ -288,14 +336,17 @@ public partial class MainViewModel(
                 var unreadCount = await db.Queryable<ChatMessage>()
                     .Where(e => !e.IsRead && e.UserId == user.UserId)
                     .CountAsync();
-                if (unreadCount > 100)
-                    menuItem.Notification = "99+";
-                else if (unreadCount == 0)
-                    menuItem.Notification = string.Empty;
-                else
-                    menuItem.Notification = unreadCount.ToString();
-                if (!messageBody.Muted)
-                    TriggerAudio(MessageAudioPath);
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (unreadCount > 100)
+                        menuItem.Notification = "99+";
+                    else if (unreadCount == 0)
+                        menuItem.Notification = string.Empty;
+                    else
+                        menuItem.Notification = unreadCount.ToString();
+                    if (!messageBody.Muted)
+                        TriggerAudio(MessageAudioPath);
+                });
             }
 
             if (ea.RoutingKey == $"{nameof(ChatMessage)}_{user.UserId}")
@@ -358,8 +409,7 @@ public partial class MainViewModel(
                 Type = ChatMessageType.Head,
                 Data = user.UserId
             };
-            await _client.SendAsync(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(transModel)), SocketFlags.None,
-                cancellationToken);
+            await _client.SendWith(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(transModel)), cancellationToken);
         }
         finally
         {
@@ -512,7 +562,7 @@ public partial class MainViewModel(
                         Message = "Heartbeat"
                     };
                     var json = JsonSerializer.Serialize(heartbeat);
-                    await client.SendAsync(Encoding.UTF8.GetBytes(json), SocketFlags.None, cancellationToken);
+                    await Client.SendWith(Encoding.UTF8.GetBytes(json), cancellationToken);
                 }
                 else
                 {

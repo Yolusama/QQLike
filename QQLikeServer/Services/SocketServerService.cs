@@ -23,6 +23,7 @@ public class SocketServerService(
     private readonly ConcurrentDictionary<int, Socket> _temp = new();
     private readonly ConcurrentDictionary<string, Socket> _userSockets = new();
     private readonly ConcurrentDictionary<Socket, DateTime> _lastHeartbeat = new();
+    private readonly ConcurrentDictionary<Socket, Task> _clientReceiveTasks = new();
 
     private readonly Socket _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
     private readonly CancellationTokenSource _tokenSource = new();
@@ -30,7 +31,7 @@ public class SocketServerService(
     private Task? _receiveLoopTask;
     private int _isStarted;
     private const int MaxQueueCount = 1000;
-    private const int BufferSize = 4096;
+    private const int MaxMessageSize = 10 * 1024 * 1024;
     private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan ReceiveLoopInterval = TimeSpan.FromMilliseconds(100);
 
@@ -60,6 +61,7 @@ public class SocketServerService(
                 if (port == null) continue;
                 _temp[port.Value] = socket;
                 _lastHeartbeat[socket] = DateTime.UtcNow;
+                _clientReceiveTasks[socket] = Task.Run(() => ReceiveClientLoop(port.Value, socket, token), token);
 
                 //_sockets.TryAdd(ip.Port, socket);
             }
@@ -83,9 +85,192 @@ public class SocketServerService(
         await logger.LogAsync("客户端连接终止", "聊天服务器");
     }
 
+    private async Task ReceiveClientLoop(int tempKey, Socket socket, CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                if (!socket.Connected)
+                {
+                    CleanupSocket(tempKey, socket, "连接已断开");
+                    break;
+                }
+
+                var model = await ReadFrameAsync(socket, token);
+                if (model is null)
+                {
+                    CleanupSocket(tempKey, socket, "连接已断开");
+                    break;
+                }
+
+                await ProcessIncomingModel(model, socket, token);
+            }
+        }
+        catch (OperationCanceledException e)
+        {
+            // Expected during shutdown.
+            //Console.WriteLine(e);
+        }
+        catch (SocketException)
+        {
+            CleanupSocket(tempKey, socket, "接收消息失败，已断开连接");
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex);
+            await logger.LogAsync($"消息处理异常：{ex}", "聊天服务器");
+        }
+        finally
+        {
+            _clientReceiveTasks.TryRemove(socket, out _);
+        }
+    }
+
+    private async Task<ChatMessageTransModel?> ReadFrameAsync(Socket socket, CancellationToken token)
+    {
+        var lengthBuffer = new byte[sizeof(int)];
+        var headerOk = await ReceiveExactAsync(socket, lengthBuffer, token);
+        if (!headerOk)
+        {
+            return null;
+        }
+
+        var totalLength = BitConverter.ToInt32(lengthBuffer, 0);
+        if (totalLength <= 0 || totalLength > MaxMessageSize)
+        {
+            throw new InvalidDataException($"非法消息长度：{totalLength}");
+        }
+
+        var payload = new byte[totalLength];
+        var payloadOk = await ReceiveExactAsync(socket, payload, token);
+        if (!payloadOk)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<ChatMessageTransModel>(payload);
+    }
+
+    private static async Task<bool> ReceiveExactAsync(Socket socket, byte[] buffer, CancellationToken token)
+    {
+        var offset = 0;
+        while (offset < buffer.Length)
+        {
+            var read = await socket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset), SocketFlags.None, token);
+            if (read == 0)
+            {
+                return false;
+            }
+
+            offset += read;
+        }
+
+        return true;
+    }
+
+    private async Task ProcessIncomingModel(ChatMessageTransModel model, Socket socket, CancellationToken token)
+    {
+        if (model.Type == ChatMessageType.Head)
+        {
+            var userId = ParseDataAsString(model.Data);
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                _userSockets[userId] = socket;
+            }
+
+            _lastHeartbeat[socket] = DateTime.UtcNow;
+            return;
+        }
+
+        if (model.Type == ChatMessageType.Heartbeat)
+        {
+            _lastHeartbeat[socket] = DateTime.UtcNow;
+            Console.WriteLine($"收到心跳消息，来自{socket.RemoteEndPoint}");
+            await logger.LogAsync($"收到心跳消息，来自{socket.RemoteEndPoint}", "聊天服务器");
+            return;
+        }
+
+        var message = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
+        if (message is null)
+        {
+            return;
+        }
+
+        var isGroup = await orm.Select<UserContact>()
+            .Where(e => e.UserId == message.UserId && e.ContactId == message.ContactId)
+            .ToOneAsync(e => e.IsGroup, token);
+        if (!isGroup)
+        {
+            var receiptMessage = await PersistUserMessage(message);
+            if (receiptMessage == null) return;
+
+            var contactId = message.ContactId;
+
+            var transModel = model.MapTo(new ChatMessageTransModel());
+            transModel.Data = receiptMessage;
+            var data = JsonSerializer.Serialize(transModel);
+            if (_userSockets.TryGetValue(contactId, out var contactSocket) && contactSocket.Connected)
+            {
+                await contactSocket.SendWith(Encoding.UTF8.GetBytes(data), token);
+                receiptMessage.IsOnline = true;
+                _lastHeartbeat[socket] = DateTime.UtcNow;
+            }
+            else
+                receiptMessage.IsOnline = false;
+
+            await orm.Update<ChatMessage>()
+                .SetSource(receiptMessage)
+                .UpdateColumns(c => c.IsOnline)
+                .ExecuteAffrowsAsync(token);
+        }
+        else
+        {
+            var receiptMessages = await PersistGroupMessage(message);
+            foreach (var receiptMessage in receiptMessages)
+            {
+                var transModel = model.MapTo(new ChatMessageTransModel());
+                transModel.Data = receiptMessage;
+                var data = JsonSerializer.Serialize(transModel);
+                if (_userSockets.TryGetValue(receiptMessage.UserId, out var contactSocket) && contactSocket.Connected)
+                {
+                    await contactSocket.SendWith(Encoding.UTF8.GetBytes(data), token);
+                    receiptMessage.IsOnline = true;
+                    _lastHeartbeat[socket] = DateTime.UtcNow;
+                }
+                else
+                    receiptMessage.IsOnline = false;
+
+                await orm.Update<ChatMessage>()
+                    .SetSource(receiptMessage)
+                    .UpdateColumns(c => c.IsOnline)
+                    .ExecuteAffrowsAsync(token);
+            }
+        }
+
+        if (message.MessageType != ChatMessageType.Text.GetValue()
+            && message.MessageType != ChatMessageType.Notification.GetValue())
+        {
+            await sourceHandler.Store(new FileTypeMessageModel
+            {
+                FileName = message.FileName,
+                FileBytes = message.FileBytes,
+                Type = (ChatMessageType)message.MessageType
+            }, token);
+            var transmission = new FileTransmission();
+            transmission.FileName = message.FileName;
+            transmission.MessageId = message.Id;
+            transmission.HeadMessageId = message.HeadMessageId;
+            transmission.IsValid = true;
+            transmission.IsReceiveSide = false;
+            transmission.CreateTime = DateTime.Now;
+            await orm.Insert(transmission)
+                .ExecuteAffrowsAsync(token);
+        }
+    }
+
     private async Task ReceiveThread(CancellationToken token)
     {
-        var buffer = new byte[BufferSize];
         while (!token.IsCancellationRequested)
         {
             foreach (var kv in _temp.ToArray())
@@ -109,148 +294,6 @@ public class SocketServerService(
                 {
                     CleanupSocket(tempKey, socket, "心跳超时，已断开连接");
                     continue;
-                }
-
-                try
-                {
-                    if (socket.Available <= 0)
-                    {
-                        continue;
-                    }
-
-                    var receiveBytes = new List<byte>();
-                    while (socket.Available > 0)
-                    {
-                        var bytesRead =
-                            await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None, token);
-                        if (bytesRead <= 0)
-                        {
-                            break;
-                        }
-
-                        receiveBytes.AddRange(buffer.Take(bytesRead));
-                    }
-
-                    if (receiveBytes.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    var model = JsonSerializer
-                        .Deserialize<ChatMessageTransModel>(receiveBytes.ToArray());
-                    if (model is null)
-                    {
-                        continue;
-                    }
-
-                    if (model.Type == ChatMessageType.Head)
-                    {
-                        var userId = ParseDataAsString(model.Data);
-                        if (!string.IsNullOrWhiteSpace(userId))
-                        {
-                            _userSockets[userId] = socket;
-                        }
-
-                        _lastHeartbeat[socket] = DateTime.UtcNow;
-                    }
-                    else if (model.Type == ChatMessageType.Heartbeat)
-                    {
-                        _lastHeartbeat[socket] = DateTime.UtcNow;
-                        Console.WriteLine($"收到心跳消息，来自{socket.RemoteEndPoint}");
-                        await logger.LogAsync($"收到心跳消息，来自{socket.RemoteEndPoint}", "聊天服务器");
-                    }
-                    else
-                    {
-                        var message = JsonSerializer.Deserialize<ChatMessage>(JsonSerializer.Serialize(model.Data));
-                        if (message is null)
-                        {
-                            continue;
-                        }
-
-                        var isGroup = await orm.Select<UserContact>()
-                            .Where(e => e.UserId == message.UserId && e.ContactId == message.ContactId)
-                            .ToOneAsync(e => e.IsGroup, token);
-                        if (!isGroup)
-                        {
-                            var receiptMessage = await PersistUserMessage(message);
-                            if (receiptMessage == null) continue;
-
-                            var contactId = message.ContactId;
-
-                            var transModel = model.MapTo(new ChatMessageTransModel());
-                            transModel.Data = receiptMessage;
-                            var data = JsonSerializer.Serialize(transModel);
-                            if (_userSockets.TryGetValue(contactId, out var contactSocket) && contactSocket.Connected)
-                            {
-                                await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)),
-                                    SocketFlags.None, token);
-                                receiptMessage.IsOnline = true;
-                                _lastHeartbeat[socket] = DateTime.UtcNow;
-                            }
-                            else
-                                receiptMessage.IsOnline = false;
-
-                            await orm.Update<ChatMessage>()
-                                .SetSource(receiptMessage)
-                                .UpdateColumns(c => c.IsOnline)
-                                .ExecuteAffrowsAsync(token);
-                        }
-                        else
-                        {
-                            var receiptMessages = await PersistGroupMessage(message);
-                            foreach (var receiptMessage in receiptMessages)
-                            {
-                                var transModel = model.MapTo(new ChatMessageTransModel());
-                                transModel.Data = receiptMessage;
-                                var data = JsonSerializer.Serialize(transModel);
-                                if (_userSockets.TryGetValue(receiptMessage.UserId, out var contactSocket) && contactSocket.Connected)
-                                {
-                                    await contactSocket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(data)),
-                                        SocketFlags.None, token);
-                                    receiptMessage.IsOnline = true;
-                                    _lastHeartbeat[socket] = DateTime.UtcNow;
-                                }
-                                else
-                                    receiptMessage.IsOnline = false;
-
-                                await orm.Update<ChatMessage>()
-                                    .SetSource(receiptMessage)
-                                    .UpdateColumns(c => c.IsOnline)
-                                    .ExecuteAffrowsAsync(token);
-                            }
-                        }
-
-                        if (message.MessageType != ChatMessageType.Text.GetValue()
-                            && message.MessageType != ChatMessageType.Notification.GetValue())
-                        {
-                         var fileName = await sourceHandler.Store(new FileTypeMessageModel
-                            {
-                                FileName = message.FileName,
-                                FileBytes = message.FileBytes,
-                                Type = (ChatMessageType)message.MessageType
-                            }, token);
-                            var transmission = new FileTransmission();
-                            transmission.FileName = fileName;
-                            transmission.MessageId = message.Id;
-                            transmission.HeadMessageId = message.HeadMessageId;
-                            transmission.IsValid = true;
-                            transmission.CreateTime  = DateTime.Now;
-                            await orm.Insert(transmission)
-                                .ExecuteAffrowsAsync(token);
-                        }
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (SocketException)
-                {
-                    CleanupSocket(tempKey, socket, "接收消息失败，已断开连接");
-                }
-                catch
-                {
-                    CleanupSocket(tempKey, socket, "消息处理异常，已断开连接");
                 }
             }
 
@@ -332,7 +375,8 @@ public class SocketServerService(
             recipientMessage.CreateTime = createTime;
             recipientMessage.HeadMessageId = recipientHead.Id;
             recipientMessage.IsSelf = false;
-            recipientMessage.FileBytes = senderMessage.FileBytes;
+            recipientMessage.FileName = senderMessage.FileName;
+            recipientMessage.LocalSourcePath = string.Empty;
 
             recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
 
@@ -398,6 +442,8 @@ public class SocketServerService(
                 recipientMessage.CreateTime = createTime;
                 recipientMessage.HeadMessageId = recipientHead.Id;
                 recipientMessage.IsSelf = false;
+                recipientMessage.FileName = senderMessage.FileName;
+                recipientMessage.LocalSourcePath = string.Empty;
 
                 recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
                 recipientMessages.Add(recipientMessage);
@@ -420,6 +466,9 @@ public class SocketServerService(
     {
         _temp.TryRemove(tempKey, out _);
         _lastHeartbeat.TryRemove(socket, out _);
+        _clientReceiveTasks.TryRemove(socket, out _);
+
+        var endpoint = socket.RemoteEndPoint?.ToString() ?? "unknown";
 
         foreach (var userSocket in _userSockets.ToArray())
         {
@@ -438,7 +487,7 @@ public class SocketServerService(
             // Ignore shutdown errors for disconnected clients.
         }
 
-        logger.Log($"Socket:{socket.RemoteEndPoint}, 已清理：{reason}", "聊天服务器");
+        logger.Log($"Socket:{endpoint}, 已清理：{reason}", "聊天服务器");
         socket.Dispose();
     }
 
@@ -477,6 +526,15 @@ public class SocketServerService(
             {
                 // Expected during shutdown.
             }
+        }
+
+        try
+        {
+            Task.WaitAll(_clientReceiveTasks.Values.ToArray(), TimeSpan.FromSeconds(2));
+        }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException))
+        {
+            // Expected during shutdown.
         }
 
         _serverSocket.Dispose();
