@@ -57,6 +57,10 @@ public class ChatMessage
     [Column(DbType = "tinyint(1)"),SugarColumn(ColumnDataType = "tinyint(1)")]
     public bool IsOnline { get; set; }
     /// <summary>
+    /// 传输文件的文件大小
+    /// </summary>
+    public long? FileSize {get; set;}
+    /// <summary>
     /// 文件消息时携带
     /// </summary>
     [Column(IsIgnore = true),SugarColumn(IsIgnore = true)]

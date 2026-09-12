@@ -51,12 +51,12 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
                 await LoadUserContactGroups();
             }
             else 
-                NotificationComponent.ShowNotification(View,res.Message,MessageType.Error);
+                NotificationComponent.ShowNotification(View,res.Message,NotificationType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",MessageType.Error);
+            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",NotificationType.Error);
         }
     }
 
@@ -81,18 +81,18 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
                 model);
             if (res.Success)
             {
-                NotificationComponent.ShowNotification(View,"已发送验证信息",MessageType.Success);
+                NotificationComponent.ShowNotification(View,"已发送验证信息",NotificationType.Success);
                 if(ConfirmCallback!=null)
                     await ConfirmCallback.Invoke();
             }
             else
-                NotificationComponent.ShowNotification(View,res.Message,MessageType.Error);
+                NotificationComponent.ShowNotification(View,res.Message,NotificationType.Error);
             View.Close();
         }
         catch (Exception ex)
         {
             await logger.LogAsync($"发送验证信息出现异常:{ex}", "验证消息");
-            NotificationComponent.ShowNotification(View,$"发送验证信息出现异常：{ex.Message}",MessageType.Error);
+            NotificationComponent.ShowNotification(View,$"发送验证信息出现异常：{ex.Message}",NotificationType.Error);
         }
        
     }
@@ -124,12 +124,12 @@ SysSetting setting) : ViewModelBase<VerifyDialog>
                res.Data.ForEach(Groups.Add);
             }
             else
-                NotificationComponent.ShowNotification(View, res.Message, MessageType.Error);
+                NotificationComponent.ShowNotification(View, res.Message, NotificationType.Error);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",MessageType.Error);
+            NotificationComponent.ShowNotification(View,$"程序出现异常：{e.Message}",NotificationType.Error);
         }
     }
 }

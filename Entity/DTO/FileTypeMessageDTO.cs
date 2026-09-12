@@ -8,4 +8,5 @@ public class FileTypeMessageDTO
     public string TempMessage { get; set; }
     public string OriginalFileName { get; set; }
     public string LocalFilePath { get; set; }
+    public long FileSize { get; set; }
 }

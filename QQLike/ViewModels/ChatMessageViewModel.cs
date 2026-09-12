@@ -1,9 +1,11 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,7 +18,9 @@ using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Entity.DTO;
 using QQLike.Entity.Enum;
+using QQLike.Entity.Exceptions;
 using QQLike.Entity.Model;
+using QQLike.Entity.Result;
 using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
@@ -33,31 +37,27 @@ public partial class ChatMessageViewModel(
     IRandomGenerator generator,
     IApiService apiService,
     IRabbitMQProducer mqProducer,
-    SysSetting setting) : ViewModelBase<ChatMessageView>
+    SysSetting setting) : ViewModelBase<ChatMessageView>, IDisposable
 {
     private static readonly TimeSpan SocketSendTimeout = TimeSpan.FromSeconds(8);
 
-    [ObservableProperty]
-    private ObservableCollection<ChatHeadMessageItem> _headMessages = [];
-    [ObservableProperty]
-    private ChatHeadMessageItem? _selectedHeadMessage;
-    [ObservableProperty]
-    private ObservableCollection<ChatMessageItem> _chatMessages = [];
-    [ObservableProperty]
-    private bool _hasSelection;
-    [ObservableProperty] 
-    private bool _isNoSelection = true;
-    [ObservableProperty]
-    private string _newMessageText;
-    [ObservableProperty]
-    private bool _isUserCardPopupOpen;
-    [ObservableProperty] 
-    private bool _canSendMessage; 
-    [ObservableProperty]
-    private bool _isUserContactOpen;
-    
+    [ObservableProperty] private ObservableCollection<ChatHeadMessageItem> _headMessages = [];
+    [ObservableProperty] private ChatHeadMessageItem? _selectedHeadMessage;
+    [ObservableProperty] private ObservableCollection<ChatMessageItem> _chatMessages = [];
+    [ObservableProperty] private bool _hasSelection;
+    [ObservableProperty] private bool _isNoSelection = true;
+    [ObservableProperty] private string _newMessageText;
+    [ObservableProperty] private bool _isUserCardPopupOpen;
+    [ObservableProperty] private bool _canSendMessage;
+    [ObservableProperty] private bool _isUserContactOpen;
+
+    private CancellationTokenSource _downloadCancellationTokenSource = new();
+    private CancellationTokenSource _uploadCancellationTokenSource = new();
+    private readonly SemaphoreSlim _uploadSGate = new SemaphoreSlim(20, 20);
+    private readonly SemaphoreSlim _downloadSGate = new SemaphoreSlim(20, 20);
+
     public string DefaultFileIcon => sourceHandler.ImageUrl("default-file-icon.png");
-    
+
     private Socket? _client = null;
     private readonly SemaphoreSlim _sendGate = new(1, 1);
 
@@ -65,13 +65,13 @@ public partial class ChatMessageViewModel(
 
     private Socket? GetSocket()
     {
-        if(_client != null) return _client;
+        if (_client != null) return _client;
         var window = Window.GetWindow(View);
         var viewModel = window.GetViewModel<MainViewModel>();
         _client = viewModel.Client;
         return viewModel.Client;
     }
-    
+
     partial void OnNewMessageTextChanged(string value)
     {
         CanSendMessage = value.Length > 0;
@@ -85,15 +85,16 @@ public partial class ChatMessageViewModel(
         {
             var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
             var res = await apiService.GetAsync<List<V_HeadMessage>>
-                ($"api/{nameof(HeadMessage)}/Get/{user.UserId}",null);
+                ($"api/{nameof(HeadMessage)}/Get/{user.UserId}", null);
 
             if (!res.Success)
             {
                 MessageComponent.ShowMessage(window, $"加载会话列表失败：{res.Message}", MessageType.Error);
                 return;
             }
+
             HeadMessages.Clear();
-            
+
             foreach (var header in res.Data)
             {
                 var displayName = string.IsNullOrWhiteSpace(header.Remark) ? header.ContactName : header.Remark;
@@ -112,7 +113,7 @@ public partial class ChatMessageViewModel(
                     MessageReceiveMuted = header.MessageReceiveMuted
                 });
             }
-            
+
             var headMessageIds = res.Data.Select(h => h.HeadMessageId).ToList();
             var offlineReceiveCount = await sugarClient.Queryable<ChatMessage>()
                 .Where(e => e.UserId == user.UserId && headMessageIds.Contains(e.HeadMessageId) && !e.IsOnline)
@@ -122,23 +123,25 @@ public partial class ChatMessageViewModel(
                 Identifier = user.UserId,
                 Muted = true
             };
-            if(offlineReceiveCount > 0)
-               await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+            if (offlineReceiveCount > 0)
+                await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange,
+                    $"{nameof(HeadMessage)}_{user.UserId}",
                     messageBody.ToNormalJson());
-            
+
             var unreadCount = res.Data.Sum(h => h.UnreadCount);
             if (unreadCount > 0)
             {
                 messageBody.Muted = false;
-                await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+                await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange,
+                    $"{nameof(HeadMessage)}_{user.UserId}",
                     messageBody.ToNormalJson());
             }
 
             if (sessionStorage.KeyExists(CachingKeys.ChatMessageCurrentHeadId))
             {
                 var currentHeadId = sessionStorage.Get<string>(CachingKeys.ChatMessageCurrentHeadId);
-                SelectedHeadMessage = HeadMessages.FirstOrDefault(h=>h.HeadMessageId 
-                == currentHeadId);
+                SelectedHeadMessage = HeadMessages.FirstOrDefault(h => h.HeadMessageId
+                                                                       == currentHeadId);
                 await sugarClient.Updateable<ChatMessage>()
                     .SetColumns(e => e.IsRead == true)
                     .Where(e => e.HeadMessageId == currentHeadId && e.UserId == user.UserId && !e.IsRead)
@@ -161,7 +164,7 @@ public partial class ChatMessageViewModel(
         using var cts = new CancellationTokenSource();
         try
         {
-            if(item == null)return;
+            if (item == null) return;
             SelectedHeadMessage = item;
             HasSelection = true;
             IsNoSelection = false;
@@ -236,8 +239,9 @@ public partial class ChatMessageViewModel(
                 foreach (var message in messages)
                 {
                     var type = (ChatMessageType)message.MessageType;
-                    var contactName = string.IsNullOrEmpty(message.GroupDisplayName) ?
-                        message.NickName : message.GroupDisplayName;
+                    var contactName = string.IsNullOrEmpty(message.GroupDisplayName)
+                        ? message.NickName
+                        : message.GroupDisplayName;
                     var newMessageItem = new ChatMessageItem
                     {
                         MessageId = message.MessageId,
@@ -283,13 +287,14 @@ public partial class ChatMessageViewModel(
                             newMessageItem.SourceUnload = !newMessageItem.SourceDownloaded;
                         }
                     }
+
                     ChatMessages.Add(newMessageItem);
                 }
             }
 
             await sugarClient.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
-                .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead) 
+                .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead)
                 .ExecuteCommandAsync(cts.Token);
             item.UnreadCount = 0;
 
@@ -298,7 +303,7 @@ public partial class ChatMessageViewModel(
                 Identifier = user.UserId,
                 Muted = true
             };
-            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{user.UserId}",
+            await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{user.UserId}",
                 messageBody.ToNormalJson());
             View.ContentWriteTo.Focus();
         }
@@ -308,17 +313,16 @@ public partial class ChatMessageViewModel(
             MessageComponent.ShowMessage(Owner, $"加载消息记录失败：{e.Message}", MessageType.Error);
             await cts.CancelAsync();
         }
-        
     }
-    
+
 
     [RelayCommand]
     private async Task SendMessage()
     {
         await HandMessageSending(ChatMessageType.Text);
     }
-    
-    private async Task HandMessageSending(ChatMessageType type,FileTypeMessageDTO? fileTypeMessageDto = null)
+
+    private async Task HandMessageSending(ChatMessageType type, FileTypeMessageDTO? fileTypeMessageDto = null)
     {
         if (SelectedHeadMessage == null)
         {
@@ -335,119 +339,128 @@ public partial class ChatMessageViewModel(
         await _sendGate.WaitAsync();
         try
         {
-        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
-        var model = new ChatMessageTransModel();
-        var message = new ChatMessage
-        {
-            UserId = user.UserId,
-            ContactId = SelectedHeadMessage.ContactId,
-            Content = NewMessageText,
-            MessageType = type.GetValue(),
-            CreateTime = DateTime.Now,
-            HeadMessageId = SelectedHeadMessage.HeadMessageId,
-            IsRead = true,
-            IsSelf = true
-        };
-        if(SelectedHeadMessage.IsGroup)
-            message.GroupMemberId = user.UserId;
-        if (type != ChatMessageType.Text && fileTypeMessageDto != null)
-        {
-            message.Content = fileTypeMessageDto.TempMessage;
-            message.FileBytes = fileTypeMessageDto.FileBytes;
-            message.FileName = fileTypeMessageDto.FileName + fileTypeMessageDto.FileExtension;
-            message.OriginalFileName = fileTypeMessageDto.OriginalFileName;
-            message.LocalSourcePath = fileTypeMessageDto.LocalFilePath;
-            model.Message = fileTypeMessageDto.TempMessage;
-        }
-        else 
-            model.Message = NewMessageText;
-        model.Type = type;
-
-        using var worker = sugarClient.CreateContext();
-        try
-        {
-            message.IsOnline = true;
-            var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
-            message.Id = id;
-            model.Data = message;
-            var json = JsonSerializer.Serialize(model);
-            using var sendCts = new CancellationTokenSource(SocketSendTimeout);
-            await socket.SendWith(Encoding.UTF8.GetBytes(json), sendCts.Token);
-            NewMessageText = string.Empty;
-            await sugarClient.Updateable<HeadMessage>()
-                .SetColumns(e => new HeadMessage { Content = message.Content,LastMessageTime = message.CreateTime })
-                .Where(e => e.Id == SelectedHeadMessage.HeadMessageId)
-                .ExecuteCommandAsync();
-            var messageBody = new MQMessageBody();
-            messageBody.Identifier = message.ContactId;
-            messageBody.Body = true;
-            await mqProducer.Produce(nameof(HeadMessage),Constants.MQExchange,$"{nameof(HeadMessage)}_{messageBody.Identifier}",JsonSerializer.Serialize(messageBody));
-            messageBody.Body = new HeadMessageMQModel
+            var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+            var model = new ChatMessageTransModel();
+            var message = new ChatMessage
             {
+                UserId = user.UserId,
+                ContactId = SelectedHeadMessage.ContactId,
+                Content = NewMessageText,
+                MessageType = type.GetValue(),
+                CreateTime = DateTime.Now,
                 HeadMessageId = SelectedHeadMessage.HeadMessageId,
-                UserId = message.ContactId,
-                ContactId = message.UserId,
-                Content = message.Content,
-                LastMessageTime = message.CreateTime
+                IsRead = true,
+                IsSelf = true
             };
-            await mqProducer.Produce(nameof(ChatMessage),Constants.MQExchange,$"{nameof(ChatMessage)}_{messageBody.Identifier}",JsonSerializer
-                .Serialize(messageBody));
-            var userContact = await sugarClient.Queryable<UserContact>()
-                .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
-                .FirstAsync();
-            var displayName = SelectedHeadMessage.IsGroup ? 
-                (string.IsNullOrEmpty(userContact.GroupDisplayName) ? user.Nickname : userContact.GroupDisplayName) : user.Nickname;
-            var messageItem = new ChatMessageItem
+            if (SelectedHeadMessage.IsGroup)
+                message.GroupMemberId = user.UserId;
+            if (type != ChatMessageType.Text && fileTypeMessageDto != null)
             {
-                MessageId = message.Id,
-                Avatar = sourceHandler.ImageUrl(user.Avatar),
-                DisplayName = displayName,
-                Content = message.Content,
-                MessageType = type,
-                MessageTime = message.CreateTime,
-                UserId = message.UserId,
-                ContactId = message.ContactId,
-                IsSelf = true,
-                MessageTimeText = FormatMessageTime(message.CreateTime, true)
-            };
-            if(!SelectedHeadMessage.IsGroup)
-                messageItem.ContactNameVisibility = Visibility.Collapsed;
-            if(messageItem.MessageType != ChatMessageType.Text)
-            {
-                messageItem.FileName = message.FileName;
-                messageItem.LocalSourcePath = message.LocalSourcePath;
-                message.Content = fileTypeMessageDto?.TempMessage ?? message.Content;
-                messageItem.DisplayFileName = message.OriginalFileName;
-                messageItem.SourceDownloaded = true;
-                messageItem.SourceUnload = false;
+                message.Content = fileTypeMessageDto.TempMessage;
+                message.FileBytes = fileTypeMessageDto.FileBytes;
+                message.FileName = fileTypeMessageDto.FileName + fileTypeMessageDto.FileExtension;
+                message.OriginalFileName = fileTypeMessageDto.OriginalFileName;
+                message.LocalSourcePath = fileTypeMessageDto.LocalFilePath;
+                model.Message = fileTypeMessageDto.TempMessage;
+                message.FileSize = fileTypeMessageDto.FileSize;
             }
-            ChatMessages.Add(messageItem); 
-            SelectedHeadMessage.LastContent = message.Content;
-            SelectedHeadMessage.TimeText = FormatMessageTime(message.CreateTime);
-           
-            View.ContentWriteTo.Focus();
-            worker.Commit();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            MessageComponent.ShowMessage(Owner, $"发送消息失败：{e.Message}", MessageType.Error);
-        }
+            else
+                model.Message = NewMessageText;
+
+            model.Type = type;
+
+            using var worker = sugarClient.CreateContext();
+            try
+            {
+                message.IsOnline = true;
+                var id = await worker.Db.Insertable(message).ExecuteReturnBigIdentityAsync();
+                message.Id = id;
+                model.Data = message;
+                var json = JsonSerializer.Serialize(model);
+                using var sendCts = new CancellationTokenSource(SocketSendTimeout);
+                await socket.SendWith(Encoding.UTF8.GetBytes(json), sendCts.Token);
+                NewMessageText = string.Empty;
+                await sugarClient.Updateable<HeadMessage>()
+                    .SetColumns(e => new HeadMessage
+                        { Content = message.Content, LastMessageTime = message.CreateTime })
+                    .Where(e => e.Id == SelectedHeadMessage.HeadMessageId)
+                    .ExecuteCommandAsync();
+                var messageBody = new MQMessageBody();
+                messageBody.Identifier = message.ContactId;
+                messageBody.Body = true;
+                await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange,
+                    $"{nameof(HeadMessage)}_{messageBody.Identifier}", JsonSerializer.Serialize(messageBody));
+                messageBody.Body = new HeadMessageMQModel
+                {
+                    HeadMessageId = SelectedHeadMessage.HeadMessageId,
+                    UserId = message.ContactId,
+                    ContactId = message.UserId,
+                    Content = message.Content,
+                    LastMessageTime = message.CreateTime
+                };
+                await mqProducer.Produce(nameof(ChatMessage), Constants.MQExchange,
+                    $"{nameof(ChatMessage)}_{messageBody.Identifier}", JsonSerializer
+                        .Serialize(messageBody));
+                var userContact = await sugarClient.Queryable<UserContact>()
+                    .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
+                    .FirstAsync();
+                var displayName = SelectedHeadMessage.IsGroup
+                    ? (string.IsNullOrEmpty(userContact.GroupDisplayName)
+                        ? user.Nickname
+                        : userContact.GroupDisplayName)
+                    : user.Nickname;
+                var messageItem = new ChatMessageItem
+                {
+                    MessageId = message.Id,
+                    Avatar = sourceHandler.ImageUrl(user.Avatar),
+                    DisplayName = displayName,
+                    Content = message.Content,
+                    MessageType = type,
+                    MessageTime = message.CreateTime,
+                    UserId = message.UserId,
+                    ContactId = message.ContactId,
+                    IsSelf = true,
+                    MessageTimeText = FormatMessageTime(message.CreateTime, true)
+                };
+                if (!SelectedHeadMessage.IsGroup)
+                    messageItem.ContactNameVisibility = Visibility.Collapsed;
+                if (messageItem.MessageType != ChatMessageType.Text)
+                {
+                    messageItem.FileName = message.FileName;
+                    messageItem.LocalSourcePath = message.LocalSourcePath;
+                    message.Content = fileTypeMessageDto?.TempMessage ?? message.Content;
+                    messageItem.DisplayFileName = message.OriginalFileName;
+                    messageItem.SourceDownloaded = true;
+                    messageItem.SourceUnload = false;
+                }
+
+                ChatMessages.Add(messageItem);
+                SelectedHeadMessage.LastContent = message.Content;
+                SelectedHeadMessage.TimeText = FormatMessageTime(message.CreateTime);
+
+                View.ContentWriteTo.Focus();
+                worker.Commit();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                MessageComponent.ShowMessage(Owner, $"发送消息失败：{e.Message}", MessageType.Error);
+            }
         }
         finally
         {
             _sendGate.Release();
         }
     }
-    
+
     public async Task UpdateHeadMessage(HeadMessageMQModel model)
     {
         try
         {
             var item = HeadMessages.FirstOrDefault(e => e.HeadMessageId == model.HeadMessageId);
-            if(item == null)
+            if (item == null)
                 return;
-            item.UnreadCount = await sugarClient.Queryable<ChatMessage>()    
+            item.UnreadCount = await sugarClient.Queryable<ChatMessage>()
                 .Where(e => e.HeadMessageId == model.HeadMessageId && !e.IsRead && e.UserId == model.UserId)
                 .CountAsync();
             item.LastContent = model.Content;
@@ -480,8 +493,8 @@ public partial class ChatMessageViewModel(
                     UnreadCount = 1,
                     IsGroup = headItem.IsGroup
                 };
-                HeadMessages.Insert(0,newHeadMessageItem);
-                headItem =  newHeadMessageItem;
+                HeadMessages.Insert(0, newHeadMessageItem);
+                headItem = newHeadMessageItem;
             }
             else
             {
@@ -492,7 +505,7 @@ public partial class ChatMessageViewModel(
             }
 
             var isCurrentHeadSelected = SelectedHeadMessage?.HeadMessageId == headItem.HeadMessageId;
-            if(!isCurrentHeadSelected) return;
+            if (!isCurrentHeadSelected) return;
             if (!headItem.IsGroup)
             {
                 var contactUser = await sugarClient.Queryable<User>()
@@ -517,31 +530,35 @@ public partial class ChatMessageViewModel(
                     LocalSourcePath = message.LocalSourcePath,
                     DisplayFileName = message.OriginalFileName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
-                    ContactNameVisibility =  Visibility.Collapsed
+                    ContactNameVisibility = Visibility.Collapsed
                 };
                 if (messageType == ChatMessageType.Image)
                 {
                     item.SourceDownloaded = true;
                     item.SourceUnload = false;
                 }
+
                 ChatMessages.Add(item);
             }
             else
             {
                 var chatGroupContact = await sugarClient.Queryable<ChatGroup>()
                     .LeftJoin<UserContact>((c, uc) => c.Id == uc.ContactId && uc.IsGroup)
-                    .InnerJoin<User>((c,uc,u) => uc.UserId == u.Id)
-                    .Where((c,uc,u) => uc.UserId == message.GroupMemberId)
-                    .Where((c,uc,u) => c.Id == message.ContactId)
-                    .Select((c,uc,u)=> new {GroupName = c.Name,uc.GroupDisplayName,uc.Remark,u.Avatar,UserName = u.Nickname})
+                    .InnerJoin<User>((c, uc, u) => uc.UserId == u.Id)
+                    .Where((c, uc, u) => uc.UserId == message.GroupMemberId)
+                    .Where((c, uc, u) => c.Id == message.ContactId)
+                    .Select((c, uc, u) => new
+                        { GroupName = c.Name, uc.GroupDisplayName, uc.Remark, u.Avatar, UserName = u.Nickname })
                     .FirstAsync(cancelTokenSource.Token);
-                
+
                 var messageType = (ChatMessageType)message.MessageType;
                 var item = new ChatMessageItem
                 {
                     MessageId = message.Id,
                     Avatar = sourceHandler.ImageUrl(chatGroupContact.Avatar),
-                    DisplayName = string.IsNullOrEmpty(chatGroupContact.GroupDisplayName) ? chatGroupContact.UserName : chatGroupContact.GroupDisplayName,
+                    DisplayName = string.IsNullOrEmpty(chatGroupContact.GroupDisplayName)
+                        ? chatGroupContact.UserName
+                        : chatGroupContact.GroupDisplayName,
                     Content = message.Content,
                     MessageType = messageType,
                     FileName = message.FileName,
@@ -552,32 +569,35 @@ public partial class ChatMessageViewModel(
                     IsSelf = message.IsSelf,
                     DisplayFileName = message.OriginalFileName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
-                    ContactNameVisibility =  Visibility.Visible
+                    ContactNameVisibility = Visibility.Visible
                 };
                 if (messageType == ChatMessageType.Image)
                 {
                     item.SourceDownloaded = true;
                     item.SourceUnload = false;
                 }
+
                 ChatMessages.Add(item);
             }
+
             message.IsRead = true;
-            
+
             if (message.MessageType == ChatMessageType.Image.GetValue())
-               await DownloadAction(message, cancelTokenSource.Token);
-            
+                await DownloadAction(message, cancelTokenSource.Token);
+
             await sugarClient.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
                 .Where(e => e.Id == message.Id)
                 .ExecuteCommandAsync(cancelTokenSource.Token);
-            
+
             var msgBody = new MQMessageBody
             {
                 Identifier = message.UserId,
                 Body = true,
                 Muted = headItem.MessageReceiveMuted
             };
-            await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange, $"{nameof(HeadMessage)}_{message.UserId}",
+            await mqProducer.Produce(nameof(HeadMessage), Constants.MQExchange,
+                $"{nameof(HeadMessage)}_{message.UserId}",
                 msgBody.ToNormalJson());
         }
         catch (Exception e)
@@ -586,7 +606,6 @@ public partial class ChatMessageViewModel(
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"出现异常：{e.Message}", MessageType.Error);
         }
-        
     }
 
     public void LoadHeadMessageAfterCreatingGroup(GroupCreatedHeadMessage headMessage)
@@ -596,14 +615,14 @@ public partial class ChatMessageViewModel(
         headMessageItem.ContactId = headMessage.GroupId;
         headMessageItem.UnreadCount = 0;
         headMessageItem.IsGroup = true;
-        headMessageItem.Avatar =  sourceHandler.ImageUrl(headMessage.GroupAvatar);
+        headMessageItem.Avatar = sourceHandler.ImageUrl(headMessage.GroupAvatar);
         headMessageItem.DisplayName = headMessage.GroupName;
         headMessageItem.LastContent = string.Empty;
         headMessageItem.TimeText = FormatMessageTime(headMessage.CreateTime);
         headMessageItem.IsOwner = headMessageItem.IsOwner;
         HeadMessages.Insert(0, headMessageItem);
     }
-    
+
     [RelayCommand]
     private void OpenUserCardPopup()
     {
@@ -623,38 +642,125 @@ public partial class ChatMessageViewModel(
         var result = dialog.ShowDialog();
         if (result != null && result.Value)
         {
-            var fileNames =  dialog.FileNames;
+            var fileNames = dialog.FileNames;
             foreach (var fileName in fileNames)
             {
                 var fileInfo = new FileInfo(fileName);
-                var dto = new FileTypeMessageDTO
+                if (FileTransmission.NeedTask(fileInfo.Length))
                 {
-                    FileName = generator.Guid,
-                    OriginalFileName = fileInfo.Name,
-                    FileExtension = fileInfo.Extension,
-                    LocalFilePath = fileInfo.FullName,
-                    FileBytes = await fileInfo.ReadBytes()
-                };
-                var type = EnumHelper.ToChatMessageType(fileInfo.Extension);
-                dto.TempMessage = type.FileTypeContent();
-                await HandMessageSending(type, dto);
+                    var dto = new FileTypeMessageDTO
+                    {
+                        FileName = generator.Guid,
+                        OriginalFileName = fileInfo.Name,
+                        FileExtension = fileInfo.Extension,
+                        LocalFilePath = fileInfo.FullName,
+                        FileSize = fileInfo.Length,
+                        FileBytes = await fileInfo.ReadBytes()
+                    };
+
+                    var type = EnumHelper.ToChatMessageType(fileInfo.Extension);
+                    dto.TempMessage = type.FileTypeContent();
+                    await HandMessageSending(type, dto);
+                }
+                else
+                    await PrepareToUploadFile(generator.Guid + fileInfo.Extension, fileInfo.FullName, fileInfo.Length);
             }
         }
     }
 
     [RelayCommand]
+    private async Task CancelUploadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        await _uploadCancellationTokenSource.CancelAsync();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Cancelled.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Cancelled;
+    }
+
+    [RelayCommand]
+    private async Task StartUploadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        _uploadCancellationTokenSource.Dispose();
+        _uploadCancellationTokenSource = new CancellationTokenSource();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Processing.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Processing;
+        await PrepareToUploadFile(item.FileName, item.LocalSourcePath, item.FileSize.GetValueOrDefault());
+    }
+
+    [RelayCommand]
+    private async Task StartDownloadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        _downloadCancellationTokenSource.Dispose();
+        _downloadCancellationTokenSource = new CancellationTokenSource();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Processing.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Processing;
+        await PrepareToDownloadFile(item);
+    }
+
+    [RelayCommand]
+    private async Task PauseUploadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        await _uploadCancellationTokenSource.CancelAsync();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Paused.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Paused;
+    }
+
+    [RelayCommand]
+    private async Task PauseDownloadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        await _downloadCancellationTokenSource.CancelAsync();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Paused.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Paused;
+    }
+
+    [RelayCommand]
+    private async Task CancelDownloadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        await _uploadCancellationTokenSource.CancelAsync();
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Cancelled.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Cancelled;
+        await sourceHandler.RemoveTemp(new FileTypeMessageModel
+        {
+            Type = item.MessageType, FileName = item.TempFileName
+        });
+    }
+
+    [RelayCommand]
     private async Task Download(ChatMessageItem? item)
     {
-        if(item == null)return;
+        if (item == null) return;
         using var cts = new CancellationTokenSource();
         try
         {
             var message = await sugarClient.Queryable<ChatMessage>()
-                .FirstAsync(m => m.Id == item.MessageId,cts.Token);
-            var bytes =await GetRemoteFileSource(message.FileName, (ChatMessageType)message.MessageType);
+                .FirstAsync(m => m.Id == item.MessageId, cts.Token);
+            var bytes = await GetRemoteFileSource(message.FileName, (ChatMessageType)message.MessageType);
             message.FileBytes = bytes;
-            var localPath = await DownloadAction(message,cts.Token);
-            MessageComponent.ShowMessage(Owner,"文件已保存",MessageType.Success);
+            var localPath = await DownloadAction(message, cts.Token);
+            MessageComponent.ShowMessage(Owner, "文件已保存", MessageType.Success);
             item.LocalSourcePath = localPath;
             item.SourceDownloaded = true;
             item.SourceUnload = false;
@@ -662,12 +768,10 @@ public partial class ChatMessageViewModel(
         catch (Exception e)
         {
             Console.WriteLine(e);
-            MessageComponent.ShowMessage(Owner,$"程序出现异常：{e.Message}", MessageType.Error);
-            await  cts.CancelAsync();
+            MessageComponent.ShowMessage(Owner, $"程序出现异常：{e.Message}", MessageType.Error);
+            await cts.CancelAsync();
         }
         //接收文件，生成随机名称作为本地储存
-  
-        
     }
 
     [RelayCommand]
@@ -675,7 +779,7 @@ public partial class ChatMessageViewModel(
     {
         if (item == null || string.IsNullOrWhiteSpace(item.LocalSourcePath) || !File.Exists(item.LocalSourcePath))
         {
-            MessageComponent.ShowMessage(Owner,"文件已移动或者已被删除", MessageType.Error);
+            MessageComponent.ShowMessage(Owner, "文件已移动或者已被删除", MessageType.Error);
             return;
         }
 
@@ -694,7 +798,7 @@ public partial class ChatMessageViewModel(
         }
     }
 
-    private async Task<string> DownloadAction(ChatMessage? message,CancellationToken token)
+    private async Task<string> DownloadAction(ChatMessage? message, CancellationToken token)
     {
         var extension = Path.GetExtension(message.FileName) ?? string.Empty;
         var localPath = await sourceHandler.Receive(new FileTypeMessageModel
@@ -702,7 +806,7 @@ public partial class ChatMessageViewModel(
             FileName = generator.Guid + extension,
             FileBytes = message.FileBytes,
             Type = (ChatMessageType)message.MessageType
-        },token);
+        }, token);
         var fileTransmission = new FileTransmission();
         fileTransmission.IsReceiveSide = true;
         fileTransmission.FileName = message.FileName;
@@ -717,9 +821,8 @@ public partial class ChatMessageViewModel(
         return localPath;
     }
 
-    private async Task<byte[]> GetRemoteFileSource(string fileName,ChatMessageType type)
+    private async Task<byte[]> GetRemoteFileSource(string fileName, ChatMessageType type)
     {
-        using var cts = new  CancellationTokenSource();
         var headers = new Dictionary<string, string>();
         var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
         headers.Add("Authorization", $"Bearer {user.Token}");
@@ -730,19 +833,274 @@ public partial class ChatMessageViewModel(
             query[nameof(type)] = ((int)type).ToString();
             query[nameof(fileName)] = fileName;
             urlBuilder.Query = query.ToString();
-            var byteArr = await apiService.HttpService.GetFileResult(urlBuilder.ToString(),null,headers);
+            var byteArr = await apiService.HttpService.GetFileResult(urlBuilder.ToString(), null, headers);
             return byteArr;
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"获取远程文件源失败：{e.Message}", MessageType.Error);
-            await cts.CancelAsync();
             return [];
         }
     }
 
-    private static string FormatMessageTime(DateTime? time,bool isMessaging = false)
+    private async Task PrepareToUploadFile(string fileName, string localPath, long fileSize)
+    {
+        var headers = new Dictionary<string, string>();
+        var user = sessionStorage.Get<UserLoginVO>(CachingKeys.User);
+        headers.Add("Authorization", $"Bearer {user.Token}");
+        var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var cts = _uploadCancellationTokenSource;
+        using var worker = sugarClient.CreateContext();
+        try
+        {
+            var messageType = EnumHelper.ToChatMessageType(Path.GetExtension(fileName));
+            var namePart = Path.GetFileNameWithoutExtension(fileName);
+            var tempFileName = namePart + Constants.TempFileSuffix;
+            var messageItem = ChatMessages.FirstOrDefault(e => e.UserId == user.UserId
+                                                               && e.FileName == fileName);
+            FileTransmissionTask fileTransmissionTask = null;
+            ChatMessage chatMessage = null;
+            if (messageItem == null)
+            {
+                chatMessage = new ChatMessage();
+                chatMessage.FileName = fileName;
+                chatMessage.MessageType = messageType.GetValue();
+                chatMessage.Content = messageType.FileTypeContent();
+                chatMessage.OriginalFileName = fileName;
+                chatMessage.LocalSourcePath = localPath;
+                chatMessage.CreateTime = DateTime.Now;
+                chatMessage.IsOnline = true;
+                chatMessage.IsRead = true;
+                chatMessage.IsSelf = true;
+                chatMessage.UserId = user.UserId;
+                chatMessage.ContactId = SelectedHeadMessage.ContactId;
+                chatMessage.HeadMessageId = SelectedHeadMessage.HeadMessageId;
+                messageItem = new ChatMessageItem();
+                if (SelectedHeadMessage.IsGroup)
+                {
+                    chatMessage.GroupMemberId = user.UserId;
+                    var groupDisplayName = await sugarClient.Queryable<UserContact>()
+                        .Where(e => e.IsGroup && e.UserId == user.UserId &&
+                                    e.ContactId == SelectedHeadMessage.ContactId)
+                        .Select(e => e.GroupDisplayName)
+                        .FirstAsync(cts.Token);
+                    messageItem.DisplayName = string.IsNullOrEmpty(groupDisplayName)
+                        ? user.Nickname
+                        : groupDisplayName;
+                }
+
+                messageItem.FileName = fileName;
+                messageItem.Content = messageType.FileTypeContent();
+                messageItem.MessageType = messageType;
+                messageItem.LocalSourcePath = localPath;
+                messageItem.Avatar = sourceHandler.ImageUrl(user.Avatar);
+                messageItem.UserId = user.UserId;
+                messageItem.ContactId = messageItem.ContactId;
+                messageItem.IsSelf = true;
+                var messageId = await worker.Db.Insertable(chatMessage).ExecuteReturnBigIdentityAsync(cts.Token);
+                messageItem.MessageId = messageId;
+                messageItem.DisplayFileName = fileName;
+                fileTransmissionTask = new FileTransmissionTask
+                {
+                    Current = 1,
+                    Total = FileTransmission.GetTotal(fileSize),
+                    TempFileName = tempFileName,
+                    CreateTime = DateTime.Now,
+                    State = FileTransmissionState.Processing.GetValue()
+                };
+                var taskId = await worker.Db
+                    .Insertable(fileTransmissionTask)
+                    .ExecuteReturnBigIdentityAsync(cts.Token);
+
+                var fileTransmission = new FileTransmission
+                {
+                    TaskId = taskId,
+                    HeadMessageId = SelectedHeadMessage.HeadMessageId,
+                    MessageId = messageId,
+                    IsValid = true,
+                    IsReceiveSide = false,
+                    FileName = fileName,
+                    CreateTime = DateTime.Now
+                };
+                await worker.Db.Insertable(fileTransmission).ExecuteCommandAsync(cts.Token);
+                ChatMessages.Add(messageItem);
+                await worker.Db.Updateable<HeadMessage>()
+                    .SetColumns(e => new HeadMessage
+                    {
+                        Content = messageType.FileTypeContent(),
+                        LastMessageTime = messageItem.MessageTime
+                    })
+                    .Where(e => e.Id == SelectedHeadMessage.HeadMessageId)
+                    .ExecuteCommandAsync(cts.Token);
+            }
+            else
+            {
+                fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
+                    .Where(f => f.Id == messageItem.TaskId)
+                    .FirstAsync(cts.Token);
+                chatMessage = await sugarClient.Queryable<ChatMessage>()
+                    .Where(c => c.Id == messageItem.MessageId)
+                    .FirstAsync(cts.Token);
+            }
+
+            var bufferSize = FileTransmission.GetBufferSize(fileSize);
+            var position = (fileTransmissionTask.Current - 1) * bufferSize;
+            var tasks = new List<Task>();
+            while (fileTransmissionTask.Current < fileTransmissionTask.Total)
+            {
+                await _uploadSGate.WaitAsync(cts.Token);
+                tasks.Add(Task.Run(async () =>
+                {
+                    if (cts.Token.IsCancellationRequested) return;
+                    using var content = new MultipartFormDataContent();
+                    var buffer = new byte[bufferSize];
+                    var bytesRead = await fileStream.ReadAsync(buffer, position, bufferSize, cts.Token);
+                    position += bytesRead;
+                    content.Add(new ByteArrayContent(buffer.Take(bytesRead).ToArray()), "file", fileName);
+                    content.Add(new StringContent(messageItem.TaskId.ToString()), "taskId");
+                    content.Add(new StringContent(fileTransmissionTask.Current.ToString()), "current");
+                    content.Add(new StringContent(fileTransmissionTask.Total.ToString()), "total");
+                    content.Add(new StringContent(bufferSize.ToString()), "bufferSize");
+                    content.Add(new StringContent(tempFileName), nameof(tempFileName));
+                    content.Add(
+                        new StringContent(((int)EnumHelper.ToChatMessageType(Path.GetExtension(fileName))).ToString()),
+                        "messageType");
+                    var resStr = await apiService.HttpService.Request
+                        ($"{setting.ApiUrl}/api/ChatMessage/UploadFile", HttpMethod.Post, content, headers);
+                    var res = JsonSerializer.Deserialize<ResponseResult<bool>>(resStr, Constants.DesSerializerOptions);
+                    if (res.Success)
+                    {
+                        if (res.Data)
+                        {
+                            NotificationComponent.ShowNotification(Owner, "文件上传完成", NotificationType.Success);
+                            var data = JsonSerializer.Serialize(chatMessage.ToNormalJson());
+                            await Client.SendAsync(Encoding.UTF8.GetBytes(data), cts.Token);
+                        }
+
+                        fileTransmissionTask.Current += 1;
+                        messageItem.Current = fileTransmissionTask.Current;
+                        messageItem.ProcessText = fileTransmissionTask.PercentStr();
+                        await Task.Delay(100, cts.Token);
+                        if (fileTransmissionTask.Current == fileTransmissionTask.Total)
+                            messageItem.ProcessState = FileTransmissionState.Finished;
+                    }
+                    else
+                    {
+                        MessageComponent.ShowMessage(Owner, $"上传文件失败：{res.Message}", MessageType.Error);
+                        throw new ServiceException(res.Message);
+                    }
+                }, cts.Token).ContinueWith(_ => _uploadSGate.Release(), cts.Token));
+            }
+
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(Owner, $"准备上传文件失败：{e.Message}", MessageType.Error);
+            await cts.CancelAsync();
+        }
+        finally
+        {
+            fileStream.Close();
+        }
+    }
+
+    private async Task PrepareToDownloadFile(ChatMessageItem? item)
+    {
+        if (item == null) return;
+        var cts = _downloadCancellationTokenSource;
+        using var worker = sugarClient.CreateContext();
+        var bufferSize = FileTransmission.GetBufferSize(item.FileSize.GetValueOrDefault());
+        try
+        {
+            FileTransmissionTask fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
+                .Where(f => f.Id == item.TaskId)
+                .FirstAsync(cts.Token);
+            if (fileTransmissionTask == null)
+            {
+                var suffix = Path.GetExtension(item.FileName);
+                fileTransmissionTask = new FileTransmissionTask()
+                {
+                    Current = 1,
+                    Total = FileTransmission.GetTotal(item.FileSize.GetValueOrDefault()),
+                    TempFileName = string.IsNullOrEmpty(suffix)
+                        ? Path.GetFileName(item.FileName) + suffix
+                        : item.FileName.Substring(0, item.FileName.Length - suffix.Length) + Constants.TempFileSuffix,
+                    CreateTime = DateTime.Now,
+                    State = FileTransmissionState.Processing.GetValue()
+                };
+                fileTransmissionTask.Id = await worker.Db
+                    .Insertable(fileTransmissionTask)
+                    .ExecuteReturnBigIdentityAsync(cts.Token);
+                var fileTransmission = new FileTransmission
+                {
+                    FileName = item.FileName,
+                    IsReceiveSide = true,
+                    IsValid = true,
+                    CreateTime = DateTime.Now,
+                    MessageId = item.MessageId,
+                    HeadMessageId = SelectedHeadMessage.HeadMessageId,
+                    TaskId = fileTransmissionTask.Id
+                };
+                await sugarClient.Insertable(fileTransmission)
+                    .ExecuteCommandAsync(cts.Token);
+                item.TaskId = fileTransmissionTask.Id;
+                item.ProcessText = fileTransmissionTask.PercentStr();
+                item.ProcessState = FileTransmissionState.Processing;
+                item.TempFileName = fileTransmissionTask.TempFileName;
+            }
+
+            var tasks = new List<Task>();
+            while (fileTransmissionTask.Current < fileTransmissionTask.Total)
+            {
+                await _downloadSGate.WaitAsync(cts.Token);
+                tasks.Add(Task.Run(async () =>
+                {
+                    var model = new MessageFileDownloadDTO
+                    {
+                        FileName = item.FileName,
+                        Current = fileTransmissionTask.Current,
+                        Total = fileTransmissionTask.Total,
+                        BufferSize = bufferSize
+                    };
+                    var res = await apiService.GetAsync<byte[]>
+                        ($"{setting.ApiUrl}/api/ChatMessage/DownloadFile", model);
+                    if (res.Success)
+                    {
+                        fileTransmissionTask.Current += 1;
+                        item.Current = fileTransmissionTask.Current;
+                        var finished = item.Current == fileTransmissionTask.Total;
+                        await sourceHandler.ReceivePart(new FileTypeMessageModel
+                        {
+                            FileName = item.TempFileName,
+                            FileBytes = res.Data,
+                            Type = item.MessageType
+                        }, finished, cts.Token);
+                        item.ProcessText = fileTransmissionTask.PercentStr();
+                        if (finished)
+                            item.ProcessState = FileTransmissionState.Finished;
+                    }
+                    else
+                    {
+                        MessageComponent.ShowMessage(Owner, $"上传下载失败：{res.Message}", MessageType.Error);
+                        throw new ServiceException(res.Message);
+                    }
+                }, cts.Token).ContinueWith(_ => _downloadSGate.Release(), cts.Token));
+            }
+
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            MessageComponent.ShowMessage(Owner, $"准备上传文件失败：{e.Message}", MessageType.Error);
+            await cts.CancelAsync();
+        }
+    }
+
+    private static string FormatMessageTime(DateTime? time, bool isMessaging = false)
     {
         if (time == null)
             return string.Empty;
@@ -752,8 +1110,8 @@ public partial class ChatMessageViewModel(
 
         if (value.Date == today)
             return value.ToString("HH:mm");
-        
-        if(value.Date == today.AddDays(-1))
+
+        if (value.Date == today.AddDays(-1))
             return "昨天";
 
         if (value.Date == today.AddDays(-2))
@@ -771,6 +1129,15 @@ public partial class ChatMessageViewModel(
                 _ => "星期日"
             };
 
-        return  isMessaging? value.ToString("yyyy/MM/dd HH:mm:ss") : value.ToString("yyyy/MM/dd");
+        return isMessaging ? value.ToString("yyyy/MM/dd HH:mm:ss") : value.ToString("yyyy/MM/dd");
+    }
+
+    public void Dispose()
+    {
+        _downloadCancellationTokenSource.SafeDispose();
+        _uploadCancellationTokenSource.SafeDispose();
+        _sendGate.SafeDispose();
+        _uploadSGate.SafeDispose();
+        _downloadSGate.SafeDispose();
     }
 }

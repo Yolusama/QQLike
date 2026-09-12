@@ -37,9 +37,6 @@ public static class ExpansionService
         var commons =  new DirectoryInfo(Path.Combine(root.FullName, config.CommonPath));
         if (!commons.Exists)
             commons.Create();
-        var temps =  new DirectoryInfo(Path.Combine(root.FullName, config.TempPath));
-        if (!temps.Exists)
-            temps.Create();
 
         app.UseStaticFiles(new StaticFileOptions
         {

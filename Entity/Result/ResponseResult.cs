@@ -16,6 +16,16 @@ public class ResponseResult
         return new ResponseResult { Success = true, Message = msg, Code = code };
     }
 
+    public static ResponseResult OK<T>(T data)
+    {
+        return new ResponseResult<T> { Success = true, Message = "OK", Code = 200, Data = data };
+    }
+    
+    public static ResponseResult OK<T>(string msg,T data)
+    {
+        return new ResponseResult<T> { Success = true, Message = msg, Code = 200, Data = data };
+    }
+
     public ResponseResult<T> Generic<T>()
     {
         return new ResponseResult<T> 
@@ -40,5 +50,12 @@ public class ResponseResult<T>  : ResponseResult
     {
         return new ResponseResult<T> { Success = true, Message = msg, Code = 200,Data = data };
     }
+    
+    public static ResponseResult<T> Fail(string msg = "fail", int code = 500)
+    {
+        return new ResponseResult { Success = false, Message = msg, Code = code }.Generic<T>();
+    }
+    
+    
     
 }

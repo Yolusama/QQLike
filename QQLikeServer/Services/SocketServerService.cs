@@ -377,6 +377,7 @@ public class SocketServerService(
             recipientMessage.IsSelf = false;
             recipientMessage.FileName = senderMessage.FileName;
             recipientMessage.LocalSourcePath = string.Empty;
+            recipientMessage.FileSize = senderMessage.FileSize;
 
             recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
 
@@ -444,6 +445,7 @@ public class SocketServerService(
                 recipientMessage.IsSelf = false;
                 recipientMessage.FileName = senderMessage.FileName;
                 recipientMessage.LocalSourcePath = string.Empty;
+                recipientMessage.FileSize =  senderMessage.FileSize;
 
                 recipientMessage.Id = await worker.Orm.Insert(recipientMessage).ExecuteIdentityAsync();
                 recipientMessages.Add(recipientMessage);

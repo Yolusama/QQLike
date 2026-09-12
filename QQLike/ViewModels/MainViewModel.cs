@@ -545,6 +545,20 @@ public partial class MainViewModel(
             .SetColumns(e => e.IsOnline == false)
             .Where(e => e.Id == user.UserId)
             .ExecuteCommandAsync();
+        
+        var taskIds = await sugarClient.Queryable<User>()
+            .InnerJoin<ChatMessage>((u, c) => u.Id == c.UserId)
+            .InnerJoin<FileTransmission>((u, c, f) => c.Id == f.MessageId)
+            .InnerJoin<FileTransmissionTask>((u, c, f, ft) => f.TaskId == ft.Id)
+            .Where((u,c,f,ft)=> ft.State == FileTransmissionState.Processing.GetValue()
+            && u.Id == user.UserId && !f.IsReceiveSide)
+            .Select(((u, c, f, ft) => ft.Id))
+            .ToListAsync();
+        
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(f=>f.State ==  FileTransmissionState.Paused.GetValue())
+            .Where(f=>taskIds.Contains(f.Id))
+            .ExecuteCommandAsync();
     }
 
     private async Task HeartbeatLoop(CancellationToken cancellationToken)

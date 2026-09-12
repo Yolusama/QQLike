@@ -30,9 +30,21 @@ public class UserChatSourceHandler(
             return path;
         }
     }
+
+    private string DownloadPath(string fileName,ChatMessageType type)
+    {
+        var tempFileName = fileName.Substring(0, fileName.LastIndexOf('.')) + Constants.TempFileSuffix;
+        var downloadPath = Path.Combine(UserBaseDirectory, FileRootPath(type));
+        if(!Directory.Exists(downloadPath))
+            Directory.CreateDirectory(downloadPath);
+        var path = Path.Combine(downloadPath, tempFileName);
+        if(!File.Exists(path))
+            File.Create(path).Close();
+        return path;
+    }
     
 
-    public async Task<string> Receive(FileTypeMessageModel model,CancellationToken token)
+    public async Task<string> Receive(FileTypeMessageModel model,CancellationToken token = default)
     {
         var filePath = Path.Combine(UserBaseDirectory, FileRootPath(model.Type));
         var directory = new DirectoryInfo(filePath);
@@ -44,6 +56,45 @@ public class UserChatSourceHandler(
         await newFileStream.WriteAsync(model.FileBytes,token);
         await newFileStream.FlushAsync(token);
         return toStoreName;
+    }
+
+    public async Task ReceivePart(FileTypeMessageModel model,bool finished, CancellationToken token = default)
+    {
+        var filePath = DownloadPath(model.FileName, model.Type);
+        var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+        try
+        {
+            await stream.WriteAsync(model.FileBytes, token);
+            await stream.FlushAsync(token);
+            stream.Close();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        finally
+        {
+            await stream.DisposeAsync();
+        }
+
+        if (finished)
+        {
+            var realFileName = model.FileName.Replace(filePath, Path.GetExtension(model.FileName));
+            if(!File.Exists(realFileName))
+                File.Create(realFileName).Close();
+            File.Move(filePath, realFileName, true);
+        }
+    }
+
+    public async Task RemoveTemp(FileTypeMessageModel model, CancellationToken token = default)
+    {
+        var fileRootPath = Path.Combine(UserBaseDirectory, FileRootPath(model.Type));
+        var file =new FileInfo(Path.Combine(fileRootPath, model.FileName));
+        await Task.Run(() =>
+        {
+            if(file.Exists)
+                file.Delete();
+        }, token);
     }
 
     public string ImageUrl(string sourceName)

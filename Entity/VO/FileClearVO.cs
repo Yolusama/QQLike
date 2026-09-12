@@ -1,6 +1,6 @@
-﻿namespace QQLike.Entity.DTO;
+﻿namespace QQLike.Entity.VO;
 
-public struct FileClearDTO
+public struct FileClearVO
 {
     public long TransmissionId { get; set; }
     public FileInfo File { get; set; }

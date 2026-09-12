@@ -1,4 +1,5 @@
 ﻿using FreeSql.DataAnnotations;
+using QQLike.Entity.Common;
 using SqlSugar;
 
 namespace QQLike.Entity;
@@ -41,4 +42,30 @@ public class FileTransmission
     /// </summary>
     [Column(DbType = "TINYINT(1)"),SugarColumn(ColumnDataType = "TINYINT(1)")]
     public bool IsReceiveSide { get; set; }
+
+    public static bool NeedTask(long size)
+    {
+        return size > 20L * Constants.MB;
+    }
+    
+    public static int GetBufferSize(long size)
+    {
+        if (size >= 20L * Constants.MB && size < 100L * Constants.MB)
+            return 8 * Constants.KB;
+        else if (size >= 100L * Constants.MB && size < 500L * Constants.MB)
+            return 20 * Constants.KB;
+        else if (size >= 500L * Constants.MB && size < Constants.GB)
+            return 40 * Constants.KB;
+        else if (size >= Constants.GB && size < 4L * Constants.GB)
+            return  Constants.MB;
+        else
+            return 10 * Constants.MB;
+    }
+    
+    
+    public static int GetTotal(long size)
+    {
+        var buffSize = GetBufferSize(size);
+        return (int)Math.Ceiling((size * 1.0) / buffSize);
+    }
 }

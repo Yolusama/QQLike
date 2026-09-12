@@ -1,4 +1,6 @@
-﻿namespace QQLike.Services.Interfaces;
+﻿using System;
+
+namespace QQLike.Services.Interfaces;
 
 public interface IJwtService
 {

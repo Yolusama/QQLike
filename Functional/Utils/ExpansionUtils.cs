@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
-using QQLike.Entity.VO;
+using QQLike.Entity.Common;
 
 namespace QQLike.Functional.Utils;
 
@@ -57,7 +57,7 @@ public static class ExpansionUtils
 
     public static async Task<byte[]> ReadBytes(this FileInfo fileInfo)
     {
-        const int bufferSize = 10240;
+        const int bufferSize = 10 * Constants.KB;
         var buffer = new byte[bufferSize];
         var bytes = new List<byte>();
         using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -86,6 +86,15 @@ public static class ExpansionUtils
         {
             sendLock.Release();
         }
+    }
+
+    public static void SafeDispose(this IDisposable disposable)
+    {
+        try
+        {
+            disposable.Dispose();
+        }
+        catch { }
     }
 
     private static async Task SendAllAsync(Socket socket, byte[] buffer, CancellationToken token)

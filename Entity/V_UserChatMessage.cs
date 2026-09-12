@@ -77,4 +77,25 @@ public class V_UserChatMessage
     /// 文件上传时的原名
     /// </summary>
     public string?  OriginalFileName { get; set; }
+    
+    /// <summary>
+    /// 文件上传/下载进行状态 1.完成 2.进行中 3.已取消
+    /// </summary>
+    public int ProcessState { get; set; }
+    /// <summary>
+    /// 当前切片
+    /// </summary>
+    public int? CurrentChunk { get; set; }
+    /// <summary>
+    /// 全部切片数
+    /// </summary>
+    public int? TotalChunkCount  { get; set; }
+    /// <summary>
+    /// 临时文件名
+    /// </summary>
+    public string TempFileName { get; set; }
+    /// <summary>
+    /// 文件大小
+    /// </summary>
+    public long? FileSize { get; set; } 
 }

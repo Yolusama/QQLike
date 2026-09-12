@@ -26,10 +26,6 @@ public class FileConfig
     /// </summary>
     public string CommonPath { get; set; }
     /// <summary>
-    /// 临时文件目录
-    /// </summary>
-    public string TempPath { get; set; }
-    /// <summary>
     /// 文件缓存时间间隔（天）到时间自动删除
     /// </summary>
     public int FileExpireDays { get; set; }

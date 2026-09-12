@@ -1,6 +1,5 @@
 using FreeSql;
 using Hangfire;
-using Hangfire.AspNetCore;
 using Hangfire.MemoryStorage;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;

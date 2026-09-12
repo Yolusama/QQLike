@@ -33,4 +33,18 @@ public class FileTransmissionTask
     /// 完成时间
     /// </summary>
     public DateTime? FinishTime {get; set;}
+    /// <summary>
+    /// 进行状态 1.完成 2.进行中 3.已取消
+    /// </summary>
+    public int State {get; set;}
+    /// <summary>
+    /// 传输类型：1.上传 2.下载
+    /// </summary>
+    public int Type {get; set;}
+
+    public string PercentStr()
+    {
+        var number = (Current * 1.0m / Total) * 100;
+        return $"{Math.Round(number, 1):F1}%";
+    }
 }

@@ -24,7 +24,7 @@ public partial class NotificationComponent : Window
     public static void ShowNotification(
         Window owner,
         string message,
-        MessageType type = MessageType.Info,
+        NotificationType type = NotificationType.Info,
         long duration = 2500,
         double offset = 16,
         HorizontalAlignment side = HorizontalAlignment.Right)
