@@ -38,6 +38,17 @@ public class SourceHandler(FileConfig fileConfig) : ISourceHandler
         return buffer.Take(bytesRead).ToArray();
     }
 
+    public async Task RemoveTempFile(string tempFileName, ChatMessageType type,CancellationToken token = default)
+    {
+        await Task.Run(() =>
+        {
+            var fileRootPath = Path.Combine(fileConfig.FileRootPath, FileRootPath(type));
+            var filePath = new FileInfo(Path.Combine(fileRootPath, tempFileName));
+            if (filePath.Exists)
+                filePath.Delete();
+        }, token);
+    }
+
     public string FileRootPath(ChatMessageType type)
     {
         return type switch 

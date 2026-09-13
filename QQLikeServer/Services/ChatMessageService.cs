@@ -25,7 +25,7 @@ public class ChatMessageService(IFreeSql orm,
             await sourceHandler.HandleWriteChunk(tempFileName, type, stream, buffeSize, cts.Token);
             var finished = current == total;
             await worker.Orm.Update<FileTransmissionTask>()
-                .Set(e => e.Current, current + 1)
+                .SetIf(!finished,e => e.Current, current + 1)
                 .SetIf(finished, e => new FileTransmissionTask
                 {
                     State = FileTransmissionState.Finished.GetValue(),
@@ -102,5 +102,24 @@ public class ChatMessageService(IFreeSql orm,
             throw;
         }
      
+    }
+
+    public async Task<ResponseResult> RemoveTempFile(string tempFileName,ChatMessageType type)
+    {
+        if (string.IsNullOrEmpty(tempFileName))
+            return ResponseResult.Fail("临时文件不存在！");
+        using var cts = new CancellationTokenSource();
+        try
+        {
+            await sourceHandler.RemoveTempFile(tempFileName, type,cts.Token);
+            return ResponseResult.OK();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            await cts.CancelAsync();
+            throw;
+        }
+        
     }
 }

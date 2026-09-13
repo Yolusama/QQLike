@@ -15,6 +15,7 @@ public class ChatMessageBodyTemplateSelector : DataTemplateSelector
     public DataTemplate? AudioTemplate { get; set; }
     public DataTemplate? VideoTemplate { get; set; }
     public DataTemplate? FileTemplate { get; set; }
+    public DataTemplate? BigFileTemplate { get; set; }
 
     public override DataTemplate? SelectTemplate(object? item, DependencyObject container)
     {
@@ -26,9 +27,8 @@ public class ChatMessageBodyTemplateSelector : DataTemplateSelector
             ChatMessageType.Image => ImageTemplate,
             ChatMessageType.Audio => AudioTemplate,
             ChatMessageType.Video => VideoTemplate,
-            ChatMessageType.File => FileTemplate,
+            ChatMessageType.File => message.IsBigFile ? BigFileTemplate : FileTemplate,
             _ => TextTemplate
         };
     }
 }
-

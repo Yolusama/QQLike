@@ -340,7 +340,7 @@ public class SocketServerService(
         {
             var senderId = senderMessage.UserId;
             var recipientId = senderMessage.ContactId;
-            var createTime = senderMessage.CreateTime ?? DateTime.Now;
+            var createTime = DateTime.Now;
 
             var recipientHead = await worker.Orm.Select<HeadMessage>()
                 .Where(e => e.UserId == recipientId && e.ContactId == senderId)
@@ -364,7 +364,10 @@ public class SocketServerService(
             {
                 recipientHead.Content = senderMessage.Content;
                 recipientHead.LastMessageTime = createTime;
-                await worker.Orm.Update<HeadMessage>().SetSource(recipientHead).ExecuteAffrowsAsync();
+                await worker.Orm.Update<HeadMessage>()
+                    .SetSource(recipientHead)
+                    .UpdateColumns(c=>new {c.Content,c.LastMessageTime})
+                    .ExecuteAffrowsAsync();
             }
 
             var recipientMessage = senderMessage.MapTo(new ChatMessage());

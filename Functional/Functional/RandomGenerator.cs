@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using QQLike.Entity.Common;
 using QQLike.Entity.Enum;
 using QQLike.Functional.Instructure;
 
@@ -9,7 +10,15 @@ public class RandomGenerator : IRandomGenerator
     private const string alphabet ="0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private const string numbers = "0123456789";
     private const string letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    
+    private static readonly long[] bufferSizes =
+    [
+        4 * Constants.KB, 8 * Constants.KB, 16 * Constants.KB,
+            32 * Constants.KB, 64 * Constants.KB, 128 * Constants.KB,
+            256 * Constants.KB, 512 * Constants.KB, Constants.MB, 2 * Constants.MB,
+            4 * Constants.MB, 8 * Constants.MB, 16 * Constants.MB, 32 * Constants.MB, 64 * Constants.MB,
+            128 * Constants.MB, 256 * Constants.MB
+    ];
+
     /// <summary>
     /// 数字级生成
     /// </summary>
@@ -73,6 +82,18 @@ public class RandomGenerator : IRandomGenerator
             builder.Append(table[index]);
         }
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// 模拟网络速度变化在随机区间生成当前buffer大小，保证buffer大小不小于size
+    /// </summary>
+    /// <param name="size"></param>
+    /// <returns></returns>
+    public long RandomBufferSize(long size)
+    {
+        var range = bufferSizes.Where(x => x >= size).ToArray();
+        var index = Random.Shared.Next(0, range.Length);
+        return range[index];
     }
 
     public string Guid => System.Guid.NewGuid().ToString();

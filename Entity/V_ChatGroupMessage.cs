@@ -48,7 +48,7 @@ public class V_ChatGroupMessage
     public string NickName { get; set; }
 
     /// <summary>
-    /// 备注
+    /// 群内联系人备注（存在好友关系）
     /// </summary>
     public string Remark { get; set; }
 
@@ -96,4 +96,29 @@ public class V_ChatGroupMessage
     /// 文件上传时的原名
     /// </summary>
     public string?  OriginalFileName { get; set; }
+    
+    /// <summary>
+    /// 文件上传/下载进行状态 1.完成 2.进行中 3.已取消
+    /// </summary>
+    public int? ProcessState { get; set; }
+    /// <summary>
+    /// 当前切片
+    /// </summary>
+    public int? CurrentChunk { get; set; }
+    /// <summary>
+    /// 全部切片数
+    /// </summary>
+    public int? TotalChunkCount  { get; set; }
+    /// <summary>
+    /// 临时文件名
+    /// </summary>
+    public string TempFileName { get; set; }
+    /// <summary>
+    /// 文件大小
+    /// </summary>
+    public long? FileSize { get; set; } 
+    /// <summary>
+    /// 传输类型 1.上传 2.下载
+    /// </summary>
+    public int? FileTransType {get; set;}
 }

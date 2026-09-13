@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Collections.Concurrent;
+using QQLike.Entity;
 using QQLike.Entity.Common;
 
 namespace QQLike.Functional.Utils;
@@ -57,7 +58,7 @@ public static class ExpansionUtils
 
     public static async Task<byte[]> ReadBytes(this FileInfo fileInfo)
     {
-        const int bufferSize = 10 * Constants.KB;
+        int bufferSize = FileTransmission.GetBufferSize(fileInfo.Length);
         var buffer = new byte[bufferSize];
         var bytes = new List<byte>();
         using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);

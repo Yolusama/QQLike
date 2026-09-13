@@ -8,6 +8,7 @@
              xmlns:views="clr-namespace:QQLike.Views.Message"
              xmlns:templates="clr-namespace:QQLike.Views.Templates"
              xmlns:behaviors="clr-namespace:QQLike.Behaviors"
+             xmlns:enum="clr-namespace:QQLike.Entity.Enum;assembly=Entity"
              mc:Ignorable="d"
              IsVisibleChanged="ChatMessageView_OnIsVisibleChanged"
              d:DesignHeight="720" d:DesignWidth="1200">
@@ -247,52 +248,69 @@
         </DataTemplate>
 
         <DataTemplate x:Key="VideoMessageBodyTemplate">
-            <Border MaxWidth="420" CornerRadius="8" ClipToBounds="True"
-                    Background="#1F1F1F"
+            <Border MaxWidth="320" CornerRadius="8" ClipToBounds="True"
+                    Background="{Binding BubbleBackground}"
                     BorderBrush="{Binding BubbleBorderBrush}"
                     BorderThickness="1">
                 <Grid>
+                    <MediaElement x:Name="VideoMedia"
+                                  Width="300" Height="200"
+                                  Source="{Binding LocalSourcePath}"
+                                  LoadedBehavior="Manual"
+                                  UnloadedBehavior="Stop"
+                                  Stretch="Uniform" />
+                    <ToggleButton x:Name="PlayToggle"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Width="48" Height="48" Padding="8"
+                                  Style="{StaticResource MaterialDesignFlatButton}"
+                                  Foreground="White"
+                                  Click="ToggleMediaPlay"
+                                  ToolTip="播放/暂停">
+                        <materialDesign:PackIcon x:Name="PlayIcon" Kind="Play" Width="28" Height="28" />
+                    </ToggleButton>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FileMessageBodyTemplate">
+            <Border MaxWidth="320" MinWidth="220" Padding="12,10" CornerRadius="8"
+                    Background="White"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition x:Name="IconColumn" Width="Auto" />
+                        <ColumnDefinition x:Name="ContentColumn" Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Grid x:Name="VideoContent" Grid.Column="0">
-                        <MediaElement x:Name="VideoMedia"
-                                      Width="360" Height="240"
-                                      Source="{Binding LocalSourcePath}"
-                                      LoadedBehavior="Manual"
-                                      UnloadedBehavior="Stop"
-                                      Stretch="Uniform" />
-                        <ToggleButton x:Name="PlayToggle"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Width="48" Height="48" Padding="8"
-                                      Style="{StaticResource MaterialDesignFlatButton}"
-                                      Foreground="White"
-                                      Click="ToggleMediaPlay"
-                                      ToolTip="播放/暂停">
-                            <materialDesign:PackIcon x:Name="PlayIcon" Kind="Play" Width="28" Height="28" />
-                        </ToggleButton>
-                    </Grid>
+                    <!-- 文件图标 -->
+                    <Image x:Name="FileIcon" Grid.Column="0"
+                           Width="50" Height="50"
+                           Margin="0,0,10,0"
+                           VerticalAlignment="Center"
+                           Source="{Binding DataContext.DefaultFileIcon, RelativeSource={RelativeSource AncestorType=UserControl}}" />
 
-                    <StackPanel x:Name="VideoActions" Grid.Column="1" Orientation="Vertical" Margin="8,8,8,8" 
-                                VerticalAlignment="Bottom">
-                        <Button Width="36" Height="36" Padding="8" 
+                    <!-- 文件信息 -->
+                    <StackPanel x:Name="FileContent" Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayFileName}"
+                                   FontSize="14"
+                                   Foreground="#1F1F1F"
+                                   TextWrapping="Wrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="200" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Text="{Binding FileSizeText}"
+                                   FontSize="12"
+                                   Foreground="#8F8F8F" />
+                        <!-- 上传完成后显示打开文件所在位置按钮 -->
+                        <Button Width="28" Height="28" Padding="4" Margin="0,4,0,0"
                                 Style="{StaticResource MaterialDesignFlatButton}"
-                                Command="{Binding DataContext.DownloadCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                Command="{Binding DataContext.OpenInFileBrowserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
-                                Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}"
-                                ToolTip="下载视频">
-                            <materialDesign:PackIcon Kind="Download" Width="20" Height="20"
-                                                     VerticalAlignment="Center" HorizontalAlignment="Center" />
-                        </Button>
-                        <Button Width="36" Height="36" Padding="8" 
-                                Style="{StaticResource MaterialDesignFlatButton}"
-                                Command="{Binding DataContext.OpenInFileBrowserCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}"
-                                Visibility="{Binding SourceDownloaded, Converter={StaticResource BoolVisibilityConverter2}}"
-                                ToolTip="打开文件所在位置">
-                            <materialDesign:PackIcon Kind="FolderOpen" Width="20" Height="20"
+                                HorizontalAlignment="Left"
+                                ToolTip="打开文件所在位置"
+                                Visibility="{Binding SourceDownloaded, Converter={StaticResource BoolVisibilityConverter2}}">
+                            <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18"
                                                      VerticalAlignment="Center" HorizontalAlignment="Center" />
                         </Button>
                     </StackPanel>
@@ -300,75 +318,123 @@
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsSelf}" Value="True">
-                    <Setter TargetName="VideoContent" Property="Grid.Column" Value="1" />
-                    <Setter TargetName="VideoActions" Property="Grid.Column" Value="0" />
-                    <Setter TargetName="VideoActions" Property="Margin" Value="8,8,8,8" />
+                    <Setter TargetName="FileIcon" Property="Grid.Column" Value="1" />
+                    <Setter TargetName="FileIcon" Property="Margin" Value="10,0,0,0" />
+                    <Setter TargetName="FileContent" Property="Grid.Column" Value="0" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
-        <DataTemplate x:Key="FileMessageBodyTemplate">
-            <Grid MaxWidth="420" MinWidth="220">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <Border x:Name="FileBubble"
-                        Grid.Column="0"
-                        MaxWidth="320"
-                        MinWidth="180"
-                        Padding="12,10"
-                        CornerRadius="8"
-                        Background="{Binding BubbleBackground}"
-                        BorderBrush="{Binding BubbleBorderBrush}"
-                        BorderThickness="1">
-                    <StackPanel x:Name="FileContent" HorizontalAlignment="Center">
-                        <Image Width="50" Height="50"
-                               Source="{Binding DataContext.DefaultFileIcon,RelativeSource={RelativeSource AncestorType=UserControl}}"
-                               HorizontalAlignment="Center" />
-                        <TextBlock Margin="0,8,0,0"
-                                   Text="{Binding DisplayFileName}"
-                                   FontSize="14"
-                                   Foreground="#1F1F1F"
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="260" />
-                    </StackPanel>
-                </Border>
-
-                <StackPanel x:Name="FileActions"
-                            Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Bottom"
-                            Margin="8,0,0,0"
-                            >
-                    <Button Width="36" Height="36" Padding="8" 
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Command="{Binding DataContext.DownloadCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"
-                            Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}"
-                            ToolTip="下载文件">
-                        <materialDesign:PackIcon Kind="Download" Width="20" Height="20"
-                                                 VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Width="36" Height="36" Padding="8" VerticalAlignment="Bottom"
-                            Style="{StaticResource MaterialDesignFlatButton}"
-                            Command="{Binding DataContext.OpenInFileBrowserCommand,RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}"
-                            Visibility="{Binding SourceDownloaded, Converter={StaticResource BoolVisibilityConverter2}}"
-                            ToolTip="打开文件所在位置文件夹">
-                        <materialDesign:PackIcon Kind="FolderOpen" Width="20" Height="20"
-                                                 VerticalAlignment="Center" HorizontalAlignment="Center" />
-                    </Button>
-                </StackPanel>
-            </Grid>
+        <!-- 大文件消息模板：文件图标 + 进度信息，白色气泡 -->
+        <DataTemplate x:Key="BigFileMessageBodyTemplate">
+            <Border MaxWidth="400" MinWidth="280"
+                    Padding="14,12"
+                    CornerRadius="8"
+                    Background="White"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- 文件图标 -->
+                    <Image x:Name="BigFileIcon" Grid.Column="0" Width="50" Height="50"
+                           Margin="0,0,12,0" VerticalAlignment="Top"
+                           Source="{Binding DataContext.DefaultFileIcon, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                    
+                    <!-- 文件信息区域 -->
+                    <Grid x:Name="BigFileInfo" Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 文件名 -->
+                        <TextBlock Grid.Row="0" Text="{Binding DisplayFileName}" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#1F1F1F"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                        
+                        <!-- 文件大小 -->
+                        <TextBlock Grid.Row="1" Margin="0,4,0,0" 
+                                   Text="{Binding FileSizeText}" FontSize="12" Foreground="#8F8F8F" />
+                        
+                        <!-- 进度条 - 移到信息区域 -->
+                        <ProgressBar Grid.Row="2" Value="{Binding LoadProgress, Mode=TwoWay}"
+                                     Minimum="0" Maximum="100"
+                                     Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                     Foreground="#2196F3" Background="#E8E8E8" IsIndeterminate="True"
+                                     Width="32" Height="32" Margin="0,8,0,0"
+                                     HorizontalAlignment="Left" />
+                        
+                        <!-- 进度文本和速度 -->
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding ProcessText}" FontSize="12" Foreground="#8F8F8F" />
+                            <TextBlock Text="{Binding SpeedText}" FontSize="12" Foreground="#8F8F8F" Margin="12,0,0,0" />
+                        </StackPanel>
+                        
+                        <!-- 操作按钮区域 -->
+                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,8,0,0">
+                            <!-- 上传完成/下载完成 - 打开文件位置 -->
+                            <Button Width="32" Height="32" Padding="4"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.OpenInFileBrowserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" HorizontalAlignment="Left"
+                                    ToolTip="打开文件所在位置"
+                                    Visibility="{Binding SourceDownloaded, Converter={StaticResource BoolVisibilityConverter2}}">
+                                <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" />
+                            </Button>
+                            
+                            <!-- 上传中 - 暂停/继续 -->
+                            <Button Width="32" Height="32" Padding="4" Margin="0,0,6,0"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.PauseLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" HorizontalAlignment="Left"
+                                    ToolTip="暂停"
+                                    Visibility="{Binding SourceLoading, Converter={StaticResource BoolVisibilityConverter2}}">
+                                <materialDesign:PackIcon Kind="Pause" Width="18" Height="18" />
+                            </Button>
+                            <Button Width="32" Height="32" Padding="4" Margin="0,0,6,0"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.StartLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" HorizontalAlignment="Left"
+                                    ToolTip="继续"
+                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                <materialDesign:PackIcon Kind="Play" Width="18" Height="18" />
+                            </Button>
+                            
+                            <!-- 上传中 - 取消 -->
+                            <Button Width="32" Height="32" Padding="4"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.CancelLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" HorizontalAlignment="Left"
+                                    ToolTip="取消上传"
+                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="#FF5252" />
+                            </Button>
+                            
+                            <!-- 等待接收 -->
+                            <Button Width="32" Height="32" Padding="4"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding DataContext.RequestReceiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}" HorizontalAlignment="Left"
+                                    ToolTip="接收文件"
+                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                <materialDesign:PackIcon Kind="Download" Width="18" Height="18" Foreground="#2196F3" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsSelf}" Value="True">
-                    <Setter TargetName="FileBubble" Property="Grid.Column" Value="1" />
-                    <Setter TargetName="FileActions" Property="Grid.Column" Value="0" />
-                    <Setter TargetName="FileActions" Property="Margin" Value="0,0,8,0" />
+                    <Setter TargetName="BigFileIcon" Property="Grid.Column" Value="1" />
+                    <Setter TargetName="BigFileIcon" Property="Margin" Value="12,0,0,0" />
+                    <Setter TargetName="BigFileInfo" Property="Grid.Column" Value="0" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
@@ -378,7 +444,8 @@
                                                    ImageTemplate="{StaticResource ImageMessageBodyTemplate}"
                                                    AudioTemplate="{StaticResource AudioMessageBodyTemplate}"
                                                    VideoTemplate="{StaticResource VideoMessageBodyTemplate}"
-                                                   FileTemplate="{StaticResource FileMessageBodyTemplate}" />
+                                                   FileTemplate="{StaticResource FileMessageBodyTemplate}"
+                                                   BigFileTemplate="{StaticResource BigFileMessageBodyTemplate}" />
 
 
     </UserControl.Resources>

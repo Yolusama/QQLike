@@ -81,7 +81,7 @@ public class V_UserChatMessage
     /// <summary>
     /// 文件上传/下载进行状态 1.完成 2.进行中 3.已取消
     /// </summary>
-    public int ProcessState { get; set; }
+    public int? ProcessState { get; set; }
     /// <summary>
     /// 当前切片
     /// </summary>
@@ -98,4 +98,8 @@ public class V_UserChatMessage
     /// 文件大小
     /// </summary>
     public long? FileSize { get; set; } 
+    /// <summary>
+    /// 传输类型 1.上传 2.下载
+    /// </summary>
+    public int? FileTransType {get; set;}
 }

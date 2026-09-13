@@ -46,4 +46,11 @@ public class ChatMessageController(IChatMessageService chatMessageService) : Con
         return Ok(await chatMessageService
             .DownloadFile(model.Type,model.TaskId,model.FileName,model.Current,model.Total,model.BufferSize));
     }
+
+    [RequestAuthorize]
+    [HttpDelete]
+    public async Task<ActionResult<ResponseResult>> RemoveTempFileName([FromQuery] string fileName,[FromQuery]int messageType)
+    {
+        return Ok(await chatMessageService.RemoveTempFile(fileName, (ChatMessageType)messageType));
+    }
 }

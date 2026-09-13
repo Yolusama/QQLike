@@ -17,4 +17,6 @@ public static class Constants
     public const int KB = 1024;
     public const int MB = KB * KB;
     public const int GB = MB * KB;
+    public const int EOF = -1;
+
 }

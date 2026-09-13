@@ -37,14 +37,20 @@ public partial class ChatMessageItem : ObservableObject
     private bool _sourceUnload = true;
     [ObservableProperty]
     private bool _sourceDownloaded;
-    [ObservableProperty] 
-    private bool _sourceDownloading;
     [ObservableProperty]
     private string _processText;
     [ObservableProperty]
-    private FileTransmissionState _processState;
+    private FileTransmissionState? _processState;
     [ObservableProperty]
     private string _speedText;
+    [ObservableProperty]
+    private bool _isBigFile;
+    [ObservableProperty]
+    private double _loadProgress;
+    [ObservableProperty]
+    private string _fileSizeText;
+    [ObservableProperty]
+    private bool _sourceLoading;
 
     [ObservableProperty] 
     private HorizontalAlignment _messageHorizontalAlignment = HorizontalAlignment.Left;
@@ -73,6 +79,7 @@ public partial class ChatMessageItem : ObservableObject
     public long? TaskId { get; set; }
     public long? FileSize { get; set; }
     public string TempFileName { get; set; }
+    public FileTransType? TransType { get; set; }
 
     partial void OnIsSelfChanged(bool value)
     {

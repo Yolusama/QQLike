@@ -38,10 +38,9 @@ public class FileTransmissionTask
     /// </summary>
     public int State {get; set;}
     /// <summary>
-    /// 传输类型：1.上传 2.下载
+    /// 传输类型 1.上传 2.下载
     /// </summary>
     public int Type {get; set;}
-
     public string PercentStr()
     {
         var number = (Current * 1.0m / Total) * 100;

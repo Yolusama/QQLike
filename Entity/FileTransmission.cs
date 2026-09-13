@@ -51,15 +51,15 @@ public class FileTransmission
     public static int GetBufferSize(long size)
     {
         if (size >= 20L * Constants.MB && size < 100L * Constants.MB)
-            return 8 * Constants.KB;
-        else if (size >= 100L * Constants.MB && size < 500L * Constants.MB)
             return 20 * Constants.KB;
-        else if (size >= 500L * Constants.MB && size < Constants.GB)
+        else if (size >= 100L * Constants.MB && size < 500L * Constants.MB)
             return 40 * Constants.KB;
+        else if (size >= 500L * Constants.MB && size < Constants.GB)
+            return Constants.MB;
         else if (size >= Constants.GB && size < 4L * Constants.GB)
-            return  Constants.MB;
+            return  10*Constants.MB;
         else
-            return 10 * Constants.MB;
+            return 20 * Constants.MB;
     }
     
     
@@ -67,5 +67,17 @@ public class FileTransmission
     {
         var buffSize = GetBufferSize(size);
         return (int)Math.Ceiling((size * 1.0) / buffSize);
+    }
+
+    public static string GetMemoryText(long size)
+    {
+        if(size < Constants.KB)
+            return $"{size}B";
+        else if(size >= Constants.KB && size < Constants.MB)
+            return $"{(size * 1.0 / Constants.KB):F1}KB";
+        else if(size >= Constants.MB && size < Constants.GB)
+            return $"{(size * 1.0 / Constants.MB):F1}MB";
+        else
+            return $"{(size * 1.0 / Constants.GB):F1}GB";
     }
 }
