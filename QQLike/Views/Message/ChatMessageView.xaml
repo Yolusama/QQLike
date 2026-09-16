@@ -83,7 +83,6 @@
                 </Grid.ColumnDefinitions>
                 <!-- 左侧头像（对方消息时显示） -->
                 <Border x:Name="LeftAvatar"
-
                         Width="38"
                         Height="38"
                         Margin="0,0,8,0"
@@ -367,7 +366,7 @@
                         <ProgressBar Grid.Row="2" Value="{Binding LoadProgress, Mode=TwoWay}"
                                      Minimum="0" Maximum="100"
                                      Style="{StaticResource MaterialDesignCircularProgressBar}"
-                                     Foreground="#2196F3" Background="#E8E8E8" IsIndeterminate="True"
+                                     Foreground="#2196F3" Background="#E8E8E8" 
                                      Width="32" Height="32" Margin="0,8,0,0"
                                      HorizontalAlignment="Left" />
                         
@@ -381,49 +380,125 @@
                         <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,8,0,0">
                             <!-- 上传完成/下载完成 - 打开文件位置 -->
                             <Button Width="32" Height="32" Padding="4"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
                                     Command="{Binding DataContext.OpenInFileBrowserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}" HorizontalAlignment="Left"
-                                    ToolTip="打开文件所在位置"
-                                    Visibility="{Binding SourceDownloaded, Converter={StaticResource BoolVisibilityConverter2}}">
+                                    ToolTip="打开文件所在位置">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelf}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SourceDownloaded}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <materialDesign:PackIcon Kind="FolderOpen" Width="18" Height="18" />
                             </Button>
                             
-                            <!-- 上传中 - 暂停/继续 -->
                             <Button Width="32" Height="32" Padding="4" Margin="0,0,6,0"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Command="{Binding DataContext.PauseLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Command="{Binding DataContext.PauseLoadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}" HorizontalAlignment="Left"
-                                    ToolTip="暂停"
-                                    Visibility="{Binding SourceLoading, Converter={StaticResource BoolVisibilityConverter2}}">
+                                    ToolTip="暂停">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Static enum:FileTransmissionState.Processing}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <materialDesign:PackIcon Kind="Pause" Width="18" Height="18" />
                             </Button>
+
+                            <!-- 暂停后 - 继续 -->
                             <Button Width="32" Height="32" Padding="4" Margin="0,0,6,0"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Command="{Binding DataContext.StartLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Command="{Binding DataContext.StartLoadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}" HorizontalAlignment="Left"
-                                    ToolTip="继续"
-                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                    ToolTip="继续">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Static enum:FileTransmissionState.Paused}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <materialDesign:PackIcon Kind="Play" Width="18" Height="18" />
                             </Button>
                             
-                            <!-- 上传中 - 取消 -->
+                            <!-- 传输任务 - 取消 -->
                             <Button Width="32" Height="32" Padding="4"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Command="{Binding DataContext.CancelLoadCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Command="{Binding DataContext.CancelLoadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}" HorizontalAlignment="Left"
-                                    ToolTip="取消上传"
-                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                    ToolTip="取消下载">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Static enum:FileTransmissionState.Processing}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Static enum:FileTransmissionState.Paused}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <materialDesign:PackIcon Kind="Close" Width="18" Height="18" Foreground="#FF5252" />
                             </Button>
                             
-                            <!-- 等待接收 -->
+                            <!-- 开始下载（仅接收方，未开始或已取消） -->
                             <Button Width="32" Height="32" Padding="4"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Command="{Binding DataContext.RequestReceiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Command="{Binding DataContext.StartLoadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}" HorizontalAlignment="Left"
-                                    ToolTip="接收文件"
-                                    Visibility="{Binding SourceUnload, Converter={StaticResource BoolVisibilityConverter2}}">
+                                    ToolTip="接收文件">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignFlatButton}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsSelf}" Value="False" />
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Null}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsSelf}" Value="False" />
+                                                    <Condition Binding="{Binding SourceUnload}" Value="True" />
+                                                    <Condition Binding="{Binding ProcessState}" Value="{x:Static enum:FileTransmissionState.Cancelled}" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
                                 <materialDesign:PackIcon Kind="Download" Width="18" Height="18" Foreground="#2196F3" />
                             </Button>
                         </StackPanel>

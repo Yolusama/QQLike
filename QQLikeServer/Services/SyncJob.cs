@@ -91,7 +91,7 @@ public class SyncJob(
                 {
                     var fileName = file.Name;
                     var isTemp = fileName.EndsWith(Constants.TempFileSuffix);
-                    var tempFileName = isTemp ? fileName.Replace(file.Extension, string.Empty) + Constants.TempFileSuffix 
+                    var tempFileName = isTemp ? fileName.Replace(Constants.TempFileSuffix,file.Extension)
                         : null;
                     var transmission = orm.Select<FileTransmission>()
                         .Where(e=> e.IsValid && !e.IsReceiveSide)

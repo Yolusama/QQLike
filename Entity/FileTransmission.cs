@@ -45,7 +45,7 @@ public class FileTransmission
 
     public static bool NeedTask(long size)
     {
-        return size > 20L * Constants.MB;
+        return size >= 20L * Constants.MB;
     }
     
     public static int GetBufferSize(long size)

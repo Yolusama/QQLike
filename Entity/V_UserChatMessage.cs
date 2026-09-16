@@ -79,7 +79,7 @@ public class V_UserChatMessage
     public string?  OriginalFileName { get; set; }
     
     /// <summary>
-    /// 文件上传/下载进行状态 1.完成 2.进行中 3.已取消
+    /// 文件上传/下载进行状态 1.完成 2.进行中 3.已取消 4.暂停
     /// </summary>
     public int? ProcessState { get; set; }
     /// <summary>
@@ -102,4 +102,9 @@ public class V_UserChatMessage
     /// 传输类型 1.上传 2.下载
     /// </summary>
     public int? FileTransType {get; set;}
+
+    /// <summary>
+    /// 任务Id
+    /// </summary>
+    public long? TaskId { get; set; }
 }

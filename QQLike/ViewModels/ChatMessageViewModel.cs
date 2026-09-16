@@ -215,6 +215,7 @@ public partial class ChatMessageViewModel(
                         Current = message.CurrentChunk,
                         Total = message.TotalChunkCount,
                         FileSize = message.FileSize,
+                        IsBigFile = (type != ChatMessageType.Text && type != ChatMessageType.Notification) && FileTransmission.NeedTask(message.FileSize ?? 0),
                         FileSizeText = FileTransmission.GetMemoryText(message.FileSize ?? 0),
                         TransType = message.FileTransType == null ? null : (FileTransType)message.FileTransType,
                         ProcessState = message.ProcessState.HasValue ? (FileTransmissionState)message.ProcessState.Value : null,
@@ -239,7 +240,20 @@ public partial class ChatMessageViewModel(
                         if (message.IsSelf)
                         {
                             newMessageItem.SourceDownloaded = true;
-                            newMessageItem.SourceUnload = false;
+                            if (FileTransmission.NeedTask(message.FileSize ?? 0))
+                            { 
+                               newMessageItem.TaskId = message.TaskId;
+                               newMessageItem.SourceUnload = 
+                                   newMessageItem.ProcessState  == FileTransmissionState.Paused;
+                               newMessageItem.SourceLoading = false;
+                               if (newMessageItem.ProcessState == FileTransmissionState.Cancelled)
+                               {
+                                   newMessageItem.ProcessText = "文件传输任务已取消";
+                                   newMessageItem.SourceUnload = false;
+                               }
+                            }
+                            else
+                                newMessageItem.SourceUnload = false;
                         }
                         else
                         {
@@ -284,6 +298,7 @@ public partial class ChatMessageViewModel(
                         Current = message.CurrentChunk,
                         Total = message.TotalChunkCount,
                         FileSize = message.FileSize,
+                        IsBigFile = type != ChatMessageType.Text && FileTransmission.NeedTask(message.FileSize ?? 0),
                         FileSizeText = FileTransmission.GetMemoryText(message.FileSize ?? 0),
                         ProcessState = message.ProcessState.HasValue ? (FileTransmissionState)message.ProcessState.Value : null,
                         TransType = message.FileTransType == null ? null : (FileTransType)message.FileTransType,
@@ -308,7 +323,16 @@ public partial class ChatMessageViewModel(
                         if (message.IsSelf)
                         {
                             newMessageItem.SourceDownloaded = true;
-                            newMessageItem.SourceUnload = false;
+                            if (FileTransmission.NeedTask(message.FileSize ?? 0))
+                            {
+                                newMessageItem.SourceUnload =
+                                    newMessageItem.ProcessState == FileTransmissionState.Paused;
+                                newMessageItem.SourceLoading = false;
+                            }
+                            else
+                            {
+                                newMessageItem.SourceUnload = false;
+                            }
                         }
                         else
                         {
@@ -557,6 +581,8 @@ public partial class ChatMessageViewModel(
                     IsSelf = message.IsSelf,
                     FileName = message.FileName,
                     LocalSourcePath = message.LocalSourcePath,
+                    FileSize = message.FileSize,
+                    IsBigFile = messageType == ChatMessageType.File && FileTransmission.NeedTask(message.FileSize ?? 0),
                     DisplayFileName = message.OriginalFileName,
                     MessageTimeText = FormatMessageTime(message.CreateTime, true),
                     ContactNameVisibility = Visibility.Collapsed
@@ -592,6 +618,8 @@ public partial class ChatMessageViewModel(
                     MessageType = messageType,
                     FileName = message.FileName,
                     LocalSourcePath = message.LocalSourcePath,
+                    FileSize = message.FileSize,
+                    IsBigFile = messageType == ChatMessageType.File && FileTransmission.NeedTask(message.FileSize ?? 0),
                     MessageTime = message.CreateTime,
                     UserId = message.GroupMemberId,
                     ContactId = message.ContactId,
@@ -702,6 +730,15 @@ public partial class ChatMessageViewModel(
     private async Task StartLoadFile(ChatMessageItem? item)
     {
         if (item == null) return;
+
+        await sugarClient.Updateable<FileTransmissionTask>()
+            .SetColumns(e => e.State == FileTransmissionState.Processing.GetValue())
+            .Where(e => e.Id == item.TaskId)
+            .ExecuteCommandAsync();
+        item.ProcessState = FileTransmissionState.Processing;
+        item.SourceLoading = true;
+        //item.SourceUnload = false;
+
         if (item.TransType == FileTransType.Upload)
         {
             _uploadBytes = 0;
@@ -717,13 +754,6 @@ public partial class ChatMessageViewModel(
             _downloadCancellationTokenSource = new CancellationTokenSource();
             await PrepareToDownloadFile(item);
         }
-
-        await sugarClient.Updateable<FileTransmissionTask>()
-            .SetColumns(e => e.State == FileTransmissionState.Processing.GetValue())
-            .Where(e => e.Id == item.TaskId)
-            .ExecuteCommandAsync();
-        item.ProcessState = FileTransmissionState.Processing;
-        item.SourceLoading = true;
     }
     
 
@@ -748,6 +778,8 @@ public partial class ChatMessageViewModel(
             .Where(e => e.Id == item.TaskId)
             .ExecuteCommandAsync();
         item.ProcessState = FileTransmissionState.Paused;
+        item.SourceLoading = false;
+        item.SourceUnload = true;
         item.SpeedText = string.Empty;
     }
     
@@ -778,7 +810,10 @@ public partial class ChatMessageViewModel(
             .Where(e => e.Id == item.TaskId)
             .ExecuteCommandAsync();
         item.ProcessState = FileTransmissionState.Cancelled;
+        item.SourceLoading = false;
+        item.SourceUnload = true;
         item.SpeedText = string.Empty;
+        item.ProcessText = "文件传输任务已取消";
     }
 
     [RelayCommand]
@@ -986,16 +1021,6 @@ public partial class ChatMessageViewModel(
                 chatMessage = await sugarClient.Queryable<ChatMessage>()
                     .Where(c => c.Id == messageItem.MessageId)
                     .FirstAsync(cts.Token);
-                if (fileTransmissionTask.State != FileTransmissionState.Cancelled.GetValue()
-                    || fileTransmissionTask.State != FileTransmissionState.Finished.GetValue())
-                {
-                    this.UIDispatch(() =>
-                    {
-                        MessageComponent.ShowMessage(Owner, "当前存在未上传完成的上传任务", MessageType.Warning);
-                    });
-                   
-                    return;
-                }
             }
 
             worker.Commit();
@@ -1047,7 +1072,8 @@ public partial class ChatMessageViewModel(
                             fileTransmissionTask.Current += 1;
                             messageItem.Current = fileTransmissionTask.Current;
                             messageItem.ProcessText = fileTransmissionTask.PercentStr();
-                            messageItem.LoadProgress = Math.Round(fileTransmissionTask.Current *100d / fileTransmissionTask.Total, 1);
+                            messageItem.LoadProgress =
+                                Math.Round(fileTransmissionTask.Current * 100d / fileTransmissionTask.Total, 1);
                             _uploadBytes += bytesRead;
                             if (fileTransmissionTask.Current == fileTransmissionTask.Total)
                             {
@@ -1057,6 +1083,7 @@ public partial class ChatMessageViewModel(
                                 messageItem.ProcessText = string.Empty;
                                 messageItem.SourceLoading = false;
                             }
+
                             await Task.Delay(LoadInterval, cts.Token);
                             return beginTicks;
                         }
@@ -1068,6 +1095,7 @@ public partial class ChatMessageViewModel(
                     }
                     catch (Exception e)
                     {
+                        if (e is TaskCanceledException) return Constants.EOF;
                         Console.WriteLine(e);
                         throw new ServiceException(e.Message);
                     }
@@ -1094,6 +1122,7 @@ public partial class ChatMessageViewModel(
         }
         catch (Exception e)
         {
+            if(e is TaskCanceledException)return;
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"准备上传文件失败：{e.Message}", MessageType.Error);
             await cts.CancelAsync();
@@ -1244,7 +1273,7 @@ public partial class ChatMessageViewModel(
         try
         {
             var res = await apiService.DeleteAsync<object>
-                ("api/ChatMessage/RemoveTempFile", new {TempFileName = tempFileName,MessageType = type.GetValue()});
+                ("api/ChatMessage/RemoveTempFile", new { FileName = tempFileName,MessageType = type.GetValue()});
             if (res.Success)
                 return true;
             else

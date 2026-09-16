@@ -75,7 +75,8 @@ public partial class AppHeaderViewModel : ViewModelBase<AppHeader>
         if (window.GetType() == typeof(MainView))
         {
             foreach (Window win in Application.Current.Windows)
-               win.Close();
+                win.Close();
+            Thread.Sleep(1000);
             return;
         }
 

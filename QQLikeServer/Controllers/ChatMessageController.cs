@@ -49,7 +49,7 @@ public class ChatMessageController(IChatMessageService chatMessageService) : Con
 
     [RequestAuthorize]
     [HttpDelete]
-    public async Task<ActionResult<ResponseResult>> RemoveTempFileName([FromQuery] string fileName,[FromQuery]int messageType)
+    public async Task<ActionResult<ResponseResult>> RemoveTempFile([FromQuery] string fileName,[FromQuery]int messageType)
     {
         return Ok(await chatMessageService.RemoveTempFile(fileName, (ChatMessageType)messageType));
     }

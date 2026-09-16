@@ -551,7 +551,7 @@ public partial class MainViewModel(
             .InnerJoin<FileTransmission>((u, c, f) => c.Id == f.MessageId)
             .InnerJoin<FileTransmissionTask>((u, c, f, ft) => f.TaskId == ft.Id)
             .Where((u,c,f,ft)=> ft.State == FileTransmissionState.Processing.GetValue()
-            && u.Id == user.UserId && !f.IsReceiveSide)
+            && u.Id == user.UserId)
             .Select(((u, c, f, ft) => ft.Id))
             .ToListAsync();
         

@@ -107,7 +107,7 @@ public class ChatMessageService(IFreeSql orm,
     public async Task<ResponseResult> RemoveTempFile(string tempFileName,ChatMessageType type)
     {
         if (string.IsNullOrEmpty(tempFileName))
-            return ResponseResult.Fail("临时文件不存在！");
+            return ResponseResult.Fail("文件名不能为空");
         using var cts = new CancellationTokenSource();
         try
         {

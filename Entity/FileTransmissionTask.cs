@@ -34,8 +34,9 @@ public class FileTransmissionTask
     /// </summary>
     public DateTime? FinishTime {get; set;}
     /// <summary>
-    /// 进行状态 1.完成 2.进行中 3.已取消
+    /// 进行状态 1.完成 2.进行中 3.已取消,4.暂停
     /// </summary>
+    [SugarColumn(ColumnDataType = "TINYINT(1)")]
     public int State {get; set;}
     /// <summary>
     /// 传输类型 1.上传 2.下载
