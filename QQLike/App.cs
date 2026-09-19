@@ -182,5 +182,7 @@ public partial class App : Application
         services.AddTransient<UserContactGroupView>();
         services.AddTransient<ImagePreviewerViewModel>();
         services.AddTransient<ImagePreviewer>();
+        services.AddTransient<ScreenShotComponentViewModel>();
+        services.AddTransient<ScreenShotComponent>();
     }
 }

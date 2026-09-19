@@ -8,6 +8,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -25,6 +28,7 @@ using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services;
+using QQLike.Services.Interfaces;
 using QQLike.Views.Message;
 using SqlSugar;
 
@@ -37,6 +41,7 @@ public partial class ChatMessageViewModel(
     IRandomGenerator generator,
     IApiService apiService,
     IRabbitMQProducer mqProducer,
+    IWindowFactory windowFactory,
     SysSetting setting) : ViewModelBase<ChatMessageView>, IDisposable
 {
     private static readonly TimeSpan SocketSendTimeout = TimeSpan.FromSeconds(8);
@@ -64,6 +69,8 @@ public partial class ChatMessageViewModel(
     private CancellationTokenSource _uploadCancellationTokenSource = new();
     private readonly SemaphoreSlim _uploadSGate = new SemaphoreSlim(1, 1);
     private readonly SemaphoreSlim _downloadSGate = new SemaphoreSlim(1, 1);
+    private Task? _uploadTask;
+    private Task? _downloadTask;
 
     private long _uploadBytes = 0;
     private long _receivedBytes = 0;
@@ -262,7 +269,16 @@ public partial class ChatMessageViewModel(
                         }
                     }
 
-                    ChatMessages.Add(newMessageItem);
+                    if (newMessageItem.IsBigFile &&
+                        newMessageItem.ProcessState == FileTransmissionState.Processing)
+                    {
+                        ChatMessages.Add(newMessageItem);
+                        newMessageItem.SourceUnload = true;
+                        await PauseLoadFile(newMessageItem);
+                        await StartLoadFile(newMessageItem);
+                    }
+                    else
+                       ChatMessages.Add(newMessageItem);
                 }
             }
             else
@@ -345,7 +361,8 @@ public partial class ChatMessageViewModel(
                 }
             }
 
-            await sugarClient.Updateable<ChatMessage>()
+            using var scope = sugarClient.CopyNew();
+            await scope.Updateable<ChatMessage>()
                 .SetColumns(e => e.IsRead == true)
                 .Where(e => e.HeadMessageId == item.HeadMessageId && e.UserId == user.UserId && !e.IsRead)
                 .ExecuteCommandAsync(cts.Token);
@@ -372,7 +389,38 @@ public partial class ChatMessageViewModel(
     [RelayCommand]
     private async Task SendMessage()
     {
-        await HandMessageSending(ChatMessageType.Text);
+        foreach (var block in View.ContentWriteTo.Document.Blocks)
+        {
+            if (block is Paragraph paragraph)
+            {
+                foreach (var inline in paragraph.Inlines)
+                {
+                    switch (inline)
+                    {
+                        case Run run:
+                            NewMessageText = run.Text;
+                            await HandMessageSending(ChatMessageType.Text);
+                            break;
+
+                        case InlineUIContainer container when container.Child is Image image:
+                        {
+                            var fileInfo = new FileInfo(image.Source.ToString());
+                            await HandMessageSending(ChatMessageType.Image,new FileTypeMessageDTO
+                            {
+                                TempMessage = ChatMessageType.Image.FileTypeContent(),
+                                FileName = fileInfo.Name,
+                                LocalFilePath = fileInfo.FullName,
+                                OriginalFileName = fileInfo.Name,
+                                FileSize = fileInfo.Length,
+                                FileBytes =await fileInfo.ReadBytes(),
+                                FileExtension = fileInfo.Extension
+                            });
+                        } break;
+                    }
+                }
+            }
+        }
+        
     }
 
     private async Task HandMessageSending(ChatMessageType type, FileTypeMessageDTO? fileTypeMessageDto = null)
@@ -437,7 +485,7 @@ public partial class ChatMessageViewModel(
                     .SetColumns(e => new HeadMessage
                         { Content = message.Content, LastMessageTime = message.CreateTime })
                     .Where(e => e.Id == SelectedHeadMessage.HeadMessageId)
-                    .ExecuteCommandAsync();
+                    .ExecuteCommandAsync(sendCts.Token);
                 var messageBody = new MQMessageBody();
                 messageBody.Identifier = message.ContactId;
                 messageBody.Body = true;
@@ -456,7 +504,7 @@ public partial class ChatMessageViewModel(
                         .Serialize(messageBody));
                 var userContact = await sugarClient.Queryable<UserContact>()
                     .Where(e => e.UserId == user.UserId && e.ContactId == SelectedHeadMessage.ContactId)
-                    .FirstAsync();
+                    .FirstAsync(sendCts.Token);
                 var displayName = SelectedHeadMessage.IsGroup
                     ? (string.IsNullOrEmpty(userContact.GroupDisplayName)
                         ? user.Nickname
@@ -661,7 +709,7 @@ public partial class ChatMessageViewModel(
         {
             await cancelTokenSource.CancelAsync();
             Console.WriteLine(e);
-            MessageComponent.ShowMessage(Owner, $"出现异常：{e.Message}", MessageType.Error);
+            MessageComponent.ShowMessage(Owner, $"出现异常���{e.Message}", MessageType.Error);
         }
     }
 
@@ -691,11 +739,21 @@ public partial class ChatMessageViewModel(
     }
 
     [RelayCommand]
-    private async Task OpenFileDialog()
+    private void OpenScreenShotComponent()
     {
+        var window = windowFactory.GetWindow<ScreenShotComponent>();
+        window.Background= new SolidColorBrush(Colors.Transparent);
+        window.Show();
+    }
+
+    [RelayCommand]
+    private async Task OpenFileDialog(string filter)
+    {
+        
         var dialog = new OpenFileDialog();
         dialog.Multiselect = true;
-        dialog.Title = "选择文件发送";
+        dialog.Filter = filter;
+        dialog.Title = "请选择";
         var result = dialog.ShowDialog();
         if (result != null && result.Value)
         {
@@ -720,7 +778,8 @@ public partial class ChatMessageViewModel(
                     await HandMessageSending(type, dto);
                 }
                 else
-                    await PrepareToUploadFile(generator.Guid + fileInfo.Extension, fileInfo.FullName, fileInfo.Length);
+                    _uploadTask = PrepareToUploadFile(generator.Guid + fileInfo.Extension, fileInfo.FullName,
+                        fileInfo.Length);
             }
         }
     }
@@ -744,7 +803,7 @@ public partial class ChatMessageViewModel(
             _uploadBytes = 0;
             _uploadCancellationTokenSource.Dispose();
             _uploadCancellationTokenSource = new CancellationTokenSource();
-            await PrepareToUploadFile(item.FileName, item.LocalSourcePath, item.FileSize.GetValueOrDefault());
+            _uploadTask = PrepareToUploadFile(item.FileName, item.LocalSourcePath, item.FileSize.GetValueOrDefault());
         }
 
         if (item.TransType == null || item.TransType == FileTransType.Download)
@@ -930,6 +989,7 @@ public partial class ChatMessageViewModel(
                                                                && e.FileName == fileName);
             FileTransmissionTask fileTransmissionTask = null;
             ChatMessage chatMessage = null;
+            FileTransmission fileTransmission = null;
             if (messageItem == null)
             {
                 chatMessage = new ChatMessage();
@@ -974,6 +1034,7 @@ public partial class ChatMessageViewModel(
                 messageItem.FileSizeText = FileTransmission.GetMemoryText(fileSize);
                 messageItem.MessageTime = chatMessage.CreateTime;
                 messageItem.SourceUnload = true;
+                messageItem.ProcessState = FileTransmissionState.Processing;
                 var messageId = await worker.Db.Insertable(chatMessage).ExecuteReturnBigIdentityAsync(cts.Token);
                 messageItem.MessageId = messageId;
                 fileTransmissionTask = new FileTransmissionTask
@@ -991,7 +1052,7 @@ public partial class ChatMessageViewModel(
                 fileTransmissionTask.Id = taskId;
                 messageItem.TaskId = taskId;
 
-                var fileTransmission = new FileTransmission
+                fileTransmission = new FileTransmission
                 {
                     TaskId = taskId,
                     HeadMessageId = SelectedHeadMessage.HeadMessageId,
@@ -1014,6 +1075,15 @@ public partial class ChatMessageViewModel(
             }
             else
             {
+                       
+                fileTransmission = await sugarClient.Queryable<FileTransmission>()
+                    .Where(f=>f.TaskId == messageItem.TaskId)
+                    .FirstAsync(cts.Token);
+                if (!fileTransmission.IsValid)
+                {
+                    MessageComponent.ShowMessage(Owner,"文件已无效",MessageType.Warning);
+                    return;
+                }
                 fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
                     .Where(f => f.Id == messageItem.TaskId)
                     .FirstAsync(cts.Token);
@@ -1144,6 +1214,9 @@ public partial class ChatMessageViewModel(
             var fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
                 .Where(f => f.Id == item.TaskId)
                 .FirstAsync(cts.Token);
+            var fileTransmission = await sugarClient.Queryable<FileTransmission>()
+                .Where(f=>f.TaskId ==  item.TaskId)
+                .FirstAsync(cts.Token);
             if (fileTransmissionTask == null)
             {
                 var suffix = Path.GetExtension(item.FileName);
@@ -1161,7 +1234,7 @@ public partial class ChatMessageViewModel(
                 fileTransmissionTask.Id = await worker.Db
                     .Insertable(fileTransmissionTask)
                     .ExecuteReturnBigIdentityAsync(cts.Token);
-                var fileTransmission = new FileTransmission
+                fileTransmission = new FileTransmission
                 {
                     FileName = item.FileName,
                     IsReceiveSide = true,
@@ -1180,10 +1253,9 @@ public partial class ChatMessageViewModel(
             }
             else
             {
-                if (fileTransmissionTask.State != FileTransmissionState.Cancelled.GetValue()
-                    || fileTransmissionTask.State != FileTransmissionState.Finished.GetValue())
+                if (!fileTransmission.IsValid)
                 {
-                    MessageComponent.ShowMessage(Owner, "当前存在未下载完成的下载任务", MessageType.Warning);
+                    MessageComponent.ShowMessage(Owner,"文件已失效", MessageType.Warning);
                     return;
                 }
             }
@@ -1329,5 +1401,7 @@ public partial class ChatMessageViewModel(
         _sendGate.SafeDispose();
         _uploadSGate.SafeDispose();
         _downloadSGate.SafeDispose();
+        _uploadTask?.SafeDispose();
+        _downloadTask?.SafeDispose();
     }
 }

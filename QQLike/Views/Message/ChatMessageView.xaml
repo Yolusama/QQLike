@@ -913,28 +913,35 @@
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Command="{Binding OpenScreenShotComponentCommand}"
                                         Style="{StaticResource MaterialDesignFlatButton}"
-                                        Foreground="#757575" ToolTip="截图">
+                                        Foreground="#757575" ToolTip="截图(Ctrl+Shift+A)">
                                     <materialDesign:PackIcon Kind="ContentCut" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
                                         Command="{Binding OpenFileDialogCommand}"
+                                        CommandParameter="所有文件 (*.*)|*.*"
                                         Foreground="#757575" ToolTip="打开文件">
                                     <materialDesign:PackIcon Kind="FolderOutline" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
+                                        Command="{Binding OpenFileDialogCommand}"
+                                        CommandParameter="图片文件|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp;*.tiff;*.ico"
                                         Foreground="#757575" ToolTip="图片">
                                     <materialDesign:PackIcon Kind="ImageOutline" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
+                                        Command="{Binding OpenFileDialogCommand}"
+                                        CommandParameter= "视频文件|*.mp4;*.avi;*.mov;*.wmv;*.flv;*.mkv;*.webm;*.m4v;*.mpg;*.mpeg;*.3gp;*.rmvb;*.ts"
                                         Foreground="#757575" ToolTip="视频">
                                     <materialDesign:PackIcon Kind="VideoOutline" Width="20" Height="20" />
                                 </Button>
                                 <Button Width="32" Height="32" Margin="4,0,0,0" Padding="5"
                                         Style="{StaticResource MaterialDesignFlatButton}"
-                                        Foreground="#757575" ToolTip="语音">
+                                        Command="{Binding OpenFileDialogCommand}"
+                                        CommandParameter= "音频文件|*.mp3;*.wav;*.flac;*.aac;*.ogg;*.wma;*.m4a;*.ape;*.opus;*.amr;*.mid;*.midi"
+                                        Foreground="#757575" ToolTip="音频文件">
                                     <materialDesign:PackIcon Kind="MicrophoneOutline" Width="20" Height="20" />
                                 </Button>
                             </StackPanel>
@@ -946,8 +953,22 @@
                             </Button>
                         </Grid>
 
-                        <!-- Text Input Area -->
-                        <TextBox Grid.Row="1"
+                        <RichTextBox Grid.Row="1"
+                                     x:Name="ContentWriteTo"
+                                     MinHeight="100"
+                                     VerticalContentAlignment="Top"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     FontSize="14"
+                                     Padding="4"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Disabled" >
+                                <RichTextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Modifiers="Control" 
+                                                Command="{Binding SendMessageCommand}"></KeyBinding>
+                                </RichTextBox.InputBindings>
+                              </RichTextBox>
+                       <!-- <TextBox Grid.Row="1"
                                  Text="{Binding NewMessageText,UpdateSourceTrigger=PropertyChanged}"
                                  MinHeight="100"
                                  VerticalContentAlignment="Top"
@@ -957,7 +978,7 @@
                                  Background="Transparent"
                                  x:Name="ContentWriteTo"
                                  FontSize="14"
-                                 Padding="4" />
+                                 Padding="4" /> -->
 
                         <!-- Send Button Row -->
                         <Grid Grid.Row="2" HorizontalAlignment="Right" Margin="0,6,0,0" Height="30">

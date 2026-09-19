@@ -1,0 +1,116 @@
+﻿<Window x:Class="QQLike.Components.ScreenShotComponent"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        WindowStyle="None"
+        Topmost="True"
+        Cursor="Cross"
+        AllowsTransparency="True"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseMove="Window_MouseMove"
+        MouseUp="Window_MouseLeftButtonUp">
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseCommand}" />
+        <KeyBinding Key="C" Command="{Binding CopyColorCommand}"  />
+    </Window.InputBindings> 
+    <Canvas HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!-- 全屏截图背景 -->
+        <Image x:Name="ScreenCaptureImage" Stretch="None" Canvas.Left="0" Canvas.Top="0" />
+
+        <!-- 半透明遮罩层 -->
+        <Canvas x:Name="OverlayCanvas" Background="#80000000" Canvas.Left="0" Canvas.Top="0" />
+
+        <!-- 选区（透明恢复区域） -->
+        <Canvas x:Name="SelectionCanvas" Canvas.Left="0" Canvas.Top="0" />
+
+        <!-- 选区边框 -->
+        <Rectangle x:Name="SelectionBorder" Stroke="#3399FF" StrokeThickness="2"
+                   Fill="Transparent" Visibility="Collapsed" />
+
+        <!-- 放大镜 -->
+        <Border x:Name="MagnifierBorder" Width="150" Height="150"
+                BorderBrush="#3399FF" BorderThickness="2"
+                CornerRadius="4" Visibility="Collapsed">
+            <Canvas x:Name="MagnifierCanvas" />
+        </Border>
+
+
+        <!-- 顶部模式提示（居中） -->
+        <Grid Canvas.Left="0" Canvas.Top="0" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Canvas}}"
+              Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Canvas}}">
+            <Border x:Name="ModeTipBorder" Background="#CC000000" CornerRadius="4" Visibility="Collapsed"
+                    Padding="16,6" HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}">
+                        <TextBlock Text="截图" Foreground="#3399FF" FontSize="14" FontWeight="Bold" Margin="0,0,16,0" />
+                    </Button>
+                   <Button Style="{StaticResource MaterialDesignFlatButton}">
+                       <TextBlock Text="录屏" Foreground="#AAAAAA" FontSize="14" />
+                   </Button>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 颜色信息面板 -->
+        <Border x:Name="ColorInfoBorder" Background="#CC000000" CornerRadius="4"
+                Padding="8,4" Visibility="Collapsed" Margin="0,12,0,0"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="按C复制色值" Width="60" Height="16" Foreground="White"></TextBlock>
+                <Border x:Name="ColorPreviewBorder" Width="16" Height="16" CornerRadius="2"
+                        BorderBrush="White" BorderThickness="1" Margin="0,0,6,0" />
+                <TextBlock x:Name="ColorInfoText" Foreground="White" FontSize="12"
+                           FontFamily="Consolas" />
+            </StackPanel>
+        </Border>
+
+        <!-- 坐标信息 -->
+        <Border x:Name="CoordInfoBorder" Background="#CC000000" CornerRadius="4"
+                Padding="6,3" Visibility="Collapsed"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock x:Name="CoordInfoText" Foreground="White" FontSize="11"
+                       FontFamily="Consolas" />
+        </Border>
+
+        <!-- 选区尺寸信息 -->
+        <Border x:Name="SizeInfoBorder" Background="#CC000000" CornerRadius="4"
+                Padding="6,3" Visibility="Collapsed"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock x:Name="SizeInfoText" Foreground="White" FontSize="11"
+                       FontFamily="Consolas" />
+        </Border>
+
+        <!-- 截图完成后的工具栏 -->
+        <Border x:Name="ToolBarBorder" Background="#CC2D2D2D" CornerRadius="4" Opacity="1"
+                Padding="4" Visibility="Collapsed"
+                HorizontalAlignment="Left" VerticalAlignment="Top">
+            <StackPanel Orientation="Horizontal">
+                <!-- 保存按钮 -->
+                <Button Width="32" Height="32" Padding="4"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="White" ToolTip="保存"
+                        Command="{Binding SaveCommand}">
+                    <materialDesign:PackIcon Kind="DownloadOutline" Width="20" Height="20" />
+                </Button>
+                <!-- 复制到剪贴板 -->
+                <Button  Width="32" Height="32" Padding="4"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="White" ToolTip="复制到剪贴板"
+                        Command="{Binding CopyToClipboardCommand}">
+                    <materialDesign:PackIcon Kind="Check" Width="20" Height="20" />
+                </Button>
+                <!-- 取消 -->
+                <Button x:Name="BtnCancel" Width="32" Height="32" Padding="4"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="White" ToolTip="取消 (ESC)"
+                        Command="{Binding CloseCommand}">
+                    <materialDesign:PackIcon Kind="Close" Width="20" Height="20" />
+                </Button>
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>

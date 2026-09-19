@@ -18,5 +18,6 @@ public static class Constants
     public const int MB = KB * KB;
     public const int GB = MB * KB;
     public const int EOF = -1;
+    public const int EnsureClosingInterval = 2500;
 
 }

@@ -9,6 +9,7 @@ using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Services.Interfaces;
 using QQLike.Views;
+using Constants = QQLike.Entity.Common.Constants;
 
 
 namespace QQLike.ViewModels;
@@ -76,7 +77,7 @@ public partial class AppHeaderViewModel : ViewModelBase<AppHeader>
         {
             foreach (Window win in Application.Current.Windows)
                 win.Close();
-            Thread.Sleep(1000);
+            Thread.Sleep(Constants.EnsureClosingInterval);
             return;
         }
 

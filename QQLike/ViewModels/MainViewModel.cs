@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MaterialDesignThemes.Wpf;
@@ -19,6 +20,7 @@ using QQLike.Entity.VO;
 using QQLike.Functional.Instructure;
 using QQLike.Functional.Utils;
 using QQLike.Services;
+using QQLike.Services.Interfaces;
 using QQLike.Views;
 using RabbitMQ.Client.Events;
 using SqlSugar;
@@ -31,6 +33,7 @@ public partial class MainViewModel(
     ISessionStorage sessionStorage,
     IRabbitMQConsumer mqConsumer,
     ISqlSugarClient sugarClient,
+    IWindowFactory windowFactory,
     SysSetting setting) : ViewModelBase<MainView>, IDisposable
 {
     private static readonly TimeSpan ReceiveDelay = TimeSpan.FromSeconds(1);
@@ -559,6 +562,14 @@ public partial class MainViewModel(
             .SetColumns(f=>f.State ==  FileTransmissionState.Paused.GetValue())
             .Where(f=>taskIds.Contains(f.Id))
             .ExecuteCommandAsync();
+    }
+
+    [RelayCommand]
+    private void ScreenShot()
+    {
+        var window = windowFactory.GetWindow<ScreenShotComponent>();
+        window.Background = new SolidColorBrush(Colors.Transparent);
+        window.Show();
     }
 
     private async Task HeartbeatLoop(CancellationToken cancellationToken)
