@@ -5,6 +5,7 @@ namespace QQLike.Services.Interfaces;
 
 public interface IScreenShotsHandler
 {
-    public Task Store(ImageSource imageSource);
+    public Task<string> StoreAsync(ImageSource imageSource);
+    public string Store(ImageSource imageSource);
  
 }

@@ -174,16 +174,34 @@
         </DataTemplate>
 
         <DataTemplate x:Key="ImageMessageBodyTemplate">
-            <Border MaxWidth="260" MaxHeight="320" CornerRadius="8" ClipToBounds="True"
-                    Background="{Binding BubbleBackground}"
-                    BorderBrush="{Binding BubbleBorderBrush}"
+           <!-- <Ellipse MaxHeight="320" MaxWidth="280"
+                     HorizontalAlignment="{Binding BubbleHorizontalAlignment}"
+                     VerticalAlignment="Center">
+                <Ellipse.Fill>
+                    <ImageBrush ImageSource="{Binding LocalSourcePath}" Stretch="Uniform"></ImageBrush>
+                </Ellipse.Fill>
+            </Ellipse> -->
+            <Border MaxWidth="260" MaxHeight="320" CornerRadius="12"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
                     BorderThickness="1">
+                <Border.OpacityMask>
+                    <VisualBrush>
+                        <VisualBrush.Visual>
+                            <Border Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}"
+                                    Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Border}}"
+                                    Background="White"
+                                    CornerRadius="12"/>
+                        </VisualBrush.Visual>
+                    </VisualBrush>
+                </Border.OpacityMask>
                 <Image Source="{Binding LocalSourcePath}"
                        behaviors:ImagePreview.Previewable="True"
                        Stretch="Uniform"
                        behaviors:ImageDefault.WithDefault="True"
                        MaxWidth="260"
-                       MaxHeight="320" />
+                       MaxHeight="320">
+                </Image>
             </Border>
         </DataTemplate>
 
@@ -390,7 +408,7 @@
                                             <DataTrigger Binding="{Binding IsSelf}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding SourceDownloaded}" Value="True">
+                                            <DataTrigger Binding="{Binding SourceUnload}" Value="True">
                                                 <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -804,7 +822,7 @@
                                 <!-- 我的本群昵称 -->
                                 <Border Grid.Row="2" Background="White" CornerRadius="8" Margin="10,5" Padding="12">
                                     <StackPanel>
-                                        <TextBlock Text="我的本群昵称" FontSize="14" FontWeight="SemiBold"
+                                        <TextBlock Text="��的本群昵称" FontSize="14" FontWeight="SemiBold"
                                                    Foreground="#1F1F1F" Margin="0,0,0,8" />
                                         <TextBox Text="{Binding GroupDisplayName}" FontSize="14"
                                                  Foreground="#1F1F1F" BorderThickness="0"
@@ -962,6 +980,7 @@
                                      FontSize="14"
                                      Padding="4"
                                      VerticalScrollBarVisibility="Auto"
+                                     TextChanged="ContentWriteTo_OnTextChanged"
                                      HorizontalScrollBarVisibility="Disabled" >
                                 <RichTextBox.InputBindings>
                                     <KeyBinding Key="Enter" Modifiers="Control" 

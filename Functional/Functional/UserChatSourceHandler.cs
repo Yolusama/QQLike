@@ -38,9 +38,10 @@ public class UserChatSourceHandler(
         if(!Directory.Exists(downloadPath))
             Directory.CreateDirectory(downloadPath);
         var path = Path.Combine(downloadPath, tempFileName);
-        if(!File.Exists(path))
-            File.Create(path).Close();
-        return path;
+        var file = new FileInfo(path);
+        if(!file.Exists)
+            file.Create().Close();
+        return file.FullName;
     }
     
 
@@ -51,11 +52,12 @@ public class UserChatSourceHandler(
         if(!directory.Exists)
             directory.Create();
         var toStoreName = Path.Combine(filePath, model.FileName);
-        await using var newFileStream = new FileStream(toStoreName,
+        var fileInfo = new FileInfo(toStoreName);
+        await using var newFileStream = new FileStream(fileInfo.FullName,
             FileMode.Create, FileAccess.ReadWrite,FileShare.ReadWrite);
         await newFileStream.WriteAsync(model.FileBytes,token);
         await newFileStream.FlushAsync(token);
-        return toStoreName;
+        return fileInfo.FullName;
     }
 
     public async Task ReceivePart(FileTypeMessageModel model,bool finished, CancellationToken token = default)

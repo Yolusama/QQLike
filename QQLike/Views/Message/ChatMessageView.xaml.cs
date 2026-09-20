@@ -7,7 +7,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using MaterialDesignThemes.Wpf;
+using Microsoft.Extensions.DependencyInjection;
+using QQLike.Behaviors;
 using QQLike.Services;
+using QQLike.Services.Interfaces;
 using QQLike.ViewModels;
 
 namespace QQLike.Views.Message;
@@ -15,10 +18,12 @@ namespace QQLike.Views.Message;
 public partial class ChatMessageView : UserControl
 {
     private ChatMessageViewModel ViewModel => this.GetViewModel<ChatMessageViewModel>();
+    private readonly IScreenShotsHandler _screenShotsHandler;
     public ChatMessageView()
     {
         InitializeComponent();
         this.SetViewModel<ChatMessageViewModel,ChatMessageView>();
+        _screenShotsHandler = App.ServiceProvider.GetRequiredService<IScreenShotsHandler>();
         
         // 添加粘贴命令绑定
         var pasteCommandBinding = new CommandBinding(ApplicationCommands.Paste, OnPasteExecuted);
@@ -88,22 +93,7 @@ public partial class ChatMessageView : UserControl
     private void InsertImageToRichTextBox(BitmapSource bitmap)
     {
         // 生成唯一文件名保存图片
-        var tempPath = Path.Combine(Path.GetTempPath(), "QQLike", "PasteImages");
-        if (!Directory.Exists(tempPath))
-        {
-            Directory.CreateDirectory(tempPath);
-        }
-        
-        var fileName = $"{Guid.NewGuid()}.png";
-        var filePath = Path.Combine(tempPath, fileName);
-        
-        // 保存图片到临时文件
-        using (var fs = new FileStream(filePath, FileMode.Create))
-        {
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-            encoder.Save(fs);
-        }
+        var filePath = _screenShotsHandler.Store(bitmap);
         
         // 创建 BitmapImage 用于显示
         var displayBitmap = new BitmapImage();
@@ -117,12 +107,14 @@ public partial class ChatMessageView : UserControl
         var image = new Image
         {
             Source = displayBitmap,
-            Width = Math.Min(displayBitmap.PixelWidth, 200),
-            Height = Math.Min(displayBitmap.PixelHeight, 200),
-            MaxWidth = 200,
-            MaxHeight = 200,
+            Width = Math.Min(displayBitmap.PixelWidth, 100),
+            Height = Math.Min(displayBitmap.PixelHeight, 100),
+            MaxWidth = 100,
+            MaxHeight = 100,
             Stretch = Stretch.Uniform
         };
+        
+         ImagePreview.SetPreviewable(image, true);
         
         // 创建 InlineUIContainer 包裹图片
         var container = new InlineUIContainer(image)
@@ -134,7 +126,7 @@ public partial class ChatMessageView : UserControl
         var caretPosition = ContentWriteTo.CaretPosition;
         var paragraph = caretPosition.Paragraph;
         
-        if (paragraph != null)
+        /*if (paragraph != null)
         {
             // 如果段落有内容，先添加换行
             if (paragraph.Inlines.Count > 0)
@@ -147,7 +139,9 @@ public partial class ChatMessageView : UserControl
             
             // 在图片后添加换行，方便继续输入
             paragraph.Inlines.Add(new LineBreak());
-        }
+        }*/
+        paragraph.Inlines.Add(container);
+        paragraph.KeepWithNext = true;
         
         // 更新布局
         ContentWriteTo.UpdateLayout();
@@ -205,5 +199,10 @@ public partial class ChatMessageView : UserControl
         }
 
         return null;
+    }
+
+    private void ContentWriteTo_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        ViewModel.SendingTextChangedCommand.Execute(null);
     }
 }

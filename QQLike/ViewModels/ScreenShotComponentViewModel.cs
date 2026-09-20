@@ -37,7 +37,7 @@ public partial class ScreenShotComponentViewModel(IScreenShotsHandler shotsHandl
         var shotsImage = croppedBitmap.Clone();
 
         Clipboard.SetImage(croppedBitmap);
-        await shotsHandler.Store(shotsImage);
+        await shotsHandler.StoreAsync(shotsImage);
         Close();
     }
 

@@ -11,6 +11,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -92,11 +93,6 @@ public partial class ChatMessageViewModel(
         var viewModel = window.GetViewModel<MainViewModel>();
         _client = viewModel.Client;
         return viewModel.Client;
-    }
-
-    partial void OnNewMessageTextChanged(string value)
-    {
-        CanSendMessage = value.Length > 0;
     }
 
     [RelayCommand]
@@ -404,11 +400,12 @@ public partial class ChatMessageViewModel(
 
                         case InlineUIContainer container when container.Child is Image image:
                         {
-                            var fileInfo = new FileInfo(image.Source.ToString());
+                            var bitmap = (BitmapImage)image.Source;
+                            var fileInfo = new FileInfo(bitmap.UriSource.LocalPath);
                             await HandMessageSending(ChatMessageType.Image,new FileTypeMessageDTO
                             {
                                 TempMessage = ChatMessageType.Image.FileTypeContent(),
-                                FileName = fileInfo.Name,
+                                FileName = Path.GetFileNameWithoutExtension(fileInfo.Name),
                                 LocalFilePath = fileInfo.FullName,
                                 OriginalFileName = fileInfo.Name,
                                 FileSize = fileInfo.Length,
@@ -420,6 +417,8 @@ public partial class ChatMessageViewModel(
                 }
             }
         }
+        
+        View.ContentWriteTo.Document.Blocks.Clear();
         
     }
 
@@ -923,6 +922,13 @@ public partial class ChatMessageViewModel(
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"打开文件位置失败：{e.Message}", MessageType.Error);
         }
+    }
+
+    [RelayCommand]
+    private void SendingTextChanged()
+    {
+        Thread.Sleep(LoadInterval);
+        CanSendMessage = View.ContentWriteTo.HasContent();
     }
 
     private async Task<string> DownloadAction(ChatMessage? message, CancellationToken token)
