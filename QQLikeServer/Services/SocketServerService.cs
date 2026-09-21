@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using QQLike.Entity;
+using QQLike.Entity.Common;
 using QQLike.Functional.Instructure;
 using QQLike.Entity.Configuration.Server;
 using QQLike.Entity.Enum;
@@ -31,7 +32,7 @@ public class SocketServerService(
     private Task? _receiveLoopTask;
     private int _isStarted;
     private const int MaxQueueCount = 1000;
-    private const int MaxMessageSize = 10 * 1024 * 1024;
+    private const int MaxMessageSize = 30 * Constants.MB;
     private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan ReceiveLoopInterval = TimeSpan.FromMilliseconds(100);
 
@@ -129,46 +130,42 @@ public class SocketServerService(
 
     private async Task<ChatMessageTransModel?> ReadFrameAsync(Socket socket, CancellationToken token)
     {
-        var lengthBuffer = new byte[sizeof(int)];
-        var headerOk = await ReceiveExactAsync(socket, lengthBuffer, token);
-        if (!headerOk)
+        try
         {
-            return null;
-        }
-
-        var totalLength = BitConverter.ToInt32(lengthBuffer, 0);
-        if (totalLength <= 0 || totalLength > MaxMessageSize)
-        {
-            throw new InvalidDataException($"非法消息长度：{totalLength}");
-        }
-
-        var payload = new byte[totalLength];
-        var payloadOk = await ReceiveExactAsync(socket, payload, token);
-        if (!payloadOk)
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<ChatMessageTransModel>(payload);
-    }
-
-    private static async Task<bool> ReceiveExactAsync(Socket socket, byte[] buffer, CancellationToken token)
-    {
-        var offset = 0;
-        while (offset < buffer.Length)
-        {
-            var read = await socket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset), SocketFlags.None, token);
+            var buffer = new byte[sizeof(long)];
+            var read = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None, token);
             if (read == 0)
+                return null;
+            var totalLength = BitConverter.ToInt64(buffer, 0);
+            
+            if(totalLength > MaxMessageSize)
             {
-                return false;
+                Console.WriteLine($"接收到的消息过长，长度为{totalLength}字节，已断开连接");
+                return null;
             }
 
-            offset += read;
+            var receiveRes = new List<byte>();
+            while (receiveRes.Count < totalLength)
+            {
+                var chunk = new byte[4 * Constants.KB];
+                var chunkRead = await socket.ReceiveAsync(new ArraySegment<byte>(chunk), SocketFlags.None, token);
+                if (chunkRead == 0)
+                {
+                    return null;
+                }
+                receiveRes.AddRange(chunk.Take(chunkRead));
+            }
+            
+            return JsonSerializer.Deserialize<ChatMessageTransModel>(receiveRes.ToArray());
         }
-
-        return true;
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return null;
+        }
+        
     }
-
+    
     private async Task ProcessIncomingModel(ChatMessageTransModel model, Socket socket, CancellationToken token)
     {
         if (model.Type == ChatMessageType.Head)

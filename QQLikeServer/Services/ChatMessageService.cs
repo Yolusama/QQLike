@@ -13,7 +13,7 @@ public class ChatMessageService(IFreeSql orm,
     ISourceHandler sourceHandler,
     IProjectLogger logger) : IChatMessageService
 {
-    public async Task<ResponseResult<bool>> UploadFile(IFormFile file,ChatMessageType type,long taskId, string tempFileName, int current, int total,long buffeSize)
+    public async Task<ResponseResult<bool>> UploadFile(IFormFile file,ChatMessageType type,long taskId, string tempFileName, long current, long total,long buffeSize)
     {
         using var worker = orm.CreateUnitOfWork();
         using var cts = new CancellationTokenSource();
@@ -22,10 +22,10 @@ public class ChatMessageService(IFreeSql orm,
             using var stream = file.OpenReadStream();
             var fileInfo = new  FileInfo(Path.Combine(fileConfig.FileRootPath,
                 Path.Combine(sourceHandler.FileRootPath(type), tempFileName)));
-            await sourceHandler.HandleWriteChunk(tempFileName, type, stream, buffeSize, cts.Token);
-            var finished = current == total;
+            var bytes = await sourceHandler.HandleWriteChunk(tempFileName, type, stream, buffeSize, cts.Token);
+            var finished = current + bytes == total;
             await worker.Orm.Update<FileTransmissionTask>()
-                .SetIf(!finished,e => e.Current, current + 1)
+                .SetIf(!finished,e => e.Current, current + bytes)
                 .SetIf(finished, e => new FileTransmissionTask
                 {
                     State = FileTransmissionState.Finished.GetValue(),
@@ -69,10 +69,9 @@ public class ChatMessageService(IFreeSql orm,
         return await fileInfo.ReadBytes();
     }
 
-    public async Task<ResponseResult<byte[]>> DownloadFile(ChatMessageType type, long taskId, string fileName, int current, int total, long buffeSize)
+    public async Task<ResponseResult<byte[]>> DownloadFile(ChatMessageType type, string fileName, long current, long total, long buffeSize)
     {
         using var cts = new  CancellationTokenSource();
-        using var worker = orm.CreateUnitOfWork();
         try
         {
             var isValid = await orm.Select<FileTransmission>()
@@ -80,19 +79,7 @@ public class ChatMessageService(IFreeSql orm,
                 .ToOneAsync(e => e.IsValid,cts.Token);
             if(!isValid)
                 return ResponseResult.Fail("文件已失效!").Generic<byte[]>();
-            var bytes = await sourceHandler.HandReadChunk(fileName, current, total, type, buffeSize, cts.Token);
-            var next = current + 1;
-            await worker.Orm.Update<FileTransmissionTask>()
-                .Set(e=>e.Current,next)
-                .SetIf(next == total,e=>new FileTransmissionTask
-                {
-                    FinishTime = DateTime.Now,
-                    Current = total,
-                    State = FileTransmissionState.Finished.GetValue()
-                })
-                .Where(e=>e.Id == taskId)
-                .ExecuteAffrowsAsync(cts.Token);
-            worker.Commit();
+            var bytes = await sourceHandler.HandReadChunk(fileName, current,type, buffeSize, cts.Token);
             return ResponseResult<byte[]>.OK(bytes);
         }
         catch (Exception e)

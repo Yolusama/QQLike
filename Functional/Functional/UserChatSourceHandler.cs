@@ -81,7 +81,8 @@ public class UserChatSourceHandler(
 
         if (finished)
         {
-            var realFileName = model.FileName.Replace(filePath, Path.GetExtension(model.FileName));
+            var realFileName = 
+                model.FileName.Replace(filePath, Path.GetExtension(model.FileName));
             if(!File.Exists(realFileName))
                 File.Create(realFileName).Close();
             File.Move(filePath, realFileName, true);

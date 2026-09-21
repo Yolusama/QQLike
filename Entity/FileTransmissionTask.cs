@@ -17,14 +17,25 @@ public class FileTransmissionTask
     /// 断点续传临时文件名
     /// </summary>
     public string TempFileName  { get; set; }
-    /// <summary>
+    #region  连续上传模型，数据上由于网络情况不可能达成完美的连续上传
+    /*/// <summary>
     /// 当前分片
     /// </summary>
     public int Current {get; set;}
     /// <summary>
     /// 总分片
     /// </summary>
-    public int Total {get; set;}
+    public int Total {get; set;}*/
+    #endregion
+    
+    /// <summary>
+    /// 当前已上传
+    /// </summary>
+    public long Current {get; set;}
+    /// <summary>
+    /// 总大小
+    /// </summary>
+    public long Total {get; set;}
     /// <summary>
     /// 创建时间
     /// </summary>

@@ -27,8 +27,8 @@ public class ChatMessageController(IChatMessageService chatMessageService) : Con
         var file = Request.Form.Files[0];
         var tempFileName = Request.Form["tempFileName"].ToString();
         var taskId = long.Parse(Request.Form["taskId"].ToString());
-        var current = int.Parse(Request.Form["current"].ToString());
-        var total = int.Parse(Request.Form["total"].ToString());
+        var current = long.Parse(Request.Form["current"].ToString());
+        var total = long.Parse(Request.Form["total"].ToString());
         var bufferSize = long.Parse(Request.Form["bufferSize"].ToString());
         var messageType = Enum.Parse<ChatMessageType>(Request.Form["messageType"].ToString());
         
@@ -44,7 +44,7 @@ public class ChatMessageController(IChatMessageService chatMessageService) : Con
     public async Task<ActionResult<ResponseResult<byte[]>>> DownloadFile([FromQuery] MessageFileDownloadDTO model)
     {
         return Ok(await chatMessageService
-            .DownloadFile(model.Type,model.TaskId,model.FileName,model.Current,model.Total,model.BufferSize));
+            .DownloadFile(model.Type,model.FileName,model.Current,model.Total,model.BufferSize));
     }
 
     [RequestAuthorize]

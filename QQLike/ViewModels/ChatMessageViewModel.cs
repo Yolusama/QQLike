@@ -47,24 +47,15 @@ public partial class ChatMessageViewModel(
 {
     private static readonly TimeSpan SocketSendTimeout = TimeSpan.FromSeconds(8);
 
-    [ObservableProperty] 
-    private ObservableCollection<ChatHeadMessageItem> _headMessages = [];
-    [ObservableProperty] 
-    private ChatHeadMessageItem? _selectedHeadMessage;
-    [ObservableProperty] 
-    private ObservableCollection<ChatMessageItem> _chatMessages = [];
-    [ObservableProperty] 
-    private bool _hasSelection;
-    [ObservableProperty] 
-    private bool _isNoSelection = true;
-    [ObservableProperty]
-    private string _newMessageText;
-    [ObservableProperty]
-    private bool _isUserCardPopupOpen;
-    [ObservableProperty]
-    private bool _canSendMessage;
-    [ObservableProperty]
-    private bool _isUserContactOpen;
+    [ObservableProperty] private ObservableCollection<ChatHeadMessageItem> _headMessages = [];
+    [ObservableProperty] private ChatHeadMessageItem? _selectedHeadMessage;
+    [ObservableProperty] private ObservableCollection<ChatMessageItem> _chatMessages = [];
+    [ObservableProperty] private bool _hasSelection;
+    [ObservableProperty] private bool _isNoSelection = true;
+    [ObservableProperty] private string _newMessageText;
+    [ObservableProperty] private bool _isUserCardPopupOpen;
+    [ObservableProperty] private bool _canSendMessage;
+    [ObservableProperty] private bool _isUserContactOpen;
 
     private CancellationTokenSource _downloadCancellationTokenSource = new();
     private CancellationTokenSource _uploadCancellationTokenSource = new();
@@ -215,13 +206,15 @@ public partial class ChatMessageViewModel(
                         LocalSourcePath = message.LocalSourcePath,
                         DisplayFileName = message.OriginalFileName,
                         TempFileName = message.TempFileName,
-                        Current = message.CurrentChunk,
-                        Total = message.TotalChunkCount,
+                        Current = message.FileCurrentLoad,
                         FileSize = message.FileSize,
-                        IsBigFile = (type != ChatMessageType.Text && type != ChatMessageType.Notification) && FileTransmission.NeedTask(message.FileSize ?? 0),
+                        IsBigFile = (type != ChatMessageType.Text && type != ChatMessageType.Notification) &&
+                                    FileTransmission.NeedTask(message.FileSize ?? 0),
                         FileSizeText = FileTransmission.GetMemoryText(message.FileSize ?? 0),
                         TransType = message.FileTransType == null ? null : (FileTransType)message.FileTransType,
-                        ProcessState = message.ProcessState.HasValue ? (FileTransmissionState)message.ProcessState.Value : null,
+                        ProcessState = message.ProcessState.HasValue
+                            ? (FileTransmissionState)message.ProcessState.Value
+                            : null,
                         MessageTimeText = FormatMessageTime(message.CreateTime, true),
                         ContactNameVisibility = Visibility.Collapsed
                     };
@@ -244,16 +237,16 @@ public partial class ChatMessageViewModel(
                         {
                             newMessageItem.SourceDownloaded = true;
                             if (FileTransmission.NeedTask(message.FileSize ?? 0))
-                            { 
-                               newMessageItem.TaskId = message.TaskId;
-                               newMessageItem.SourceUnload = 
-                                   newMessageItem.ProcessState  == FileTransmissionState.Paused;
-                               newMessageItem.SourceLoading = false;
-                               if (newMessageItem.ProcessState == FileTransmissionState.Cancelled)
-                               {
-                                   newMessageItem.ProcessText = "文件传输任务已取消";
-                                   newMessageItem.SourceUnload = false;
-                               }
+                            {
+                                newMessageItem.TaskId = message.TaskId;
+                                newMessageItem.SourceUnload =
+                                    newMessageItem.ProcessState == FileTransmissionState.Paused;
+                                newMessageItem.SourceLoading = false;
+                                if (newMessageItem.ProcessState == FileTransmissionState.Cancelled)
+                                {
+                                    newMessageItem.ProcessText = "文件传输任务已取消";
+                                    newMessageItem.SourceUnload = false;
+                                }
                             }
                             else
                                 newMessageItem.SourceUnload = false;
@@ -274,7 +267,7 @@ public partial class ChatMessageViewModel(
                         await StartLoadFile(newMessageItem);
                     }
                     else
-                       ChatMessages.Add(newMessageItem);
+                        ChatMessages.Add(newMessageItem);
                 }
             }
             else
@@ -308,11 +301,12 @@ public partial class ChatMessageViewModel(
                         DisplayFileName = message.OriginalFileName,
                         TempFileName = message.TempFileName,
                         Current = message.CurrentChunk,
-                        Total = message.TotalChunkCount,
                         FileSize = message.FileSize,
                         IsBigFile = type != ChatMessageType.Text && FileTransmission.NeedTask(message.FileSize ?? 0),
                         FileSizeText = FileTransmission.GetMemoryText(message.FileSize ?? 0),
-                        ProcessState = message.ProcessState.HasValue ? (FileTransmissionState)message.ProcessState.Value : null,
+                        ProcessState = message.ProcessState.HasValue
+                            ? (FileTransmissionState)message.ProcessState.Value
+                            : null,
                         TransType = message.FileTransType == null ? null : (FileTransType)message.FileTransType,
                         MessageTimeText = FormatMessageTime(message.CreateTime, true),
                         ContactNameVisibility = Visibility.Visible
@@ -402,24 +396,24 @@ public partial class ChatMessageViewModel(
                         {
                             var bitmap = (BitmapImage)image.Source;
                             var fileInfo = new FileInfo(bitmap.UriSource.LocalPath);
-                            await HandMessageSending(ChatMessageType.Image,new FileTypeMessageDTO
+                            await HandMessageSending(ChatMessageType.Image, new FileTypeMessageDTO
                             {
                                 TempMessage = ChatMessageType.Image.FileTypeContent(),
                                 FileName = Path.GetFileNameWithoutExtension(fileInfo.Name),
                                 LocalFilePath = fileInfo.FullName,
                                 OriginalFileName = fileInfo.Name,
                                 FileSize = fileInfo.Length,
-                                FileBytes =await fileInfo.ReadBytes(),
+                                FileBytes = await fileInfo.ReadBytes(),
                                 FileExtension = fileInfo.Extension
                             });
-                        } break;
+                        }
+                            break;
                     }
                 }
             }
         }
-        
+
         View.ContentWriteTo.Document.Blocks.Clear();
-        
     }
 
     private async Task HandMessageSending(ChatMessageType type, FileTypeMessageDTO? fileTypeMessageDto = null)
@@ -741,14 +735,13 @@ public partial class ChatMessageViewModel(
     private void OpenScreenShotComponent()
     {
         var window = windowFactory.GetWindow<ScreenShotComponent>();
-        window.Background= new SolidColorBrush(Colors.Transparent);
+        window.Background = new SolidColorBrush(Colors.Transparent);
         window.Show();
     }
 
     [RelayCommand]
     private async Task OpenFileDialog(string filter)
     {
-        
         var dialog = new OpenFileDialog();
         dialog.Multiselect = true;
         dialog.Filter = filter;
@@ -782,7 +775,7 @@ public partial class ChatMessageViewModel(
             }
         }
     }
-    
+
 
     [RelayCommand]
     private async Task StartLoadFile(ChatMessageItem? item)
@@ -813,7 +806,7 @@ public partial class ChatMessageViewModel(
             await PrepareToDownloadFile(item);
         }
     }
-    
+
 
     [RelayCommand]
     private async Task PauseLoadFile(ChatMessageItem? item)
@@ -840,7 +833,7 @@ public partial class ChatMessageViewModel(
         item.SourceUnload = true;
         item.SpeedText = string.Empty;
     }
-    
+
     [RelayCommand]
     private async Task CancelLoadFile(ChatMessageItem? item)
     {
@@ -852,7 +845,7 @@ public partial class ChatMessageViewModel(
             await sourceHandler.RemoveTemp(new FileTypeMessageModel
             {
                 Type = item.MessageType, FileName = item.TempFileName
-            },_downloadCancellationTokenSource.Token);
+            }, _downloadCancellationTokenSource.Token);
             _receivedBytes = 0;
         }
 
@@ -862,7 +855,7 @@ public partial class ChatMessageViewModel(
             _uploadBytes = 0;
             await RemoveTempFile(item.TempFileName, item.MessageType);
         }
-        
+
         await sugarClient.Updateable<FileTransmissionTask>()
             .SetColumns(e => e.State == FileTransmissionState.Cancelled.GetValue())
             .Where(e => e.Id == item.TaskId)
@@ -1045,8 +1038,8 @@ public partial class ChatMessageViewModel(
                 messageItem.MessageId = messageId;
                 fileTransmissionTask = new FileTransmissionTask
                 {
-                    Current = 1,
-                    Total = FileTransmission.GetTotal(fileSize),
+                    Current = 0,
+                    Total = fileSize,
                     TempFileName = tempFileName,
                     CreateTime = DateTime.Now,
                     State = FileTransmissionState.Processing.GetValue(),
@@ -1081,19 +1074,19 @@ public partial class ChatMessageViewModel(
             }
             else
             {
-                       
                 fileTransmission = await sugarClient.Queryable<FileTransmission>()
-                    .Where(f=>f.TaskId == messageItem.TaskId)
+                    .Where(f => f.TaskId == messageItem.TaskId)
                     .FirstAsync(cts.Token);
                 if (!fileTransmission.IsValid)
                 {
-                    MessageComponent.ShowMessage(Owner,"文件已无效",MessageType.Warning);
+                    MessageComponent.ShowMessage(Owner, "文件已无效", MessageType.Warning);
                     return;
                 }
+
                 fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
                     .Where(f => f.Id == messageItem.TaskId)
                     .FirstAsync(cts.Token);
-                
+
                 chatMessage = await sugarClient.Queryable<ChatMessage>()
                     .Where(c => c.Id == messageItem.MessageId)
                     .FirstAsync(cts.Token);
@@ -1101,21 +1094,22 @@ public partial class ChatMessageViewModel(
 
             worker.Commit();
 
-            var bufferSize = FileTransmission.GetBufferSize(fileSize);
             if (fileTransmissionTask.Current < fileTransmissionTask.Total)
                 messageItem.SourceLoading = true;
-            while (fileTransmissionTask.Current <= fileTransmissionTask.Total)
+            while (fileTransmissionTask.Current < fileTransmissionTask.Total)
             {
                 if (cts.IsCancellationRequested) break;
-               var beginTicks = await Task.Run(async () =>
+                var beginTicks = await Task.Run(async () =>
                 {
                     await _uploadSGate.WaitAsync(cts.Token);
                     try
                     {
+                        var bufferSize = generator.RandomBufferSize(fileSize);
                         if (cts.IsCancellationRequested) return Constants.EOF;
                         var beginTicks = DateTime.Now.Ticks;
                         using var content = new MultipartFormDataContent();
-                        var position = (fileTransmissionTask.Current - 1) * bufferSize;
+                        //var position = (fileTransmissionTask.Current - 1) * bufferSize;
+                        var position = fileTransmissionTask.Current;
                         var buffer = new byte[bufferSize];
                         fileStream.Seek(position, SeekOrigin.Begin);
                         var bytesRead = await fileStream.ReadAsync(buffer, cts.Token);
@@ -1135,31 +1129,34 @@ public partial class ChatMessageViewModel(
                             Constants.DesSerializerOptions);
                         if (res.Success)
                         {
-                            if (res.Data)
-                            {
-                                this.UIDispatch(async () =>
-                                {
-                                    NotificationComponent.ShowNotification(Owner, "文件上传完成", NotificationType.Success);
-                                    var data = JsonSerializer.Serialize(chatMessage.ToNormalJson());
-                                    await Client.SendAsync(Encoding.UTF8.GetBytes(data), cts.Token);
-                                });
-                            }
-
-                            fileTransmissionTask.Current += 1;
+                            fileTransmissionTask.Current += bytesRead;
                             messageItem.Current = fileTransmissionTask.Current;
                             messageItem.ProcessText = fileTransmissionTask.PercentStr();
                             messageItem.LoadProgress =
                                 Math.Round(fileTransmissionTask.Current * 100d / fileTransmissionTask.Total, 1);
                             _uploadBytes += bytesRead;
-                            if (fileTransmissionTask.Current == fileTransmissionTask.Total)
+                            if (res.Data)
                             {
+                                this.UIDispatch(async () =>
+                                {
+                                    NotificationComponent.ShowNotification(Owner, "文件上传完成", NotificationType.Success);
+                                    var transModel = new ChatMessageTransModel
+                                    {
+                                        Data = chatMessage,
+                                        Message = "文件",
+                                        Type = EnumHelper.ToChatMessageType(Path.GetExtension(fileName))
+                                    };
+                                    var data = transModel.ToNormalJson();
+                                    await Client.SendWith(Encoding.UTF8.GetBytes(data), cts.Token);
+                                });
                                 messageItem.ProcessState = FileTransmissionState.Finished;
                                 messageItem.SourceDownloaded = true;
                                 messageItem.SourceUnload = false;
                                 messageItem.ProcessText = string.Empty;
+                                messageItem.SpeedText = string.Empty;
                                 messageItem.SourceLoading = false;
                             }
-
+                            
                             await Task.Delay(LoadInterval, cts.Token);
                             return beginTicks;
                         }
@@ -1180,25 +1177,31 @@ public partial class ChatMessageViewModel(
                         _uploadSGate.Release();
                     }
                 }, cts.Token);
-               if(beginTicks == Constants.EOF)
-                   return;
-               else
-               {
-                 await Task.Run(async () =>
-                   {
-                       await Task.Delay(CalculateSpeedInterval, cts.Token);
-                       var endTicks = DateTime.Now.Ticks;
-                       var milliseconds = (endTicks - beginTicks) * 1.0d / TimeSpan.TicksPerMillisecond - CalculateSpeedInterval - LoadInterval;
-                       var bytesPerSecond =(long)Math.Round(_uploadBytes * 1000d / milliseconds, 0);
-                       messageItem.SpeedText = FileTransmission.GetMemoryText(bytesPerSecond) + "/s";
-                       _uploadBytes = 0;
-                   },cts.Token);
-               }
+                if (beginTicks == Constants.EOF)
+                    return;
+                else
+                {
+                    await Task.Run(async () =>
+                    {
+                        await Task.Delay(CalculateSpeedInterval, cts.Token);
+                        var endTicks = DateTime.Now.Ticks;
+                        var milliseconds = (endTicks - beginTicks) * 1.0d / TimeSpan.TicksPerMillisecond -
+                                           CalculateSpeedInterval - LoadInterval;
+                        var bytesPerSecond = (long)Math.Round(_uploadBytes * 1000d / milliseconds, 0);
+                        if (messageItem.ProcessState == FileTransmissionState.Finished)
+                        {
+                            messageItem.SpeedText = string.Empty;
+                            return;
+                        }
+                        messageItem.SpeedText = FileTransmission.GetMemoryText(bytesPerSecond) + "/s";
+                        _uploadBytes = 0;
+                    }, cts.Token);
+                }
             }
         }
         catch (Exception e)
         {
-            if(e is TaskCanceledException)return;
+            if (e is TaskCanceledException) return;
             Console.WriteLine(e);
             MessageComponent.ShowMessage(Owner, $"准备上传文件失败：{e.Message}", MessageType.Error);
             await cts.CancelAsync();
@@ -1214,22 +1217,22 @@ public partial class ChatMessageViewModel(
         if (item == null) return;
         var cts = _downloadCancellationTokenSource;
         using var worker = sugarClient.CreateContext();
-        var bufferSize = FileTransmission.GetBufferSize(item.FileSize.GetValueOrDefault());
+        //todo 解决下载查询任务为空的情况
         try
         {
             var fileTransmissionTask = await sugarClient.Queryable<FileTransmissionTask>()
                 .Where(f => f.Id == item.TaskId)
                 .FirstAsync(cts.Token);
             var fileTransmission = await sugarClient.Queryable<FileTransmission>()
-                .Where(f=>f.TaskId ==  item.TaskId)
+                .Where(f => f.TaskId == item.TaskId)
                 .FirstAsync(cts.Token);
             if (fileTransmissionTask == null)
             {
                 var suffix = Path.GetExtension(item.FileName);
                 fileTransmissionTask = new FileTransmissionTask
                 {
-                    Current = 1,
-                    Total = FileTransmission.GetTotal(item.FileSize.GetValueOrDefault()),
+                    Current = 0,
+                    Total = item.FileSize.GetValueOrDefault(),
                     TempFileName = string.IsNullOrEmpty(suffix)
                         ? Path.GetFileName(item.FileName) + suffix
                         : item.FileName.Substring(0, item.FileName.Length - suffix.Length) + Constants.TempFileSuffix,
@@ -1261,19 +1264,23 @@ public partial class ChatMessageViewModel(
             {
                 if (!fileTransmission.IsValid)
                 {
-                    MessageComponent.ShowMessage(Owner,"文件已失效", MessageType.Warning);
+                    MessageComponent.ShowMessage(Owner, "文件已失效", MessageType.Warning);
                     return;
                 }
             }
-            while (fileTransmissionTask.Current <= fileTransmissionTask.Total)
+
+            worker.Commit();
+
+            while (fileTransmissionTask.Current < fileTransmissionTask.Total)
             {
-                if(cts.IsCancellationRequested)
+                if (cts.IsCancellationRequested)
                     break;
-                var beginTicks =  await Task.Run(async () =>
+                var bufferSize = generator.RandomBufferSize(fileTransmissionTask.Total);
+                var beginTicks = await Task.Run(async () =>
                 {
                     await _downloadSGate.WaitAsync(cts.Token);
                     var beginTicks = DateTime.Now.Ticks;
-                    if(cts.IsCancellationRequested)
+                    if (cts.IsCancellationRequested)
                         return Constants.EOF;
                     try
                     {
@@ -1282,16 +1289,17 @@ public partial class ChatMessageViewModel(
                             FileName = item.FileName,
                             Current = fileTransmissionTask.Current,
                             Total = fileTransmissionTask.Total,
-                            BufferSize = bufferSize
+                            BufferSize = bufferSize,
+                            Type = item.MessageType
                         };
                         var res = await apiService.GetAsync<byte[]>
-                            ($"{setting.ApiUrl}/api/ChatMessage/DownloadFile", model);
+                            ("api/ChatMessage/DownloadFile", model);
                         if (res.Success)
                         {
-                            fileTransmissionTask.Current += 1;
+                            var bytes = res.Data.Length;
+                            fileTransmissionTask.Current += bytes;
                             item.Current = fileTransmissionTask.Current;
                             var finished = item.Current == fileTransmissionTask.Total;
-                            var bytes = res.Data.Length;
                             _receivedBytes += bytes;
                             await sourceHandler.ReceivePart(new FileTypeMessageModel
                             {
@@ -1300,8 +1308,23 @@ public partial class ChatMessageViewModel(
                                 Type = item.MessageType
                             }, finished, cts.Token);
                             item.ProcessText = fileTransmissionTask.PercentStr();
+                            item.LoadProgress = Math.Round(fileTransmissionTask.Current *100d
+                                                           / fileTransmissionTask.Total, 1);
+                            await sugarClient.Updateable<FileTransmissionTask>()
+                                .SetColumns(e => e.Current == fileTransmissionTask.Current)
+                                .SetColumnsIF(finished, e => new FileTransmissionTask
+                                {
+                                    State = FileTransmissionState.Finished.GetValue(),
+                                    FinishTime = DateTime.Now,
+                                    Current = fileTransmissionTask.Total
+                                })
+                                .Where(e => e.Id == fileTransmissionTask.Id)
+                                .ExecuteCommandAsync(cts.Token);
                             if (finished)
+                            {
                                 item.ProcessState = FileTransmissionState.Finished;
+                                item.ProcessText = string.Empty;
+                            }
                             await Task.Delay(LoadInterval, cts.Token);
                         }
                         else
@@ -1322,7 +1345,7 @@ public partial class ChatMessageViewModel(
                         _downloadSGate.Release();
                     }
                 }, cts.Token);
-                if(beginTicks == Constants.EOF)
+                if (beginTicks == Constants.EOF)
                     return;
                 else
                 {
@@ -1330,11 +1353,17 @@ public partial class ChatMessageViewModel(
                     {
                         await Task.Delay(CalculateSpeedInterval, cts.Token);
                         var endTicks = DateTime.Now.Ticks;
-                        var milliseconds = (endTicks - beginTicks) * 1.0d / TimeSpan.TicksPerMillisecond - CalculateSpeedInterval - LoadInterval;
-                        var bytesPerSecond =(long)Math.Round(_receivedBytes * 1000d / milliseconds, 0);
-                        item.SpeedText = FileTransmission.GetMemoryText(bytesPerSecond) + "/s";
+                        var milliseconds = (endTicks - beginTicks) * 1.0d / TimeSpan.TicksPerMillisecond -
+                                           CalculateSpeedInterval - LoadInterval;
+                        var bytesPerSecond = (long)Math.Round(_receivedBytes * 1000d / milliseconds, 0);
                         _receivedBytes = 0;
-                    },cts.Token);
+                        if (item.ProcessState == FileTransmissionState.Finished)
+                        {
+                            item.SpeedText = string.Empty;
+                            return;
+                        }
+                        item.SpeedText = FileTransmission.GetMemoryText(bytesPerSecond) + "/s";
+                    }, cts.Token);
                 }
             }
         }
@@ -1351,7 +1380,7 @@ public partial class ChatMessageViewModel(
         try
         {
             var res = await apiService.DeleteAsync<object>
-                ("api/ChatMessage/RemoveTempFile", new { FileName = tempFileName,MessageType = type.GetValue()});
+                ("api/ChatMessage/RemoveTempFile", new { FileName = tempFileName, MessageType = type.GetValue() });
             if (res.Success)
                 return true;
             else

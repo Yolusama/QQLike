@@ -83,13 +83,9 @@ public class V_UserChatMessage
     /// </summary>
     public int? ProcessState { get; set; }
     /// <summary>
-    /// 当前切片
+    /// 当前已上传
     /// </summary>
-    public int? CurrentChunk { get; set; }
-    /// <summary>
-    /// 全部切片数
-    /// </summary>
-    public int? TotalChunkCount  { get; set; }
+    public long? FileCurrentLoad { get; set; }
     /// <summary>
     /// 临时文件名
     /// </summary>

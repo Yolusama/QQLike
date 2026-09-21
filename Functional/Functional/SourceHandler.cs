@@ -18,22 +18,24 @@ public class SourceHandler(FileConfig fileConfig) : ISourceHandler
         return toStore;
     }
 
-    public async Task HandleWriteChunk(string fileName,ChatMessageType type, Stream chunkStram, long buffeSize, CancellationToken token)
+    public async Task<int> HandleWriteChunk(string fileName,ChatMessageType type, Stream chunkStram, long buffeSize, CancellationToken token)
     {
         var tempRoot = Path.Combine(fileConfig.FileRootPath, FileRootPath(type));
         using var stream = new FileStream(Path.Combine(tempRoot, fileName), FileMode.Append,FileAccess.Write, FileShare.ReadWrite);
         var buffer = new byte[buffeSize];
         var bytesRead = await chunkStram.ReadAsync(buffer,token);
         await stream.WriteAsync(buffer.Take(bytesRead).ToArray(),token);
+        await stream.FlushAsync(token);
+        return bytesRead;
     }
 
-    public async Task<byte[]> HandReadChunk(string fileName, int current, int total, ChatMessageType type, long bufferSize,
+    public async Task<byte[]> HandReadChunk(string fileName, long current,  ChatMessageType type, long bufferSize,
         CancellationToken token)
     {
         var tempRoot = Path.Combine(fileConfig.FileRootPath, FileRootPath(type));
         var buffer = new byte[bufferSize];
         using var stream = new FileStream(Path.Combine(tempRoot, fileName), FileMode.Open,FileAccess.Read, FileShare.ReadWrite);
-        stream.Seek((current - 1) * bufferSize,SeekOrigin.Begin);
+        stream.Seek(current,SeekOrigin.Begin);
         var bytesRead =await stream.ReadAsync(buffer, token);
         return buffer.Take(bytesRead).ToArray();
     }

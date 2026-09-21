@@ -74,8 +74,7 @@ public partial class ChatMessageItem : ObservableObject
     public string UserId { get; set; }
     public string ContactId { get; set; }
     public long MessageId { get; set; }
-    public int? Current { get; set; }
-    public int? Total { get; set; }
+    public long? Current { get; set; }
     public long? TaskId { get; set; }
     public long? FileSize { get; set; }
     public string TempFileName { get; set; }

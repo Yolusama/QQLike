@@ -83,15 +83,10 @@ public class RandomGenerator : IRandomGenerator
         }
         return builder.ToString();
     }
-
-    /// <summary>
-    /// 模拟网络速度变化在随机区间生成当前buffer大小，保证buffer大小不小于size
-    /// </summary>
-    /// <param name="size"></param>
-    /// <returns></returns>
+    
     public long RandomBufferSize(long size)
     {
-        var range = bufferSizes.Where(x => x >= size).ToArray();
+        var range = bufferSizes.Where(x => x <= size).ToArray();
         var index = Random.Shared.Next(0, range.Length);
         return range[index];
     }

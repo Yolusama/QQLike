@@ -1,6 +1,7 @@
 using FreeSql;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using QQLike.Entity.Common;
 using QQLike.Entity.Configuration;
 using QQLike.Functional;
 using QQLike.Functional.Instructure;
@@ -14,6 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    // 设置为 100 MB，你可以根据需求调整或设为 null 取消限制
+    serverOptions.Limits.MaxRequestBodySize = Constants.GB; 
+});
 
 builder.Services.AddControllers(options =>
 {
